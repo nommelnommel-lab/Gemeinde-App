@@ -1,0 +1,20 @@
+# Node / NestJS
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Flutter / Dart
+.build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Env
+.env
+.env.local
