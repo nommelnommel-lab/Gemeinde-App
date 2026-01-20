@@ -1,26 +1,34 @@
 import 'package:flutter/material.dart';
 
-import 'config/app_config.dart';
 import 'api/api_client.dart';
 import 'api/health_service.dart';
-import 'screens/health_screen.dart';
+import 'config/app_config.dart';
+import 'features/navigation/screens/main_navigation_screen.dart';
+import 'shared/navigation/app_router.dart';
+import 'shared/theme/app_theme.dart';
 
 void main() {
-  runApp(const GemeindeApp());
+  runApp(GemeindeApp());
 }
 
 class GemeindeApp extends StatelessWidget {
-  const GemeindeApp({super.key});
+  GemeindeApp({super.key});
+
+  final AppRouter _router = AppRouter(GlobalKey<NavigatorState>());
 
   @override
   Widget build(BuildContext context) {
     final api = ApiClient(baseUrl: AppConfig.apiBaseUrl);
     final healthService = HealthService(api);
 
-    return MaterialApp(
-      title: 'Gemeinde App',
-      theme: ThemeData(useMaterial3: true),
-      home: HealthScreen(healthService: healthService),
+    return AppRouterScope(
+      router: _router,
+      child: MaterialApp(
+        title: 'Gemeinde App',
+        theme: AppTheme.light(),
+        navigatorKey: _router.navigatorKey,
+        home: MainNavigationScreen(healthService: healthService),
+      ),
     );
   }
 }
