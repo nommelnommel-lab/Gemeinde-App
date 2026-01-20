@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'api/api_client.dart';
 import 'api/health_service.dart';
 import 'config/app_config.dart';
+
+>>>>>>> origin/codex/implement-bottom-navigation-layout-with-tabs-bk8xnj
 import 'features/navigation/screens/main_navigation_screen.dart';
 import 'shared/navigation/app_router.dart';
 import 'shared/theme/app_theme.dart';
@@ -20,6 +22,7 @@ class GemeindeApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final api = ApiClient(baseUrl: AppConfig.apiBaseUrl);
     final healthService = HealthService(api);
+    final eventsService = EventsService(api);
 
     return AppRouterScope(
       router: _router,
@@ -27,7 +30,12 @@ class GemeindeApp extends StatelessWidget {
         title: 'Gemeinde App',
         theme: AppTheme.light(),
         navigatorKey: _router.navigatorKey,
-        home: MainNavigationScreen(healthService: healthService),
+
+        home: MainNavigationScreen(
+          healthService: healthService,
+          eventsService: eventsService,
+        ),
+>>>>>>> origin/codex/implement-bottom-navigation-layout-with-tabs-bk8xnj
       ),
     );
   }

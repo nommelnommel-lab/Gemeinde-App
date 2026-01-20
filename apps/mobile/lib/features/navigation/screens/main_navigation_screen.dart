@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../../../api/health_service.dart';
+
+import '../../events/services/events_service.dart';
+>>>>>>> origin/codex/implement-bottom-navigation-layout-with-tabs-bk8xnj
 import '../../events/screens/events_screen.dart';
 import '../../hilfe/screens/hilfe_screen.dart';
 import '../../info/screens/info_screen.dart';
 import '../../mehr/screens/mehr_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key, required this.healthService});
+
+
+  const MainNavigationScreen({
+    super.key,
+    required this.healthService,
+    required this.eventsService,
+  });
 
   final HealthService healthService;
+  final EventsService eventsService;
+>>>>>>> origin/codex/implement-bottom-navigation-layout-with-tabs-bk8xnj
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -23,7 +34,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final screens = <Widget>[
       const InfoScreen(),
       const HilfeScreen(),
-      const EventsScreen(),
+
+      EventsScreen(eventsService: widget.eventsService),
+>>>>>>> origin/codex/implement-bottom-navigation-layout-with-tabs-bk8xnj
       MehrScreen(healthService: widget.healthService),
     ];
 
