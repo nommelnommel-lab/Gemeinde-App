@@ -1,0 +1,49 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+class ApiException implements Exception {
+  final String message;
+  final int? statusCode;
+
+  ApiException(this.message, {this.statusCode});
+
+  @override
+  String toString() =>
+      statusCode == null ? message : 'HTTP $statusCode: $message';
+}
+
+class ApiClient {
+  ApiClient({
+    required this.baseUrl,
+    http.Client? httpClient,
+  }) : _http = httpClient ?? http.Client();
+
+  final String baseUrl;
+  final http.Client _http;
+
+  Future<Map<String, dynamic>> getJson(String path) async {
+    final uri = Uri.parse('$baseUrl$path');
+
+    http.Response res;
+    try {
+      res = await _http.get(uri).timeout(const Duration(seconds: 5));
+    } catch (e) {
+      throw ApiException('Netzwerkfehler: $e');
+    }
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiException(
+        res.body.isEmpty ? 'Request failed' : res.body,
+        statusCode: res.statusCode,
+      );
+    }
+
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      throw ApiException('Unerwartetes JSON-Format');
+    } catch (e) {
+      throw ApiException('JSON parse error: $e');
+    }
+  }
+}
