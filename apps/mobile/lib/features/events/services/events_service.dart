@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../api/api_client.dart';
 import '../models/event.dart';
 
@@ -7,8 +9,39 @@ class EventsService {
   final ApiClient _apiClient;
 
   Future<List<Event>> getEvents() async {
-    final data = await _apiClient.getJsonList('/events');
-    return data
+    final response = await _apiClient.getJsonFlexible('/events');
+    if (kDebugMode) {
+      debugPrint('Events response type: ${response.runtimeType}');
+      if (response is Map<String, dynamic>) {
+        debugPrint('Events response keys: ${response.keys.toList()}');
+      }
+    }
+
+    final List<dynamic> items;
+    if (response is List<dynamic>) {
+      items = response;
+    } else if (response is Map<String, dynamic>) {
+      final data = response['data'] ?? response['events'];
+      if (kDebugMode) {
+        debugPrint('Events list container type: ${data.runtimeType}');
+      }
+      if (data is List<dynamic>) {
+        items = data;
+      } else {
+        throw Exception('Unerwartetes /events Format: list fehlt');
+      }
+    } else {
+      throw Exception('Unerwartetes /events Format: ${response.runtimeType}');
+    }
+
+    if (kDebugMode && items.isNotEmpty) {
+      final sample = items.first;
+      if (sample is Map<String, dynamic>) {
+        debugPrint('Events sample keys: ${sample.keys.toList()}');
+      }
+    }
+
+    return items
         .whereType<Map<String, dynamic>>()
         .map(Event.fromJson)
         .toList();

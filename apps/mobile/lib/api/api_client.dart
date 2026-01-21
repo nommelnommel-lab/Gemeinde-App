@@ -73,6 +73,30 @@ class ApiClient {
     }
   }
 
+  Future<dynamic> getJsonFlexible(String path) async {
+    final uri = Uri.parse('$baseUrl$path');
+
+    http.Response res;
+    try {
+      res = await _http.get(uri).timeout(const Duration(seconds: 5));
+    } catch (e) {
+      throw ApiException('Netzwerkfehler: $e');
+    }
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiException(
+        res.body.isEmpty ? 'Request failed' : res.body,
+        statusCode: res.statusCode,
+      );
+    }
+
+    try {
+      return jsonDecode(res.body);
+    } catch (e) {
+      throw ApiException('JSON parse error: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> postJson(
     String path,
     Map<String, dynamic> body,

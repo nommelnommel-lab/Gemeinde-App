@@ -18,14 +18,26 @@ class Event {
   final DateTime updatedAt;
 
   factory Event.fromJson(Map<String, dynamic> json) {
+    final id = (json['id'] ?? '').toString();
+    final title = (json['title'] ?? '').toString();
+    final description = (json['description'] ?? '').toString();
+    final location = (json['location'] ?? '').toString();
+    final dateValue = json['date'];
+    final createdAtValue = json['createdAt'] ?? json['created_at'];
+    final updatedAtValue = json['updatedAt'] ?? json['updated_at'];
+
+    final parsedDate = _parseDate(dateValue);
+    final parsedCreatedAt = _parseDate(createdAtValue) ?? DateTime.now();
+    final parsedUpdatedAt = _parseDate(updatedAtValue) ?? DateTime.now();
+
     return Event(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String,
-      date: DateTime.parse(json['date'] as String),
-      location: json['location'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      id: id,
+      title: title,
+      description: description,
+      date: parsedDate ?? DateTime.now(),
+      location: location,
+      createdAt: parsedCreatedAt,
+      updatedAt: parsedUpdatedAt,
     );
   }
 
@@ -36,5 +48,14 @@ class Event {
       'date': date.toIso8601String(),
       'location': location,
     };
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    return DateTime.tryParse(value.toString());
   }
 }
