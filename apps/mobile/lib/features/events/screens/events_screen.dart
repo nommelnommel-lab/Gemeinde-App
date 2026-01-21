@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
-import '../models/event.dart';
 import '../services/events_service.dart';
 import 'event_detail_screen.dart';
-import 'event_form_screen.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({
@@ -58,71 +56,40 @@ class _EventsScreenState extends State<EventsScreen> {
       return _ErrorView(error: _error!, onRetry: _load);
     }
 
-    return Stack(
-      children: [
-        RefreshIndicator(
-          onRefresh: _load,
-          child: _events.isEmpty
-              ? ListView(
-                  children: const [
-                    SizedBox(height: 120),
-                    Center(
-                      child: Text(
-                        'Zurzeit sind keine Veranstaltungen geplant.',
-                      ),
-                    ),
-                  ],
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _events.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final event = _events[index];
-                    return Card(
-                      child: ListTile(
-                        title: Text(event.title),
-                        subtitle:
-                            Text('${_formatDate(event.date)} · ${event.location}'),
-                        trailing: PopupMenuButton<_EventAction>(
-                          onSelected: (action) => _handleAction(action, event),
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(
-                              value: _EventAction.edit,
-                              child: Text('Bearbeiten'),
-                            ),
-                            PopupMenuItem(
-                              value: _EventAction.delete,
-                              child: Text('Löschen'),
-                            ),
-                          ],
-                        ),
-                        onTap: () async {
-                          final result =
-                              await AppRouterScope.of(context).push<bool>(
-                            EventDetailScreen(
-                              event: event,
-                              eventsService: _eventsService,
-                            ),
-                          );
-                          if (result == true) {
-                            _load();
-                          }
-                        },
-                      ),
-                    );
-                  },
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: _events.isEmpty
+          ? ListView(
+              children: const [
+                SizedBox(height: 120),
+                Center(
+                  child: Text(
+                    'Zurzeit sind keine Veranstaltungen geplant.',
+                  ),
                 ),
-        ),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton(
-            onPressed: _openCreate,
-            child: const Icon(Icons.add),
-          ),
-        ),
-      ],
+              ],
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _events.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final event = _events[index];
+                return Card(
+                  child: ListTile(
+                    title: Text(event.title),
+                    subtitle:
+                        Text('${_formatDate(event.date)} · ${event.location}'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      AppRouterScope.of(context).push(
+                        EventDetailScreen(event: event),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
     );
   }
 
@@ -133,59 +100,7 @@ class _EventsScreenState extends State<EventsScreen> {
     return '$day.$month.$year';
   }
 
-  Future<void> _openCreate() async {
-    final result = await AppRouterScope.of(context).push<bool>(
-      EventFormScreen(eventsService: _eventsService),
-    );
-    if (result == true) {
-      _load();
-    }
-  }
-
-  Future<void> _handleAction(_EventAction action, Event event) async {
-    switch (action) {
-      case _EventAction.edit:
-        final result = await AppRouterScope.of(context).push<bool>(
-          EventFormScreen(eventsService: _eventsService, event: event),
-        );
-        if (result == true) {
-          _load();
-        }
-        break;
-      case _EventAction.delete:
-        final confirm = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Event löschen'),
-            content: const Text('Möchtest du dieses Event wirklich löschen?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Abbrechen'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Löschen'),
-              ),
-            ],
-          ),
-        );
-        if (confirm != true) return;
-        try {
-          await _eventsService.deleteEvent(event.id);
-          _load();
-        } catch (e) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Fehler beim Löschen: $e')),
-          );
-        }
-        break;
-    }
-  }
 }
-
-enum _EventAction { edit, delete }
 
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.error, required this.onRetry});

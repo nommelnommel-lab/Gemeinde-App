@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../api/health_service.dart';
-import '../../events/screens/events_screen.dart';
 import '../../events/services/events_service.dart';
-import '../../hilfe/screens/hilfe_screen.dart';
-import '../../info/screens/info_screen.dart';
+import '../../gemeinde_app/screens/gemeinde_app_hub_screen.dart';
 import '../../mehr/screens/mehr_screen.dart';
+import '../../start/screens/start_screen.dart';
+import '../../verwaltung/screens/verwaltung_hub_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({
@@ -27,13 +27,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final screens = <Widget>[
-      const InfoScreen(),
-      const HilfeScreen(),
-      EventsScreen(eventsService: widget.eventsService),
+      StartScreen(onSelectTab: _onSelectTab),
+      GemeindeAppHubScreen(eventsService: widget.eventsService),
+      const VerwaltungHubScreen(),
       MehrScreen(healthService: widget.healthService),
     ];
 
-    final titles = ['Info', 'Hilfe', 'Events', 'Mehr'];
+    final titles = ['Start', 'GemeindeApp', 'Verwaltung', 'Mehr'];
 
     return Scaffold(
       appBar: AppBar(title: Text(titles[_selectedIndex])),
@@ -44,12 +44,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           setState(() => _selectedIndex = index);
         },
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.info_outline), label: 'Info'),
-          NavigationDestination(icon: Icon(Icons.help_outline), label: 'Hilfe'),
-          NavigationDestination(icon: Icon(Icons.event), label: 'Events'),
+          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Start'),
+          NavigationDestination(
+            icon: Icon(Icons.groups_outlined),
+            label: 'GemeindeApp',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.admin_panel_settings_outlined),
+            label: 'Verwaltung',
+          ),
           NavigationDestination(icon: Icon(Icons.menu), label: 'Mehr'),
         ],
       ),
     );
+  }
+
+  void _onSelectTab(int index) {
+    setState(() => _selectedIndex = index);
   }
 }
