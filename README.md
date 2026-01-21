@@ -36,6 +36,26 @@
    ```powershell
    curl http://localhost:3000/events
    ```
+5. Event per ID:
+   ```powershell
+   curl http://localhost:3000/events/<id>
+   ```
+6. Event erstellen:
+   ```powershell
+   curl -X POST http://localhost:3000/events ^
+     -H "Content-Type: application/json" ^
+     -d "{\"title\":\"Konzert\",\"description\":\"Abend mit Musik\",\"date\":\"2024-12-01T19:00:00.000Z\",\"location\":\"Kirche\"}"
+   ```
+7. Event aktualisieren:
+   ```powershell
+   curl -X PUT http://localhost:3000/events/<id> ^
+     -H "Content-Type: application/json" ^
+     -d "{\"title\":\"Konzert\",\"description\":\"Aktualisiert\",\"date\":\"2024-12-01T19:30:00.000Z\",\"location\":\"Kirche\"}"
+   ```
+8. Event löschen:
+   ```powershell
+   curl -X DELETE http://localhost:3000/events/<id>
+   ```
 
 ## Ports
 - API: `3000`

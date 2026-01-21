@@ -5,6 +5,8 @@ class Event {
     required this.description,
     required this.date,
     required this.location,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   final String id;
@@ -12,6 +14,8 @@ class Event {
   final String description;
   final DateTime date;
   final String location;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   factory Event.fromJson(Map<String, dynamic> json) {
     return Event(
@@ -20,6 +24,17 @@ class Event {
       description: json['description'] as String,
       date: DateTime.parse(json['date'] as String),
       location: json['location'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'description': description,
+      'date': date.toIso8601String(),
+      'location': location,
+    };
   }
 }
