@@ -32,6 +32,10 @@
    ```powershell
    curl http://localhost:3000/health
    ```
+4. Events-Endpoint:
+   ```powershell
+   curl http://localhost:3000/events
+   ```
 
 ## Ports
 - API: `3000`
