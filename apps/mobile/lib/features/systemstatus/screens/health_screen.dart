@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../api/health_service.dart';
+
+import '../../../api/health_service.dart';
 
 class HealthScreen extends StatefulWidget {
   const HealthScreen({super.key, required this.healthService});
@@ -47,7 +48,7 @@ class _HealthScreenState extends State<HealthScreen> {
             : _OkView(status: _status ?? 'unknown', onRefresh: _load);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Gemeinde App')),
+      appBar: AppBar(title: const Text('Systemstatus')),
       body: body,
     );
   }
