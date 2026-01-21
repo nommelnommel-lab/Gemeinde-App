@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../models/event.dart';
 import '../services/events_service.dart';
 import 'event_detail_screen.dart';
 
