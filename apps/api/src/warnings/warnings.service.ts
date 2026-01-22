@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
-import path from 'path';
+import { dirname, join } from 'node:path';
 import { WarningEntity, WarningSeverity } from './warnings.types';
 
 type WarningInput = {
@@ -14,7 +14,7 @@ type WarningInput = {
 @Injectable()
 export class WarningsService implements OnModuleInit {
   private warnings: WarningEntity[] = [];
-  private readonly dataFilePath = path.join(
+  private readonly dataFilePath = join(
     process.cwd(),
     'data',
     'warnings.json',
@@ -92,7 +92,7 @@ export class WarningsService implements OnModuleInit {
   }
 
   private async ensureDataFile() {
-    const dataDir = path.dirname(this.dataFilePath);
+    const dataDir = dirname(this.dataFilePath);
     await fs.mkdir(dataDir, { recursive: true });
     try {
       await fs.access(this.dataFilePath);

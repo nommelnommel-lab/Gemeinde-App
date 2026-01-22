@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
-import path from 'path';
+import { dirname, join } from 'node:path';
 import { EventEntity } from './events.types';
 
 type EventInput = {
@@ -14,7 +14,7 @@ type EventInput = {
 @Injectable()
 export class EventsService implements OnModuleInit {
   private events: EventEntity[] = [];
-  private readonly dataFilePath = path.join(
+  private readonly dataFilePath = join(
     process.cwd(),
     'data',
     'events.json',
@@ -87,7 +87,7 @@ export class EventsService implements OnModuleInit {
   }
 
   private async ensureDataFile() {
-    const dataDir = path.dirname(this.dataFilePath);
+    const dataDir = dirname(this.dataFilePath);
     await fs.mkdir(dataDir, { recursive: true });
     try {
       await fs.access(this.dataFilePath);
