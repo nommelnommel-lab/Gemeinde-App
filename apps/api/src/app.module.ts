@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { EventsModule } from './events/events.module';
+import { PermissionsModule } from './permissions/permissions.module';
+
+@Module({
+  controllers: [AppController],
+  imports: [EventsModule, PermissionsModule],
 codex/implement-warnings-crud-in-nestjs-api
 import { WarningsModule } from './warnings/warnings.module';
 
