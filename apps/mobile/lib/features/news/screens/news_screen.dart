@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 
-import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/news_item.dart';
 import '../services/news_service.dart';
 import 'news_detail_screen.dart';
-import 'news_form_screen.dart';
 
 class NewsScreen extends StatefulWidget {
-  const NewsScreen({super.key});
+  const NewsScreen({
+    super.key,
+    required this.newsService,
+  });
+
+  final NewsService newsService;
 
   @override
   State<NewsScreen> createState() => _NewsScreenState();
 }
 
 class _NewsScreenState extends State<NewsScreen> {
-  late final NewsService _newsService;
-  bool _initialized = false;
   bool _loading = true;
   String? _error;
   List<NewsItem> _news = const [];
@@ -24,13 +25,8 @@ class _NewsScreenState extends State<NewsScreen> {
   String _selectedCategory = 'Alle';
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_initialized) {
-      return;
-    }
-    _newsService = AppServicesScope.of(context).newsService;
-    _initialized = true;
+  void initState() {
+    super.initState();
     _load();
   }
 
@@ -41,7 +37,7 @@ class _NewsScreenState extends State<NewsScreen> {
     });
 
     try {
-      final news = await _newsService.getNews();
+      final news = await widget.newsService.getNews();
       setState(() => _news = news);
     } catch (e) {
       setState(
@@ -55,57 +51,51 @@ class _NewsScreenState extends State<NewsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: widget.newsService.isAdmin
-          ? FloatingActionButton.extended(
-              onPressed: _openCreate,
-              icon: const Icon(Icons.add),
-              label: const Text('Create News'),
-            )
-          : null,
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Suche',
-                hintText: 'Titel oder Stichwort',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) => setState(() => _searchTerm = value),
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          TextField(
+            decoration: const InputDecoration(
+              labelText: 'Suche',
+              hintText: 'Titel oder Stichwort',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
             ),
-            const SizedBox(height: 12),
-            _CategoryFilter(
-              categories: _availableCategories,
-              selected: _selectedCategory,
-              onSelected: (value) => setState(() => _selectedCategory = value),
-            ),
-            const SizedBox(height: 16),
-            if (_loading)
-              const Center(child: CircularProgressIndicator())
-            else if (_error != null)
-              _ErrorView(error: _error!, onRetry: _load)
-            else if (_filteredNews.isEmpty)
-              const Text('Keine News gefunden.')
-            else
-              ..._filteredNews.map(
-                (item) => Card(
-                  child: ListTile(
-                    title: Text(item.title),
-                    subtitle: Text(
-                      '${_formatDate(item.publishedAt)} · ${item.excerpt}',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _openDetail(item),
+            onChanged: (value) => setState(() => _searchTerm = value),
+          ),
+          const SizedBox(height: 12),
+          _CategoryFilter(
+            categories: _availableCategories,
+            selected: _selectedCategory,
+            onSelected: (value) => setState(() => _selectedCategory = value),
+          ),
+          const SizedBox(height: 16),
+          if (_loading)
+            const Center(child: CircularProgressIndicator())
+          else if (_error != null)
+            _ErrorView(error: _error!, onRetry: _load)
+          else if (_filteredNews.isEmpty)
+            const Text('Keine News gefunden.')
+          else
+            ..._filteredNews.map(
+              (item) => Card(
+                child: ListTile(
+                  title: Text(item.title),
+                  subtitle: Text(
+                    '${_formatDate(item.publishedAt)} · ${item.excerpt}',
                   ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    AppRouterScope.of(context).push(
+                      NewsDetailScreen(item: item),
+                    );
+                  },
                 ),
               ),
-            const SizedBox(height: 80),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -141,26 +131,6 @@ class _NewsScreenState extends State<NewsScreen> {
     final month = date.month.toString().padLeft(2, '0');
     final year = date.year.toString();
     return '$day.$month.$year';
-  }
-
-  Future<void> _openCreate() async {
-    final created = await AppRouterScope.of(context).push<NewsItem>(
-      NewsFormScreen(newsService: widget.newsService),
-    );
-
-    if (created != null) {
-      await _load();
-    }
-  }
-
-  Future<void> _openDetail(NewsItem item) async {
-    final shouldReload = await AppRouterScope.of(context).push<bool>(
-      NewsDetailScreen(item: item, newsService: widget.newsService),
-    );
-
-    if (shouldReload == true) {
-      await _load();
-    }
   }
 }
 
