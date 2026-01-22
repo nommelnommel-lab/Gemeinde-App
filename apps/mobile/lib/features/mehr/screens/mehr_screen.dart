@@ -7,6 +7,7 @@ import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../hilfe/screens/hilfe_screen.dart';
 import '../../systemstatus/screens/health_screen.dart';
+import '../../verwaltung/screens/tenant_info_screen.dart';
 import 'tenant_selection_screen.dart';
 
 class MehrScreen extends StatefulWidget {
@@ -73,7 +74,7 @@ class _MehrScreenState extends State<MehrScreen> {
           subtitle: const Text('Wichtige Hinweise zur Gemeinde'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
-            AppRouterScope.of(context).push(const TenantInfoScreen());
+            AppRouterScope.of(context).push(TenantInfoScreen());
           },
         ),
         const Divider(height: 0),

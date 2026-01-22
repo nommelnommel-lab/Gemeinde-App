@@ -66,6 +66,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
       newsService: NewsService(_apiClient),
       postsService: PostsService(_apiClient),
       healthService: HealthService(_apiClient),
+      tenantConfigService: TenantConfigService(_apiClient),
       warningsService: WarningsService(_apiClient),
       permissionsService: PermissionsService(_apiClient),
       adminKeyStore: widget.adminKeyStore,

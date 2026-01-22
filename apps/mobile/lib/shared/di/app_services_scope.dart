@@ -16,6 +16,7 @@ class AppServices {
     required this.newsService,
     required this.postsService,
     required this.healthService,
+    required this.tenantConfigService,
     required this.warningsService,
     required this.permissionsService,
     required this.adminKeyStore,
@@ -26,6 +27,7 @@ class AppServices {
   final NewsService newsService;
   final PostsService postsService;
   final HealthService healthService;
+  final TenantConfigService tenantConfigService;
   final WarningsService warningsService;
   final PermissionsService permissionsService;
   final AdminKeyStore adminKeyStore;
