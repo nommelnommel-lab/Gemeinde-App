@@ -74,15 +74,6 @@ class GemeindeAppHubScreen extends StatelessWidget {
           );
         },
       ),
-      _HubItem(
-        title: 'Warnungen',
-        icon: Icons.warning_amber,
-        onTap: () => _openPlaceholder(
-          context,
-          title: 'Warnungen',
-          description: 'Warnmeldungen werden hier angezeigt.',
-        ),
-      ),
     ];
 
     return GridView.builder(
