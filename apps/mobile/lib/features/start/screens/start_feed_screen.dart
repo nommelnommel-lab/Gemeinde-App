@@ -149,6 +149,10 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
                       WarningDetailScreen(
                         warning: warning,
                         warningsService: _warningsService,
+                        canEdit:
+                            AppPermissionsScope.maybePermissionsOf(context)
+                                    ?.canManageContent ??
+                                false,
                       ),
                     ),
                   );
