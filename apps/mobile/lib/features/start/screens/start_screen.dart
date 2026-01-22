@@ -84,14 +84,14 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Start Feed',
+            'Nachbarschaft',
             style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           _FeedFilters(
-            selected: _selectedFilter,
-            onSelected: (filter) {
-              setState(() => _selectedFilter = filter);
+            selected: _selectedCategory,
+            onSelected: (category) {
+              setState(() => _selectedCategory = category);
             },
           ),
           const SizedBox(height: 12),
@@ -141,6 +141,9 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
             .where((item) => item.type == PostType.warning)
             .toList();
     }
+    return _items
+        .where((item) => item.category == _selectedCategory)
+        .toList();
   }
 
   List<Post> _activePosts(List<Post> posts) {
@@ -241,25 +244,21 @@ class _FeedFilters extends StatelessWidget {
     required this.onSelected,
   });
 
-  final _FeedFilter selected;
-  final ValueChanged<_FeedFilter> onSelected;
+  final PostCategory? selected;
+  final ValueChanged<PostCategory?> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final labels = <_FeedFilter, String>{
-      _FeedFilter.all: 'Alle',
-      _FeedFilter.events: 'Events',
-      _FeedFilter.news: 'News',
-      _FeedFilter.warnings: 'Warnungen',
-    };
+    final filters = <PostCategory?>[null, ...PostCategory.values];
 
     return Wrap(
       spacing: 8,
-      children: _FeedFilter.values.map((filter) {
+      children: filters.map((category) {
+        final label = category == null ? 'Alle' : category.label;
         return ChoiceChip(
-          label: Text(labels[filter]!),
-          selected: filter == selected,
-          onSelected: (_) => onSelected(filter),
+          label: Text(label),
+          selected: category == selected,
+          onSelected: (_) => onSelected(category),
         );
       }).toList(),
     );
@@ -283,12 +282,13 @@ class _FeedListTile extends StatelessWidget {
 
     return Card(
       child: ListTile(
-        leading: Icon(_iconForType(item.type)),
+        leading: const Icon(Icons.chat_bubble_outline),
         title: Text(item.title),
         subtitle: Text(
-          '${_labelForType(item.type)} · $formattedDate',
+          '${item.category.label} · $formattedDate\n${_preview(item.body)}',
           style: theme.textTheme.bodySmall,
         ),
+        isThreeLine: true,
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
