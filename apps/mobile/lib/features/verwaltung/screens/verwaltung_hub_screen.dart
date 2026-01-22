@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
 import '../../../shared/widgets/coming_soon_screen.dart';
+import 'tenant_info_screen.dart';
 
 class VerwaltungHubScreen extends StatelessWidget {
   const VerwaltungHubScreen({super.key});
@@ -13,21 +14,39 @@ class VerwaltungHubScreen extends StatelessWidget {
         title: 'Formulare',
         description: 'Formulare und Anträge folgen hier.',
         icon: Icons.description_outlined,
+        onTap: () => _openComingSoon(
+          context,
+          itemTitle: 'Formulare',
+          itemDescription: 'Formulare und Anträge folgen hier.',
+        ),
       ),
       _VerwaltungItem(
         title: 'Rathaus Infos',
         description: 'Informationen rund um das Rathaus folgen hier.',
         icon: Icons.account_balance_outlined,
+        onTap: () => _openComingSoon(
+          context,
+          itemTitle: 'Rathaus Infos',
+          itemDescription: 'Informationen rund um das Rathaus folgen hier.',
+        ),
       ),
       _VerwaltungItem(
-        title: 'Öffnungszeiten',
-        description: 'Hier findest du die Öffnungszeiten der Verwaltung.',
+        title: 'Öffnungszeiten & Kontakt',
+        description: 'Öffnungszeiten und Kontaktdaten der Verwaltung.',
         icon: Icons.schedule,
+        onTap: () => AppRouterScope.of(context).push(
+          const TenantInfoScreen(),
+        ),
       ),
       _VerwaltungItem(
         title: 'Ansprechpartner',
         description: 'Kontaktpersonen der Verwaltung folgen hier.',
         icon: Icons.support_agent,
+        onTap: () => _openComingSoon(
+          context,
+          itemTitle: 'Ansprechpartner',
+          itemDescription: 'Kontaktpersonen der Verwaltung folgen hier.',
+        ),
       ),
     ];
 
@@ -44,15 +63,19 @@ class VerwaltungHubScreen extends StatelessWidget {
         final item = items[index];
         return _VerwaltungTile(
           item: item,
-          onTap: () => _openComingSoon(context, item: item),
+          onTap: item.onTap,
         );
       },
     );
   }
 
-  void _openComingSoon(BuildContext context, {required _VerwaltungItem item}) {
+  void _openComingSoon(
+    BuildContext context, {
+    required String itemTitle,
+    required String itemDescription,
+  }) {
     AppRouterScope.of(context).push(
-      ComingSoonScreen(title: item.title, description: item.description),
+      ComingSoonScreen(title: itemTitle, description: itemDescription),
     );
   }
 }
@@ -62,11 +85,13 @@ class _VerwaltungItem {
     required this.title,
     required this.description,
     required this.icon,
+    required this.onTap,
   });
 
   final String title;
   final String description;
   final IconData icon;
+  final VoidCallback onTap;
 }
 
 class _VerwaltungTile extends StatelessWidget {
