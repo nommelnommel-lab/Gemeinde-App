@@ -7,6 +7,7 @@ import '../../features/posts/services/posts_service.dart';
 import '../../features/warnings/services/warnings_service.dart';
 import '../auth/admin_key_store.dart';
 import '../auth/permissions_service.dart';
+import '../tenant/tenant_store.dart';
 
 class AppServices {
   const AppServices({
@@ -17,6 +18,7 @@ class AppServices {
     required this.warningsService,
     required this.permissionsService,
     required this.adminKeyStore,
+    required this.tenantStore,
   });
 
   final EventsService eventsService;
@@ -26,6 +28,7 @@ class AppServices {
   final WarningsService warningsService;
   final PermissionsService permissionsService;
   final AdminKeyStore adminKeyStore;
+  final TenantStore tenantStore;
 }
 
 class AppServicesScope extends InheritedWidget {
