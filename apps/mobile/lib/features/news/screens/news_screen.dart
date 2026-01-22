@@ -111,13 +111,19 @@ class _NewsScreenState extends State<NewsScreen> {
                       '${_formatDate(item.publishedAt)} · ${item.excerpt}',
                     ),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      AppRouterScope.of(context).push(
+                    onTap: () async {
+                      final updated =
+                          await AppRouterScope.of(context).push<bool>(
                         NewsDetailScreen(
                           item: item,
                           newsService: _newsService,
+                          canEdit: _canManageContent,
                         ),
                       );
+                      if (!mounted) return;
+                      if (updated == true) {
+                        await _load();
+                      }
                     },
                   ),
                 ),

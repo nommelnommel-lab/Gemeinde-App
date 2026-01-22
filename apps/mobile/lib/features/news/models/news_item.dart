@@ -20,6 +20,32 @@ class NewsItem {
   String get summary => excerpt;
   DateTime get createdAt => publishedAt;
 
+  factory NewsItem.fromJson(Map<String, dynamic> json) {
+    final publishedValue = json['publishedAt'] ?? json['createdAt'];
+    return NewsItem(
+      id: json['id'] as String,
+      title: json['title'] as String? ?? '',
+      excerpt: json['excerpt'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      publishedAt: _parseDateTime(publishedValue),
+      category: json['category'] as String? ?? 'Allgemein',
+      imageUrl: json['imageUrl'] as String?,
+    );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is DateTime) {
+      return value;
+    }
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    return DateTime.now();
+  }
+
   NewsItem copyWith({
     String? id,
     String? title,

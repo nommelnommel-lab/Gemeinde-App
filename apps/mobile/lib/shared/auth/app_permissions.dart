@@ -40,7 +40,9 @@ class AppPermissionsScope extends StatefulWidget {
   }
 
   static AppPermissions? maybePermissionsOf(BuildContext context) {
-
+    final scope =
+        context.dependOnInheritedWidgetOfExactType<_AppPermissionsInherited>();
+    return scope?.permissions;
   }
 
   static AppPermissionsScopeState controllerOf(BuildContext context) {
@@ -73,6 +75,12 @@ class AppPermissionsScopeState extends State<AppPermissionsScope> {
   void setCanManageContent(bool value) {
     setState(() {
       _permissions = _permissions.copyWith(canManageContent: value);
+    });
+  }
+
+  void setPermissions(AppPermissions permissions) {
+    setState(() {
+      _permissions = permissions;
     });
   }
 

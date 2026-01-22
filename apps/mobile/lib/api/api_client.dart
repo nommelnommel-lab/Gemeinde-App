@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
+import '../shared/auth/admin_key_store.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -18,24 +19,33 @@ class ApiClient {
   ApiClient({
     required this.baseUrl,
     http.Client? httpClient,
-  }) : _http = httpClient ?? http.Client();
+    AdminKeyStore? adminKeyStore,
+  })  : _http = httpClient ?? http.Client(),
+        _adminKeyStore = adminKeyStore;
 
-  factory ApiClient.platform({http.Client? httpClient}) {
+  factory ApiClient.platform({
+    http.Client? httpClient,
+    AdminKeyStore? adminKeyStore,
+  }) {
     return ApiClient(
       baseUrl: AppConfig.apiBaseUrl,
       httpClient: httpClient,
+      adminKeyStore: adminKeyStore,
     );
   }
 
   final String baseUrl;
   final http.Client _http;
+  final AdminKeyStore? _adminKeyStore;
 
   Future<Map<String, dynamic>> getJson(String path) async {
     final uri = Uri.parse('$baseUrl$path');
 
     http.Response res;
     try {
-      res = await _http.get(uri).timeout(const Duration(seconds: 5));
+      res = await _http
+          .get(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
     }
@@ -61,7 +71,9 @@ class ApiClient {
 
     http.Response res;
     try {
-      res = await _http.get(uri).timeout(const Duration(seconds: 5));
+      res = await _http
+          .get(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
     }
@@ -87,7 +99,9 @@ class ApiClient {
 
     http.Response res;
     try {
-      res = await _http.get(uri).timeout(const Duration(seconds: 5));
+      res = await _http
+          .get(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
     }
@@ -125,7 +139,9 @@ class ApiClient {
 
     http.Response res;
     try {
-      res = await _http.delete(uri).timeout(const Duration(seconds: 5));
+      res = await _http
+          .delete(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
     }
@@ -158,7 +174,7 @@ class ApiClient {
       res = await _http
           .send(
             http.Request(method, uri)
-              ..headers['Content-Type'] = 'application/json'
+              ..headers.addAll(_buildHeaders(includeJson: true))
               ..body = jsonEncode(body),
           )
           .then(http.Response.fromStream)
@@ -181,5 +197,17 @@ class ApiClient {
     } catch (e) {
       throw ApiException('JSON parse error: $e');
     }
+  }
+
+  Map<String, String> _buildHeaders({bool includeJson = false}) {
+    final headers = <String, String>{};
+    if (includeJson) {
+      headers['Content-Type'] = 'application/json';
+    }
+    final adminKey = _adminKeyStore?.adminKey;
+    if (adminKey != null && adminKey.isNotEmpty) {
+      headers['x-admin-key'] = adminKey;
+    }
+    return headers;
   }
 }
