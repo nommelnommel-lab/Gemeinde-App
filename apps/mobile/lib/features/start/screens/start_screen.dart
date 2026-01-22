@@ -144,7 +144,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
         return severityCompare;
       }
       final dateCompare =
-          b.value.createdAt.compareTo(a.value.createdAt);
+          b.value.publishedAt.compareTo(a.value.publishedAt);
       if (dateCompare != 0) {
         return dateCompare;
       }
@@ -318,7 +318,7 @@ class _WarningsSection extends StatelessWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     WarningSeverityChip(severity: warning.severity),
-                    Text(formatDateTime(warning.createdAt)),
+                    Text(formatDateTime(warning.publishedAt)),
                   ],
                 ),
                 trailing: const Icon(Icons.chevron_right),
