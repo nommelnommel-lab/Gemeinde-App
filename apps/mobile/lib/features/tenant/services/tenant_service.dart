@@ -7,7 +7,7 @@ class TenantService {
   final ApiClient _apiClient;
 
   Future<TenantConfig> getTenantConfig() async {
-    final data = await _apiClient.getJsonFlexible('/tenant/config');
+    final data = await _apiClient.getJsonFlexible('/api/tenant/settings');
     final payload = _extractPayload(data);
     return TenantConfig.fromJson(payload);
   }
@@ -17,7 +17,7 @@ class TenantService {
     String? adminKeyOverride,
   }) async {
     final data = await _apiClient.putJson(
-      '/tenant/config',
+      '/api/tenant/settings',
       config.toJson(),
       includeAdminKey: true,
       adminKeyOverride: adminKeyOverride,
