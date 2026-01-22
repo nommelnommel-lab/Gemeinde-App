@@ -17,6 +17,8 @@ class WarningItem {
   final DateTime? validUntil;
   final String? source;
 
+  DateTime get createdAt => publishedAt;
+
   factory WarningItem.fromJson(Map<String, dynamic> json) {
     final publishedAtValue = json['publishedAt'] ?? json['createdAt'];
     return WarningItem(
