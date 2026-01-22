@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../config/app_config.dart';
 import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/permissions_service.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../hilfe/screens/hilfe_screen.dart';
-import '../../info/screens/info_screen.dart';
 import '../../systemstatus/screens/health_screen.dart';
 import 'tenant_selection_screen.dart';
 
@@ -36,7 +36,8 @@ class _MehrScreenState extends State<MehrScreen> {
     }
     final services = AppServicesScope.of(context);
     _permissionsService = services.permissionsService;
-    _adminKeyController.text = services.adminKeyStore.adminKey ?? '';
+    _adminKeyController.text =
+        services.adminKeyStore.getAdminKey(AppConfig.tenantId) ?? '';
     _initialized = true;
   }
 
@@ -72,7 +73,7 @@ class _MehrScreenState extends State<MehrScreen> {
           subtitle: const Text('Wichtige Hinweise zur Gemeinde'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
-            AppRouterScope.of(context).push(const InfoScreen());
+            AppRouterScope.of(context).push(const TenantInfoScreen());
           },
         ),
         const Divider(height: 0),
@@ -162,7 +163,10 @@ class _MehrScreenState extends State<MehrScreen> {
     setState(() => _saving = true);
     try {
       final services = AppServicesScope.of(context);
-      await services.adminKeyStore.setAdminKey(_adminKeyController.text);
+      await services.adminKeyStore.setAdminKey(
+        AppConfig.tenantId,
+        _adminKeyController.text,
+      );
       final permissions = await _permissionsService.getPermissions();
       if (!mounted) return;
       AppPermissionsScope.controllerOf(context).setPermissions(permissions);

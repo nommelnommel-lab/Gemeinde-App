@@ -40,17 +40,21 @@ class ApiClient {
   }
 
   final String baseUrl;
+  final String tenantId;
   final http.Client _http;
   final AdminKeyStore? _adminKeyStore;
   final TenantStore _tenantStore;
 
-  Future<Map<String, dynamic>> getJson(String path) async {
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    bool includeAdminKey = false,
+  }) async {
     final uri = Uri.parse('$baseUrl$path');
 
     http.Response res;
     try {
       res = await _http
-          .get(uri, headers: _buildHeaders())
+          .get(uri, headers: _buildHeaders(includeAdminKey: includeAdminKey))
           .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
@@ -72,13 +76,16 @@ class ApiClient {
     }
   }
 
-  Future<List<dynamic>> getJsonList(String path) async {
+  Future<List<dynamic>> getJsonList(
+    String path, {
+    bool includeAdminKey = false,
+  }) async {
     final uri = Uri.parse('$baseUrl$path');
 
     http.Response res;
     try {
       res = await _http
-          .get(uri, headers: _buildHeaders())
+          .get(uri, headers: _buildHeaders(includeAdminKey: includeAdminKey))
           .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
@@ -100,13 +107,16 @@ class ApiClient {
     }
   }
 
-  Future<dynamic> getJsonFlexible(String path) async {
+  Future<dynamic> getJsonFlexible(
+    String path, {
+    bool includeAdminKey = false,
+  }) async {
     final uri = Uri.parse('$baseUrl$path');
 
     http.Response res;
     try {
       res = await _http
-          .get(uri, headers: _buildHeaders())
+          .get(uri, headers: _buildHeaders(includeAdminKey: includeAdminKey))
           .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
@@ -128,25 +138,44 @@ class ApiClient {
 
   Future<Map<String, dynamic>> postJson(
     String path,
-    Map<String, dynamic> body,
-  ) async {
-    return _sendJson('POST', path, body);
+    Map<String, dynamic> body, {
+    bool includeAdminKey = false,
+    String? adminKeyOverride,
+  }) async {
+    return _sendJson(
+      'POST',
+      path,
+      body,
+      includeAdminKey: includeAdminKey,
+      adminKeyOverride: adminKeyOverride,
+    );
   }
 
   Future<Map<String, dynamic>> putJson(
     String path,
-    Map<String, dynamic> body,
-  ) async {
-    return _sendJson('PUT', path, body);
+    Map<String, dynamic> body, {
+    bool includeAdminKey = false,
+    String? adminKeyOverride,
+  }) async {
+    return _sendJson(
+      'PUT',
+      path,
+      body,
+      includeAdminKey: includeAdminKey,
+      adminKeyOverride: adminKeyOverride,
+    );
   }
 
-  Future<Map<String, dynamic>> deleteJson(String path) async {
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    bool includeAdminKey = false,
+  }) async {
     final uri = Uri.parse('$baseUrl$path');
 
     http.Response res;
     try {
       res = await _http
-          .delete(uri, headers: _buildHeaders())
+          .delete(uri, headers: _buildHeaders(includeAdminKey: includeAdminKey))
           .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
@@ -171,8 +200,10 @@ class ApiClient {
   Future<Map<String, dynamic>> _sendJson(
     String method,
     String path,
-    Map<String, dynamic> body,
-  ) async {
+    Map<String, dynamic> body, {
+    bool includeAdminKey = false,
+    String? adminKeyOverride,
+  }) async {
     final uri = Uri.parse('$baseUrl$path');
 
     http.Response res;
@@ -180,7 +211,13 @@ class ApiClient {
       res = await _http
           .send(
             http.Request(method, uri)
-              ..headers.addAll(_buildHeaders(includeJson: true))
+              ..headers.addAll(
+                _buildHeaders(
+                  includeJson: true,
+                  includeAdminKey: includeAdminKey,
+                  adminKeyOverride: adminKeyOverride,
+                ),
+              )
               ..body = jsonEncode(body),
           )
           .then(http.Response.fromStream)
@@ -205,7 +242,11 @@ class ApiClient {
     }
   }
 
-  Map<String, String> _buildHeaders({bool includeJson = false}) {
+  Map<String, String> _buildHeaders({
+    bool includeJson = false,
+    bool includeAdminKey = false,
+    String? adminKeyOverride,
+  }) {
     final headers = <String, String>{};
     if (includeJson) {
       headers['Content-Type'] = 'application/json';
