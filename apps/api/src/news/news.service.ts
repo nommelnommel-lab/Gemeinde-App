@@ -1,14 +1,14 @@
 import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
-import path from 'path';
+import { dirname, join } from 'node:path';
 import { NewsInputDto } from './news.dto';
 import { NewsEntity } from './news.types';
 
 @Injectable()
 export class NewsService implements OnModuleInit {
   private news: NewsEntity[] = [];
-  private readonly dataFilePath = path.join(process.cwd(), 'data', 'news.json');
+  private readonly dataFilePath = join(process.cwd(), 'data', 'news.json');
 
   async onModuleInit() {
     await this.ensureDataFile();
@@ -75,7 +75,7 @@ export class NewsService implements OnModuleInit {
   }
 
   private async ensureDataFile() {
-    const dataDir = path.dirname(this.dataFilePath);
+    const dataDir = dirname(this.dataFilePath);
     await fs.mkdir(dataDir, { recursive: true });
     try {
       await fs.access(this.dataFilePath);
