@@ -40,9 +40,7 @@ class AppPermissionsScope extends StatefulWidget {
   }
 
   static AppPermissions? maybePermissionsOf(BuildContext context) {
-    return context
-        .dependOnInheritedWidgetOfExactType<_AppPermissionsInherited>()
-        ?.permissions;
+
   }
 
   static AppPermissionsScopeState controllerOf(BuildContext context) {
