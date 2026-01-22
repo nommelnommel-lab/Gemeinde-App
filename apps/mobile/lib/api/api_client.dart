@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
 import '../shared/auth/admin_key_store.dart';
@@ -61,12 +62,13 @@ class ApiClient {
     bool includeAdminKey = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
+    final headers = _buildHeaders(includeAdminKey: includeAdminKey);
+    _logRequest('GET', uri, headers);
 
     http.Response res;
     try {
-      res = await _http
-          .get(uri, headers: _buildHeaders(includeAdminKey: includeAdminKey))
-          .timeout(const Duration(seconds: 5));
+      res =
+          await _http.get(uri, headers: headers).timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
     }
@@ -92,12 +94,13 @@ class ApiClient {
     bool includeAdminKey = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
+    final headers = _buildHeaders(includeAdminKey: includeAdminKey);
+    _logRequest('GET', uri, headers);
 
     http.Response res;
     try {
-      res = await _http
-          .get(uri, headers: _buildHeaders(includeAdminKey: includeAdminKey))
-          .timeout(const Duration(seconds: 5));
+      res =
+          await _http.get(uri, headers: headers).timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
     }
@@ -123,12 +126,13 @@ class ApiClient {
     bool includeAdminKey = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
+    final headers = _buildHeaders(includeAdminKey: includeAdminKey);
+    _logRequest('GET', uri, headers);
 
     http.Response res;
     try {
-      res = await _http
-          .get(uri, headers: _buildHeaders(includeAdminKey: includeAdminKey))
-          .timeout(const Duration(seconds: 5));
+      res =
+          await _http.get(uri, headers: headers).timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
     }
@@ -152,12 +156,13 @@ class ApiClient {
     bool includeAdminKey = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
+    final headers = _buildHeaders(includeAdminKey: includeAdminKey);
+    _logRequest('GET', uri, headers);
 
     http.Response res;
     try {
-      res = await _http
-          .get(uri, headers: _buildHeaders(includeAdminKey: includeAdminKey))
-          .timeout(const Duration(seconds: 5));
+      res =
+          await _http.get(uri, headers: headers).timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
     }
@@ -215,11 +220,13 @@ class ApiClient {
     bool includeAdminKey = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
+    final headers = _buildHeaders(includeAdminKey: includeAdminKey);
+    _logRequest('DELETE', uri, headers);
 
     http.Response res;
     try {
       res = await _http
-          .delete(uri, headers: _buildHeaders(includeAdminKey: includeAdminKey))
+          .delete(uri, headers: headers)
           .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw ApiException('Netzwerkfehler: $e');
@@ -249,19 +256,19 @@ class ApiClient {
     String? adminKeyOverride,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
+    final headers = _buildHeaders(
+      includeJson: true,
+      includeAdminKey: includeAdminKey,
+      adminKeyOverride: adminKeyOverride,
+    );
+    _logRequest(method, uri, headers);
 
     http.Response res;
     try {
       res = await _http
           .send(
             http.Request(method, uri)
-              ..headers.addAll(
-                _buildHeaders(
-                  includeJson: true,
-                  includeAdminKey: includeAdminKey,
-                  adminKeyOverride: adminKeyOverride,
-                ),
-              )
+              ..headers.addAll(headers)
               ..body = jsonEncode(body),
           )
           .then(http.Response.fromStream)
@@ -295,14 +302,25 @@ class ApiClient {
     if (includeJson) {
       headers['Content-Type'] = 'application/json';
     }
+    headers['X-TENANT'] = AppConfig.tenantHeaderValue;
+    headers['X-SITE-KEY'] = AppConfig.siteKey;
     final tenantId = _tenantStore.tenantIdNotifier.value;
-    if (tenantId.isNotEmpty) {
-      headers['X-Tenant'] = tenantId;
-    }
-    final adminKey = _adminKeyStore?.getAdminKey(tenantId);
+    final adminKey =
+        _adminKeyStore?.getAdminKey(adminKeyOverride ?? tenantId);
     if (adminKey != null && adminKey.isNotEmpty) {
       headers['x-admin-key'] = adminKey;
     }
     return headers;
+  }
+
+  void _logRequest(String method, Uri uri, Map<String, String> headers) {
+    if (!kDebugMode) {
+      return;
+    }
+    final hasTenant = headers.containsKey('X-TENANT');
+    final hasSiteKey = headers.containsKey('X-SITE-KEY');
+    debugPrint(
+      'API $method $uri headers: tenant=$hasTenant siteKey=$hasSiteKey',
+    );
   }
 }
