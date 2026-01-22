@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
-import '../../../shared/widgets/placeholder_content.dart';
+import '../../../shared/widgets/coming_soon_content.dart';
 import '../../events/models/event.dart';
 import '../../events/screens/event_detail_screen.dart';
 import '../../events/services/events_service.dart';
@@ -246,7 +246,7 @@ class ComingSoonScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: PlaceholderContent(title: title, description: description),
+      body: ComingSoonContent(description: description),
     );
   }
 }

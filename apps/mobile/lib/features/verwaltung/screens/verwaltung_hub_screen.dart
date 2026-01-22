@@ -15,9 +15,9 @@ class VerwaltungHubScreen extends StatelessWidget {
         icon: Icons.description_outlined,
       ),
       _VerwaltungItem(
-        title: 'Müllkalender',
-        description: 'Abholtermine und Erinnerungen werden hier angezeigt.',
-        icon: Icons.delete_outline,
+        title: 'Rathaus Infos',
+        description: 'Informationen rund um das Rathaus folgen hier.',
+        icon: Icons.account_balance_outlined,
       ),
       _VerwaltungItem(
         title: 'Öffnungszeiten',
@@ -28,16 +28,6 @@ class VerwaltungHubScreen extends StatelessWidget {
         title: 'Ansprechpartner',
         description: 'Kontaktpersonen der Verwaltung folgen hier.',
         icon: Icons.support_agent,
-      ),
-      _VerwaltungItem(
-        title: 'Schäden melden',
-        description: 'Melde Schäden oder Anliegen direkt an die Gemeinde.',
-        icon: Icons.report_problem_outlined,
-      ),
-      _VerwaltungItem(
-        title: 'Gebühren/Steuern',
-        description: 'Übersicht zu Gebühren und Steuern kommt bald.',
-        icon: Icons.receipt_long_outlined,
       ),
     ];
 

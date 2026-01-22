@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'placeholder_content.dart';
+import 'coming_soon_content.dart';
 
 class ComingSoonScreen extends StatelessWidget {
   const ComingSoonScreen({
@@ -16,7 +16,7 @@ class ComingSoonScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: PlaceholderContent(title: title, description: description),
+      body: ComingSoonContent(description: description),
     );
   }
 }
