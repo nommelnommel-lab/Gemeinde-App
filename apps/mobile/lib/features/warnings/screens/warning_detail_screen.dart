@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../models/warning_item.dart';
+import '../services/warnings_service.dart';
 import '../utils/warning_formatters.dart';
 
 class WarningDetailScreen extends StatelessWidget {
   const WarningDetailScreen({
     super.key,
     required this.warning,
+    required this.warningsService,
   });
 
   final WarningItem warning;
+  final WarningsService warningsService;
 
   @override
   Widget build(BuildContext context) {

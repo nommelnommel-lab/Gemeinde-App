@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../models/news_item.dart';
+import '../services/news_service.dart';
 
 class NewsDetailScreen extends StatelessWidget {
-  const NewsDetailScreen({super.key, required this.item});
+  const NewsDetailScreen({
+    super.key,
+    required this.item,
+    required this.newsService,
+  });
 
   final NewsItem item;
+  final NewsService newsService;
 
   @override
   Widget build(BuildContext context) {

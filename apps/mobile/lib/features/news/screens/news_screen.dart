@@ -6,7 +6,10 @@ import '../services/news_service.dart';
 import 'news_detail_screen.dart';
 
 class NewsScreen extends StatefulWidget {
-  const NewsScreen({super.key, required this.newsService});
+  const NewsScreen({
+    super.key,
+    required this.newsService,
+  });
 
   final NewsService newsService;
 
@@ -86,7 +89,10 @@ class _NewsScreenState extends State<NewsScreen> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     AppRouterScope.of(context).push(
-                      NewsDetailScreen(item: item),
+                      NewsDetailScreen(
+                        item: item,
+                        newsService: widget.newsService,
+                      ),
                     );
                   },
                 ),
