@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../events/models/event.dart';
 import '../../events/services/events_service.dart';
@@ -14,13 +15,9 @@ class StartFeedScreen extends StatefulWidget {
   const StartFeedScreen({
     super.key,
     required this.onSelectTab,
-    required this.eventsService,
-    required this.warningsService,
   });
 
   final ValueChanged<int> onSelectTab;
-  final EventsService eventsService;
-  final WarningsService warningsService;
 
   @override
   State<StartFeedScreen> createState() => _StartFeedScreenState();
@@ -29,6 +26,7 @@ class StartFeedScreen extends StatefulWidget {
 class _StartFeedScreenState extends State<StartFeedScreen> {
   late final EventsService _eventsService;
   late final WarningsService _warningsService;
+  bool _initialized = false;
 
   bool _loading = true;
   String? _error;
@@ -36,10 +34,15 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   List<WarningItem> _warnings = const [];
 
   @override
-  void initState() {
-    super.initState();
-    _eventsService = widget.eventsService;
-    _warningsService = widget.warningsService;
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    final services = AppServicesScope.of(context);
+    _eventsService = services.eventsService;
+    _warningsService = services.warningsService;
+    _initialized = true;
     _load();
   }
 
@@ -89,7 +92,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
           _WarningsSection(
             warnings: _sortedWarnings(_activeWarnings(_warnings)).take(2).toList(),
             onShowAll: () => AppRouterScope.of(context).push(
-              WarningsScreen(warningsService: _warningsService),
+              const WarningsScreen(),
             ),
             onSelectWarning: (warning) => AppRouterScope.of(context).push(
               WarningDetailScreen(

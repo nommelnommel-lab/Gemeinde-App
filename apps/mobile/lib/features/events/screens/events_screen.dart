@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/event.dart';
 import '../models/event_permissions.dart';
@@ -9,12 +10,7 @@ import 'event_detail_screen.dart';
 import 'event_form_screen.dart';
 
 class EventsScreen extends StatefulWidget {
-  const EventsScreen({
-    super.key,
-    required this.eventsService,
-  });
-
-  final EventsService eventsService;
+  const EventsScreen({super.key});
 
   @override
   State<EventsScreen> createState() => _EventsScreenState();
@@ -22,6 +18,7 @@ class EventsScreen extends StatefulWidget {
 
 class _EventsScreenState extends State<EventsScreen> {
   late final EventsService _eventsService;
+  bool _initialized = false;
 
   bool _loading = true;
   String? _error;
@@ -30,9 +27,13 @@ class _EventsScreenState extends State<EventsScreen> {
       const EventsPermissions(canManageContent: false);
 
   @override
-  void initState() {
-    super.initState();
-    _eventsService = widget.eventsService;
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    _eventsService = AppServicesScope.of(context).eventsService;
+    _initialized = true;
     _load();
   }
 

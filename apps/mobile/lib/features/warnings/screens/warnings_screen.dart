@@ -1,36 +1,35 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/warning_item.dart';
 import '../services/warnings_service.dart';
 import '../utils/warning_formatters.dart';
-import '../utils/warning_widgets.dart';
 import 'warning_detail_screen.dart';
-import 'warning_form_screen.dart';
 
 class WarningsScreen extends StatefulWidget {
-  const WarningsScreen({
-    super.key,
-    required this.warningsService,
-    this.isAdmin = false,
-  });
-
-  final WarningsService warningsService;
-  final bool isAdmin;
+  const WarningsScreen({super.key});
 
   @override
   State<WarningsScreen> createState() => _WarningsScreenState();
 }
 
 class _WarningsScreenState extends State<WarningsScreen> {
+  late final WarningsService _warningsService;
+  bool _initialized = false;
   bool _loading = true;
   String? _error;
   List<WarningItem> _warnings = const [];
   WarningFilter _selectedFilter = WarningFilter.all;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    _warningsService = AppServicesScope.of(context).warningsService;
+    _initialized = true;
     _load();
   }
 
@@ -41,7 +40,7 @@ class _WarningsScreenState extends State<WarningsScreen> {
     });
 
     try {
-      final warnings = await widget.warningsService.getWarnings();
+      final warnings = await _warningsService.getWarnings();
       setState(() => _warnings = warnings);
     } catch (e) {
       setState(() => _error = e.toString());
@@ -79,23 +78,14 @@ class _WarningsScreenState extends State<WarningsScreen> {
               ...sorted.map(
                 (warning) => Card(
                   child: ListTile(
+                    leading: _severityIcon(warning.severity),
                     title: Text(warning.title),
-                    subtitle: Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        WarningSeverityChip(severity: warning.severity),
-                        Text(formatDateTime(warning.createdAt)),
-                      ],
+                    subtitle: Text(
+                      '${warning.severity.label} · ${formatDateTime(warning.publishedAt)}',
                     ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => AppRouterScope.of(context).push(
-                      WarningDetailScreen(
-                        warning: warning,
-                        warningsService: widget.warningsService,
-                        isAdmin: widget.isAdmin,
-                      ),
+                      WarningDetailScreen(warning: warning),
                     ),
                   ),
                 ),
@@ -103,27 +93,14 @@ class _WarningsScreenState extends State<WarningsScreen> {
           ],
         ),
       ),
-      floatingActionButton: widget.isAdmin
-          ? FloatingActionButton.extended(
-              onPressed: _handleCreate,
-              label: const Text('Create Warning'),
-              icon: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 
   List<WarningItem> _sortedWarnings(List<WarningItem> warnings) {
     final indexed = warnings.asMap().entries.toList();
     indexed.sort((a, b) {
-      final severityCompare =
-          _severityRank(a.value.severity).compareTo(
-        _severityRank(b.value.severity),
-      );
-      if (severityCompare != 0) {
-        return severityCompare;
-      }
-      final dateCompare = b.value.createdAt.compareTo(a.value.createdAt);
+      final dateCompare =
+          b.value.publishedAt.compareTo(a.value.publishedAt);
       if (dateCompare != 0) {
         return dateCompare;
       }
@@ -162,9 +139,9 @@ class _WarningsScreenState extends State<WarningsScreen> {
 
   bool _isToday(WarningItem warning) {
     final now = DateTime.now();
-    return warning.createdAt.year == now.year &&
-        warning.createdAt.month == now.month &&
-        warning.createdAt.day == now.day;
+    return warning.publishedAt.year == now.year &&
+        warning.publishedAt.month == now.month &&
+        warning.publishedAt.day == now.day;
   }
 
   bool _isWeatherWarning(WarningItem warning) {
@@ -188,23 +165,14 @@ class _WarningsScreenState extends State<WarningsScreen> {
         text.contains('bahnhof');
   }
 
-  int _severityRank(WarningSeverity severity) {
+  Widget _severityIcon(WarningSeverity severity) {
     switch (severity) {
-      case WarningSeverity.critical:
-        return 0;
-      case WarningSeverity.warning:
-        return 1;
       case WarningSeverity.info:
-        return 2;
-    }
-  }
-
-  Future<void> _handleCreate() async {
-    final created = await AppRouterScope.of(context).push<WarningItem>(
-      WarningFormScreen(warningsService: widget.warningsService),
-    );
-    if (created != null) {
-      await _load();
+        return const Icon(Icons.info_outline, color: Colors.blue);
+      case WarningSeverity.warning:
+        return const Icon(Icons.warning_amber, color: Colors.orange);
+      case WarningSeverity.critical:
+        return const Icon(Icons.report, color: Colors.red);
     }
   }
 }

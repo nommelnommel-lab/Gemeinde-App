@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/news_item.dart';
 import '../services/news_service.dart';
@@ -7,15 +8,15 @@ import 'news_detail_screen.dart';
 import 'news_form_screen.dart';
 
 class NewsScreen extends StatefulWidget {
-  const NewsScreen({super.key, required this.newsService});
-
-  final NewsService newsService;
+  const NewsScreen({super.key});
 
   @override
   State<NewsScreen> createState() => _NewsScreenState();
 }
 
 class _NewsScreenState extends State<NewsScreen> {
+  late final NewsService _newsService;
+  bool _initialized = false;
   bool _loading = true;
   String? _error;
   List<NewsItem> _news = const [];
@@ -23,8 +24,13 @@ class _NewsScreenState extends State<NewsScreen> {
   String _selectedCategory = 'Alle';
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    _newsService = AppServicesScope.of(context).newsService;
+    _initialized = true;
     _load();
   }
 
@@ -35,7 +41,7 @@ class _NewsScreenState extends State<NewsScreen> {
     });
 
     try {
-      final news = await widget.newsService.getNews();
+      final news = await _newsService.getNews();
       setState(() => _news = news);
     } catch (e) {
       setState(
