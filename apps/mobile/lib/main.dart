@@ -6,6 +6,7 @@ import 'config/app_config.dart';
 import 'features/events/services/events_service.dart';
 import 'features/navigation/screens/main_navigation_screen.dart';
 import 'features/warnings/services/warnings_service.dart';
+import 'shared/auth/app_permissions.dart';
 import 'shared/navigation/app_router.dart';
 import 'shared/theme/app_theme.dart';
 
@@ -25,16 +26,18 @@ class GemeindeApp extends StatelessWidget {
     final eventsService = EventsService(api);
     final warningsService = WarningsService(api);
 
-    return AppRouterScope(
-      router: _router,
-      child: MaterialApp(
-        title: 'Gemeinde App',
-        theme: AppTheme.light(),
-        navigatorKey: _router.navigatorKey,
-        home: MainNavigationScreen(
-          healthService: healthService,
-          eventsService: eventsService,
-          warningsService: warningsService,
+    return AppPermissionsScope(
+      child: AppRouterScope(
+        router: _router,
+        child: MaterialApp(
+          title: 'Gemeinde App',
+          theme: AppTheme.light(),
+          navigatorKey: _router.navigatorKey,
+          home: MainNavigationScreen(
+            healthService: healthService,
+            eventsService: eventsService,
+            warningsService: warningsService,
+          ),
         ),
       ),
     );
