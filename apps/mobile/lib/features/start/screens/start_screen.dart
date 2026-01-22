@@ -8,6 +8,7 @@ import '../../warnings/screens/warning_detail_screen.dart';
 import '../../warnings/screens/warnings_screen.dart';
 import '../../warnings/services/warnings_service.dart';
 import '../../warnings/utils/warning_formatters.dart';
+import '../../warnings/utils/warning_widgets.dart';
 
 class StartFeedScreen extends StatefulWidget {
   const StartFeedScreen({
@@ -86,12 +87,15 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
           ),
           const SizedBox(height: 24),
           _WarningsSection(
-            warnings: _sortedWarnings(_warnings).take(2).toList(),
+            warnings: _sortedWarnings(_activeWarnings(_warnings)).take(2).toList(),
             onShowAll: () => AppRouterScope.of(context).push(
               WarningsScreen(warningsService: _warningsService),
             ),
             onSelectWarning: (warning) => AppRouterScope.of(context).push(
-              WarningDetailScreen(warning: warning),
+              WarningDetailScreen(
+                warning: warning,
+                warningsService: _warningsService,
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -129,14 +133,43 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   List<WarningItem> _sortedWarnings(List<WarningItem> warnings) {
     final indexed = warnings.asMap().entries.toList();
     indexed.sort((a, b) {
+      final severityCompare =
+          _severityRank(a.value.severity).compareTo(
+        _severityRank(b.value.severity),
+      );
+      if (severityCompare != 0) {
+        return severityCompare;
+      }
       final dateCompare =
-          b.value.publishedAt.compareTo(a.value.publishedAt);
+          b.value.createdAt.compareTo(a.value.createdAt);
       if (dateCompare != 0) {
         return dateCompare;
       }
       return a.key.compareTo(b.key);
     });
     return indexed.map((entry) => entry.value).toList();
+  }
+
+  List<WarningItem> _activeWarnings(List<WarningItem> warnings) {
+    final now = DateTime.now();
+    return warnings
+        .where(
+          (warning) =>
+              warning.validUntil == null ||
+              warning.validUntil!.isAfter(now),
+        )
+        .toList();
+  }
+
+  int _severityRank(WarningSeverity severity) {
+    switch (severity) {
+      case WarningSeverity.critical:
+        return 0;
+      case WarningSeverity.warning:
+        return 1;
+      case WarningSeverity.info:
+        return 2;
+    }
   }
 }
 
@@ -275,10 +308,15 @@ class _WarningsSection extends StatelessWidget {
             ...warnings.map(
               (warning) => ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: _severityIcon(warning.severity),
                 title: Text(warning.title),
-                subtitle: Text(
-                  '${warning.severity.label} · ${formatDateTime(warning.publishedAt)}',
+                subtitle: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    WarningSeverityChip(severity: warning.severity),
+                    Text(formatDateTime(warning.createdAt)),
+                  ],
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => onSelectWarning(warning),
@@ -288,16 +326,5 @@ class _WarningsSection extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Widget _severityIcon(WarningSeverity severity) {
-    switch (severity) {
-      case WarningSeverity.info:
-        return const Icon(Icons.info_outline, color: Colors.blue);
-      case WarningSeverity.warning:
-        return const Icon(Icons.warning_amber, color: Colors.orange);
-      case WarningSeverity.critical:
-        return const Icon(Icons.report, color: Colors.red);
-    }
   }
 }

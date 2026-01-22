@@ -4,7 +4,7 @@ class WarningItem {
     required this.title,
     required this.body,
     required this.severity,
-    required this.publishedAt,
+    required this.createdAt,
     this.validUntil,
     this.source,
   });
@@ -13,7 +13,7 @@ class WarningItem {
   final String title;
   final String body;
   final WarningSeverity severity;
-  final DateTime publishedAt;
+  final DateTime createdAt;
   final DateTime? validUntil;
   final String? source;
 }
