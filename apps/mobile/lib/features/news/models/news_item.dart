@@ -18,6 +18,7 @@ class NewsItem {
   final String? imageUrl;
 
   String get summary => excerpt;
+  DateTime get createdAt => publishedAt;
 
   NewsItem copyWith({
     String? id,
