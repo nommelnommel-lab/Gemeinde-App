@@ -144,6 +144,58 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     return formatDate(date);
   }
 
+  List<_AggregatedFeedItem> _buildFeedItems({
+    required List<Event> events,
+    required List<NewsItem> news,
+    required List<WarningItem> warnings,
+  }) {
+    final items = [
+      ...events.map(
+        (event) => _AggregatedFeedItem(
+          type: _FeedItemType.event,
+          title: event.title,
+          date: event.date,
+          event: event,
+        ),
+      ),
+      ...news.map(
+        (item) => _AggregatedFeedItem(
+          type: _FeedItemType.news,
+          title: item.title,
+          date: item.createdAt,
+          news: item,
+        ),
+      ),
+      ..._activeWarnings(warnings).map(
+        (warning) => _AggregatedFeedItem(
+          type: _FeedItemType.warning,
+          title: warning.title,
+          date: warning.createdAt,
+          warning: warning,
+        ),
+      ),
+    ];
+    items.sort((a, b) => b.date.compareTo(a.date));
+    return items;
+  }
+
+  List<_AggregatedFeedItem> _filteredItems() {
+    switch (_selectedFilter) {
+      case _FeedFilter.all:
+        return _items;
+      case _FeedFilter.events:
+        return _items
+            .where((item) => item.type == _FeedItemType.event)
+            .toList();
+      case _FeedFilter.news:
+        return _items
+            .where((item) => item.type == _FeedItemType.news)
+            .toList();
+      case _FeedFilter.warnings:
+        return _items
+            .where((item) => item.type == _FeedItemType.warning)
+            .toList();
+    }
   }
 
   List<WarningItem> _activeWarnings(List<WarningItem> warnings) {
