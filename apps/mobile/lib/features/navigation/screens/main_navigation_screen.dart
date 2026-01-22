@@ -6,16 +6,20 @@ import '../../gemeinde_app/screens/gemeinde_app_hub_screen.dart';
 import '../../mehr/screens/mehr_screen.dart';
 import '../../start/screens/start_screen.dart';
 import '../../verwaltung/screens/verwaltung_hub_screen.dart';
+import '../../warnings/screens/warnings_screen.dart';
+import '../../warnings/services/warnings_service.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({
     super.key,
     required this.healthService,
     required this.eventsService,
+    required this.warningsService,
   });
 
   final HealthService healthService;
   final EventsService eventsService;
+  final WarningsService warningsService;
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -30,13 +34,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       StartFeedScreen(
         onSelectTab: _onSelectTab,
         eventsService: widget.eventsService,
+        warningsService: widget.warningsService,
       ),
+      WarningsScreen(warningsService: widget.warningsService),
       GemeindeAppHubScreen(eventsService: widget.eventsService),
       const VerwaltungHubScreen(),
       MehrScreen(healthService: widget.healthService),
     ];
 
-    final titles = ['Start', 'GemeindeApp', 'Verwaltung', 'Mehr'];
+    final titles = ['Start', 'Warnungen', 'GemeindeApp', 'Verwaltung', 'Mehr'];
 
     return Scaffold(
       appBar: AppBar(title: Text(titles[_selectedIndex])),
@@ -48,6 +54,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         },
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Start'),
+          NavigationDestination(
+            icon: Icon(Icons.warning_amber_outlined),
+            label: 'Warnungen',
+          ),
           NavigationDestination(
             icon: Icon(Icons.groups_outlined),
             label: 'GemeindeApp',

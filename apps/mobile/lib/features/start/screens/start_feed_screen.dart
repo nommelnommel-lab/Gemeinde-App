@@ -5,6 +5,11 @@ import '../../../shared/widgets/placeholder_content.dart';
 import '../../events/models/event.dart';
 import '../../events/screens/event_detail_screen.dart';
 import '../../events/services/events_service.dart';
+import '../../warnings/models/warning_item.dart';
+import '../../warnings/screens/warning_detail_screen.dart';
+import '../../warnings/screens/warnings_screen.dart';
+import '../../warnings/services/warnings_service.dart';
+import '../../warnings/utils/warning_formatters.dart';
 import '../models/feed_item.dart';
 import '../widgets/feed_card.dart';
 
@@ -12,9 +17,11 @@ class StartFeedScreen extends StatefulWidget {
   const StartFeedScreen({
     super.key,
     required this.eventsService,
+    required this.warningsService,
   });
 
   final EventsService eventsService;
+  final WarningsService warningsService;
 
   @override
   State<StartFeedScreen> createState() => _StartFeedScreenState();
@@ -24,6 +31,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   bool _loading = true;
   String? _error;
   List<FeedItem> _items = const [];
+  List<WarningItem> _warnings = const [];
 
   @override
   void initState() {
@@ -39,8 +47,12 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
 
     try {
       final events = await widget.eventsService.getEvents();
+      final warnings = await widget.warningsService.getWarnings();
       final items = _buildFeedItems(events);
-      setState(() => _items = items);
+      setState(() {
+        _items = items;
+        _warnings = warnings;
+      });
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -73,12 +85,6 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
         title: 'Neuer Spielplatz eröffnet',
         body: 'Die Gemeinde eröffnet einen neuen Spielplatz für Familien.',
         date: now.add(const Duration(days: 1)),
-      ),
-      FeedItem(
-        type: FeedItemType.warning,
-        title: 'Baustelle auf der Hauptstraße',
-        body: 'Bitte mit Verzögerungen im Verkehr rechnen.',
-        date: now.subtract(const Duration(days: 1, hours: 2)),
       ),
       FeedItem(
         type: FeedItemType.meetup,
@@ -120,10 +126,25 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
-              itemCount: _items.length,
+              itemCount: _items.length + 1,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final item = _items[index];
+                if (index == 0) {
+                  return _WarningsSection(
+                    warnings: _sortedWarnings(_warnings).take(2).toList(),
+                    onShowAll: () => AppRouterScope.of(context).push(
+                      WarningsScreen(
+                        warningsService: widget.warningsService,
+                      ),
+                    ),
+                    onSelectWarning: (warning) =>
+                        AppRouterScope.of(context).push(
+                      WarningDetailScreen(warning: warning),
+                    ),
+                  );
+                }
+
+                final item = _items[index - 1];
                 return FeedCard(
                   item: item,
                   icon: _iconForType(item.type),
@@ -151,10 +172,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   }
 
   String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final year = date.year.toString();
-    return '$day.$month.$year';
+    return formatDate(date);
   }
 
   IconData _iconForType(FeedItemType type) {
@@ -193,6 +211,102 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
         return 'News und aktuelle Meldungen werden hier demnächst verfügbar sein.';
       case FeedItemType.event:
         return 'Weitere Informationen folgen.';
+    }
+  }
+
+  List<WarningItem> _sortedWarnings(List<WarningItem> warnings) {
+    final indexed = warnings.asMap().entries.toList();
+    indexed.sort((a, b) {
+      final dateCompare =
+          b.value.publishedAt.compareTo(a.value.publishedAt);
+      if (dateCompare != 0) {
+        return dateCompare;
+      }
+      return a.key.compareTo(b.key);
+    });
+    return indexed.map((entry) => entry.value).toList();
+  }
+}
+
+class _WarningsSection extends StatelessWidget {
+  const _WarningsSection({
+    required this.warnings,
+    required this.onShowAll,
+    required this.onSelectWarning,
+  });
+
+  final List<WarningItem> warnings;
+  final VoidCallback onShowAll;
+  final ValueChanged<WarningItem> onSelectWarning;
+
+  @override
+  Widget build(BuildContext context) {
+    if (warnings.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber_outlined),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Aktuell gibt es keine Warnungen.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Warnungen',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: onShowAll,
+                  child: const Text('Alle anzeigen'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...warnings.map(
+              (warning) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: _severityIcon(warning.severity),
+                title: Text(warning.title),
+                subtitle: Text(
+                  '${warning.severity.label} · ${formatDateTime(warning.publishedAt)}',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => onSelectWarning(warning),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _severityIcon(WarningSeverity severity) {
+    switch (severity) {
+      case WarningSeverity.info:
+        return const Icon(Icons.info_outline, color: Colors.blue);
+      case WarningSeverity.warning:
+        return const Icon(Icons.warning_amber, color: Colors.orange);
+      case WarningSeverity.critical:
+        return const Icon(Icons.report, color: Colors.red);
     }
   }
 }
