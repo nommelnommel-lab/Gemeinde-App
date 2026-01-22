@@ -16,6 +16,18 @@ class ApiException implements Exception {
       statusCode == null ? message : 'HTTP $statusCode: $message';
 }
 
+class ApiResponse<T> {
+  ApiResponse({
+    required this.data,
+    required this.statusCode,
+    required this.uri,
+  });
+
+  final T data;
+  final int statusCode;
+  final Uri uri;
+}
+
 class ApiClient {
   ApiClient({
     required this.baseUrl,
@@ -130,6 +142,39 @@ class ApiClient {
 
     try {
       return jsonDecode(res.body);
+    } catch (e) {
+      throw ApiException('JSON parse error: $e');
+    }
+  }
+
+  Future<ApiResponse<dynamic>> getJsonFlexibleWithResponse(
+    String path, {
+    bool includeAdminKey = false,
+  }) async {
+    final uri = Uri.parse('$baseUrl$path');
+
+    http.Response res;
+    try {
+      res = await _http
+          .get(uri, headers: _buildHeaders(includeAdminKey: includeAdminKey))
+          .timeout(const Duration(seconds: 5));
+    } catch (e) {
+      throw ApiException('Netzwerkfehler: $e');
+    }
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiException(
+        res.body.isEmpty ? 'Request failed' : res.body,
+        statusCode: res.statusCode,
+      );
+    }
+
+    try {
+      return ApiResponse<dynamic>(
+        data: jsonDecode(res.body),
+        statusCode: res.statusCode,
+        uri: uri,
+      );
     } catch (e) {
       throw ApiException('JSON parse error: $e');
     }

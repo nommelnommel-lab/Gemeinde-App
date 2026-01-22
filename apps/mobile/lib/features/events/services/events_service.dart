@@ -9,7 +9,7 @@ class EventsService {
   EventsService(this._apiClient, {bool useStub = false}) : _useStub = useStub;
 
   final ApiClient _apiClient;
-  bool _useStub;
+  final bool _useStub;
   int _stubCounter = 0;
   final List<Event> _stubEvents = [];
 
@@ -25,7 +25,6 @@ class EventsService {
       }
       return const EventsPermissions(canManageContent: true);
     } catch (_) {
-      _useStub = true;
       return const EventsPermissions(canManageContent: true);
     }
   }
@@ -35,47 +34,56 @@ class EventsService {
       return _getStubEvents();
     }
 
+    final from = DateTime.now().toIso8601String();
+    final path =
+        '/api/feed/events?from=${Uri.encodeQueryComponent(from)}&weeks=4';
+
     try {
-      final response = await _apiClient.getJsonFlexible('/events');
+      final response = await _apiClient.getJsonFlexibleWithResponse(path);
       if (kDebugMode) {
-        debugPrint('Events response type: ${response.runtimeType}');
-        if (response is Map<String, dynamic>) {
-          debugPrint('Events response keys: ${response.keys.toList()}');
+        debugPrint('GET ${response.uri} -> ${response.statusCode}');
+        debugPrint('Events response type: ${response.data.runtimeType}');
+        if (response.data is Map<String, dynamic>) {
+          debugPrint('Events response keys: ${response.data.keys.toList()}');
         }
       }
 
       final List<dynamic> items;
-      if (response is List<dynamic>) {
-        items = response;
-      } else if (response is Map<String, dynamic>) {
-        final data = response['data'] ?? response['events'];
+      if (response.data is List<dynamic>) {
+        items = response.data as List<dynamic>;
+      } else if (response.data is Map<String, dynamic>) {
+        final data =
+            (response.data as Map<String, dynamic>)['data'] ??
+                (response.data as Map<String, dynamic>)['events'];
         if (kDebugMode) {
           debugPrint('Events list container type: ${data.runtimeType}');
         }
         if (data is List<dynamic>) {
           items = data;
         } else {
-          throw Exception('Unerwartetes /events Format: list fehlt');
+          throw Exception('Unerwartetes /api/feed/events Format: list fehlt');
         }
       } else {
-        throw Exception('Unerwartetes /events Format: ${response.runtimeType}');
+        throw Exception(
+          'Unerwartetes /api/feed/events Format: ${response.data.runtimeType}',
+        );
       }
 
-      if (kDebugMode && items.isNotEmpty) {
-        final sample = items.first;
-        if (sample is Map<String, dynamic>) {
-          debugPrint('Events sample keys: ${sample.keys.toList()}');
-        }
-      }
-
-      return items
+      final events = items
           .whereType<Map<String, dynamic>>()
-          .map(Event.fromJson)
+          .map(_mapFeedEvent)
           .toList();
-    } catch (error) {
-      debugPrint('Events loading failed, fallback to stub: $error');
-      _useStub = true;
-      return _getStubEvents();
+      if (kDebugMode) {
+        debugPrint('Events loaded: ${events.length}');
+      }
+      return events;
+    } on ApiException catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          'GET ${_apiClient.baseUrl}$path -> ${error.statusCode ?? 'error'}',
+        );
+      }
+      rethrow;
     }
   }
 
@@ -88,7 +96,6 @@ class EventsService {
       final data = await _apiClient.getJson('/events/$id');
       return Event.fromJson(data);
     } catch (_) {
-      _useStub = true;
       return _getStubEvent(id);
     }
   }
@@ -102,7 +109,6 @@ class EventsService {
       final data = await _apiClient.postJson('/events', input.toJson());
       return Event.fromJson(data);
     } catch (_) {
-      _useStub = true;
       return _createStubEvent(input);
     }
   }
@@ -116,7 +122,6 @@ class EventsService {
       final data = await _apiClient.putJson('/events/$id', input.toJson());
       return Event.fromJson(data);
     } catch (_) {
-      _useStub = true;
       return _updateStubEvent(id, input);
     }
   }
@@ -130,9 +135,16 @@ class EventsService {
     try {
       await _apiClient.deleteJson('/events/$id');
     } catch (_) {
-      _useStub = true;
       _deleteStubEvent(id);
     }
+  }
+
+  Event _mapFeedEvent(Map<String, dynamic> json) {
+    final normalized = Map<String, dynamic>.from(json);
+    normalized['date'] ??= json['startAt'] ?? json['start_at'];
+    normalized['createdAt'] ??= json['created_at'] ?? normalized['date'];
+    normalized['updatedAt'] ??= json['updated_at'] ?? normalized['date'];
+    return Event.fromJson(normalized);
   }
 
   List<Event> _getStubEvents() {
