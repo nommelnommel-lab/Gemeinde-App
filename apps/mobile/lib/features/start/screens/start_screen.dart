@@ -89,9 +89,9 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
           ),
           const SizedBox(height: 8),
           _FeedFilters(
-            selected: _selectedCategory,
-            onSelected: (category) {
-              setState(() => _selectedCategory = category);
+            selected: _selectedFilter,
+            onSelected: (filter) {
+              setState(() => _selectedFilter = filter);
             },
           ),
           const SizedBox(height: 12),
@@ -141,9 +141,6 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
             .where((item) => item.type == PostType.warning)
             .toList();
     }
-    return _items
-        .where((item) => item.category == _selectedCategory)
-        .toList();
   }
 
   List<Post> _activePosts(List<Post> posts) {
@@ -244,24 +241,37 @@ class _FeedFilters extends StatelessWidget {
     required this.onSelected,
   });
 
-  final PostCategory? selected;
-  final ValueChanged<PostCategory?> onSelected;
+  final _FeedFilter selected;
+  final ValueChanged<_FeedFilter> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final filters = <PostCategory?>[null, ...PostCategory.values];
+    final filters = _FeedFilter.values;
 
     return Wrap(
       spacing: 8,
-      children: filters.map((category) {
-        final label = category == null ? 'Alle' : category.label;
+      children: filters.map((filter) {
+        final label = _labelForFilter(filter);
         return ChoiceChip(
           label: Text(label),
-          selected: category == selected,
-          onSelected: (_) => onSelected(category),
+          selected: filter == selected,
+          onSelected: (_) => onSelected(filter),
         );
       }).toList(),
     );
+  }
+
+  String _labelForFilter(_FeedFilter filter) {
+    switch (filter) {
+      case _FeedFilter.all:
+        return 'Alle';
+      case _FeedFilter.events:
+        return 'Events';
+      case _FeedFilter.news:
+        return 'News';
+      case _FeedFilter.warnings:
+        return 'Warnungen';
+    }
   }
 }
 
@@ -282,10 +292,10 @@ class _FeedListTile extends StatelessWidget {
 
     return Card(
       child: ListTile(
-        leading: const Icon(Icons.chat_bubble_outline),
+        leading: Icon(_iconForType(item.type)),
         title: Text(item.title),
         subtitle: Text(
-          '${item.category.label} · $formattedDate\n${_preview(item.body)}',
+          '${_labelForType(item.type)} · $formattedDate\n${_preview(item.body)}',
           style: theme.textTheme.bodySmall,
         ),
         isThreeLine: true,
@@ -307,6 +317,15 @@ class _FeedListTile extends StatelessWidget {
   }
 
   String _labelForType(PostType type) => type.label;
+
+  String _preview(String body) {
+    const maxLength = 60;
+    final cleaned = body.trim();
+    if (cleaned.length <= maxLength) {
+      return cleaned;
+    }
+    return '${cleaned.substring(0, maxLength)}…';
+  }
 }
 
 class _ErrorView extends StatelessWidget {
