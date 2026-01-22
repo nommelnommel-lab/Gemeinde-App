@@ -73,7 +73,7 @@ class _MehrScreenState extends State<MehrScreen> {
           subtitle: const Text('Wichtige Hinweise zur Gemeinde'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
-            AppRouterScope.of(context).push(const TenantInfoScreen());
+            AppRouterScope.of(context).push(TenantInfoScreen());
           },
         ),
         const Divider(height: 0),
