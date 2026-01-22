@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../events/models/event.dart';
+import '../../events/models/event_permissions.dart';
+import '../../events/screens/event_detail_screen.dart';
 import '../../events/services/events_service.dart';
+import '../../news/models/news_item.dart';
+import '../../news/screens/news_detail_screen.dart';
+import '../../news/services/news_service.dart';
 import '../../warnings/models/warning_item.dart';
 import '../../warnings/screens/warning_detail_screen.dart';
-import '../../warnings/screens/warnings_screen.dart';
 import '../../warnings/services/warnings_service.dart';
 import '../../warnings/utils/warning_formatters.dart';
-import '../../warnings/utils/warning_widgets.dart';
 
 class StartFeedScreen extends StatefulWidget {
   const StartFeedScreen({
@@ -25,13 +28,16 @@ class StartFeedScreen extends StatefulWidget {
 
 class _StartFeedScreenState extends State<StartFeedScreen> {
   late final EventsService _eventsService;
+  late final NewsService _newsService;
   late final WarningsService _warningsService;
   bool _initialized = false;
+  EventsPermissions _permissions =
+      const EventsPermissions(canManageContent: false);
 
   bool _loading = true;
   String? _error;
-  List<Event> _events = const [];
-  List<WarningItem> _warnings = const [];
+  List<_AggregatedFeedItem> _items = const [];
+  _FeedFilter _selectedFilter = _FeedFilter.all;
 
   @override
   void didChangeDependencies() {
@@ -41,6 +47,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     }
     final services = AppServicesScope.of(context);
     _eventsService = services.eventsService;
+    _newsService = services.newsService;
     _warningsService = services.warningsService;
     _initialized = true;
     _load();
@@ -53,11 +60,23 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     });
 
     try {
-      final events = await _eventsService.getEvents();
-      final warnings = await _warningsService.getWarnings();
+      final results = await Future.wait([
+        _eventsService.getEvents(),
+        _newsService.getNews(),
+        _warningsService.getWarnings(),
+        _eventsService.getPermissions(),
+      ]);
+      final events = results[0] as List<Event>;
+      final news = results[1] as List<NewsItem>;
+      final warnings = results[2] as List<WarningItem>;
+      final permissions = results[3] as EventsPermissions;
       setState(() {
-        _events = events;
-        _warnings = warnings;
+        _permissions = permissions;
+        _items = _buildFeedItems(
+          events: events,
+          news: news,
+          warnings: warnings,
+        );
       });
     } catch (e) {
       setState(() => _error = e.toString());
@@ -69,6 +88,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final filteredItems = _filteredItems();
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -89,41 +109,32 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
             onTap: () => widget.onSelectTab(3),
           ),
           const SizedBox(height: 24),
-          _WarningsSection(
-            warnings: _sortedWarnings(_activeWarnings(_warnings)).take(2).toList(),
-            onShowAll: () => AppRouterScope.of(context).push(
-              const WarningsScreen(),
-            ),
-            onSelectWarning: (warning) => AppRouterScope.of(context).push(
-              WarningDetailScreen(
-                warning: warning,
-                warningsService: _warningsService,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
           Text(
-            'Nächste Events',
+            'Start Feed',
             style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          _FeedFilters(
+            selected: _selectedFilter,
+            onSelected: (filter) {
+              setState(() => _selectedFilter = filter);
+            },
           ),
           const SizedBox(height: 12),
           if (_loading)
             const Center(child: CircularProgressIndicator())
           else if (_error != null)
-            _EventsErrorView(error: _error!, onRetry: _load)
-          else if (_events.isEmpty)
-            const Text('Zurzeit sind keine Veranstaltungen geplant.')
+            _ErrorView(error: _error!, onRetry: _load)
+          else if (filteredItems.isEmpty)
+            const Text('Zurzeit sind keine passenden Beiträge verfügbar.')
           else
-            ..._events.take(3).map(
-                  (event) => Card(
-                    child: ListTile(
-                      title: Text(event.title),
-                      subtitle:
-                          Text('${_formatDate(event.date)} · ${event.location}'),
-                      trailing: const Icon(Icons.chevron_right),
-                    ),
-                  ),
-                ),
+            ...filteredItems.map(
+              (item) => _FeedListTile(
+                item: item,
+                formattedDate: _formatDate(item.date),
+                onTap: () => _handleTap(item),
+              ),
+            ),
         ],
       ),
     );
@@ -133,24 +144,59 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     return formatDate(date);
   }
 
-  List<WarningItem> _sortedWarnings(List<WarningItem> warnings) {
-    final indexed = warnings.asMap().entries.toList();
-    indexed.sort((a, b) {
-      final severityCompare =
-          _severityRank(a.value.severity).compareTo(
-        _severityRank(b.value.severity),
-      );
-      if (severityCompare != 0) {
-        return severityCompare;
-      }
-      final dateCompare =
-          b.value.createdAt.compareTo(a.value.createdAt);
-      if (dateCompare != 0) {
-        return dateCompare;
-      }
-      return a.key.compareTo(b.key);
-    });
-    return indexed.map((entry) => entry.value).toList();
+  List<_AggregatedFeedItem> _buildFeedItems({
+    required List<Event> events,
+    required List<NewsItem> news,
+    required List<WarningItem> warnings,
+  }) {
+    final items = <_AggregatedFeedItem>[
+      ...events.map(
+        (event) => _AggregatedFeedItem(
+          type: _FeedItemType.event,
+          title: event.title,
+          date: event.date,
+          event: event,
+        ),
+      ),
+      ...news.map(
+        (item) => _AggregatedFeedItem(
+          type: _FeedItemType.news,
+          title: item.title,
+          date: item.publishedAt,
+          news: item,
+        ),
+      ),
+      ..._activeWarnings(warnings).map(
+        (warning) => _AggregatedFeedItem(
+          type: _FeedItemType.warning,
+          title: warning.title,
+          date: warning.publishedAt,
+          warning: warning,
+        ),
+      ),
+    ];
+
+    items.sort((a, b) => b.date.compareTo(a.date));
+    return items;
+  }
+
+  List<_AggregatedFeedItem> _filteredItems() {
+    switch (_selectedFilter) {
+      case _FeedFilter.all:
+        return _items;
+      case _FeedFilter.events:
+        return _items
+            .where((item) => item.type == _FeedItemType.event)
+            .toList();
+      case _FeedFilter.news:
+        return _items
+            .where((item) => item.type == _FeedItemType.news)
+            .toList();
+      case _FeedFilter.warnings:
+        return _items
+            .where((item) => item.type == _FeedItemType.warning)
+            .toList();
+    }
   }
 
   List<WarningItem> _activeWarnings(List<WarningItem> warnings) {
@@ -164,14 +210,33 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
         .toList();
   }
 
-  int _severityRank(WarningSeverity severity) {
-    switch (severity) {
-      case WarningSeverity.critical:
-        return 0;
-      case WarningSeverity.warning:
-        return 1;
-      case WarningSeverity.info:
-        return 2;
+  void _handleTap(_AggregatedFeedItem item) {
+    switch (item.type) {
+      case _FeedItemType.event:
+        if (item.event == null) return;
+        AppRouterScope.of(context).push(
+          EventDetailScreen(
+            event: item.event!,
+            eventsService: _eventsService,
+            permissions: _permissions,
+          ),
+        );
+        return;
+      case _FeedItemType.news:
+        if (item.news == null) return;
+        AppRouterScope.of(context).push(
+          NewsDetailScreen(item: item.news!, newsService: _newsService),
+        );
+        return;
+      case _FeedItemType.warning:
+        if (item.warning == null) return;
+        AppRouterScope.of(context).push(
+          WarningDetailScreen(
+            warning: item.warning!,
+            warningsService: _warningsService,
+          ),
+        );
+        return;
     }
   }
 }
@@ -229,103 +294,149 @@ class _StartCard extends StatelessWidget {
   }
 }
 
-class _EventsErrorView extends StatelessWidget {
-  const _EventsErrorView({required this.error, required this.onRetry});
+enum _FeedFilter {
+  all,
+  events,
+  news,
+  warnings,
+}
+
+enum _FeedItemType {
+  event,
+  news,
+  warning,
+}
+
+class _AggregatedFeedItem {
+  const _AggregatedFeedItem({
+    required this.type,
+    required this.title,
+    required this.date,
+    this.event,
+    this.news,
+    this.warning,
+  });
+
+  final _FeedItemType type;
+  final String title;
+  final DateTime date;
+  final Event? event;
+  final NewsItem? news;
+  final WarningItem? warning;
+}
+
+class _FeedFilters extends StatelessWidget {
+  const _FeedFilters({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final _FeedFilter selected;
+  final ValueChanged<_FeedFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = <_FeedFilter, String>{
+      _FeedFilter.all: 'Alle',
+      _FeedFilter.events: 'Events',
+      _FeedFilter.news: 'News',
+      _FeedFilter.warnings: 'Warnungen',
+    };
+
+    return Wrap(
+      spacing: 8,
+      children: _FeedFilter.values.map((filter) {
+        return ChoiceChip(
+          label: Text(labels[filter]!),
+          selected: filter == selected,
+          onSelected: (_) => onSelected(filter),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _FeedListTile extends StatelessWidget {
+  const _FeedListTile({
+    required this.item,
+    required this.formattedDate,
+    required this.onTap,
+  });
+
+  final _AggregatedFeedItem item;
+  final String formattedDate;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: ListTile(
+        leading: Icon(_iconForType(item.type)),
+        title: Text(item.title),
+        subtitle: Text(
+          '${_labelForType(item.type)} · $formattedDate',
+          style: theme.textTheme.bodySmall,
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  IconData _iconForType(_FeedItemType type) {
+    switch (type) {
+      case _FeedItemType.event:
+        return Icons.event;
+      case _FeedItemType.news:
+        return Icons.newspaper;
+      case _FeedItemType.warning:
+        return Icons.warning_amber;
+    }
+  }
+
+  String _labelForType(_FeedItemType type) {
+    switch (type) {
+      case _FeedItemType.event:
+        return 'Event';
+      case _FeedItemType.news:
+        return 'News';
+      case _FeedItemType.warning:
+        return 'Warnung';
+    }
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  const _ErrorView({required this.error, required this.onRetry});
 
   final String error;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Events konnten nicht geladen werden.'),
-        const SizedBox(height: 8),
-        Text(
-          error,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        TextButton(
-          onPressed: onRetry,
-          child: const Text('Erneut versuchen'),
-        ),
-      ],
-    );
-  }
-}
-
-class _WarningsSection extends StatelessWidget {
-  const _WarningsSection({
-    required this.warnings,
-    required this.onShowAll,
-    required this.onSelectWarning,
-  });
-
-  final List<WarningItem> warnings;
-  final VoidCallback onShowAll;
-  final ValueChanged<WarningItem> onSelectWarning;
-
-  @override
-  Widget build(BuildContext context) {
-    if (warnings.isEmpty) {
-      return Card(
+    return Center(
+      child: Card(
+        margin: const EdgeInsets.all(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.warning_amber_outlined),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Aktuell gibt es keine Warnungen.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
+              const Text(
+                'Feed konnte nicht geladen werden',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              Text(error, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: onRetry,
+                child: const Text('Erneut versuchen'),
               ),
             ],
           ),
-        ),
-      );
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Warnungen',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: onShowAll,
-                  child: const Text('Alle anzeigen'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ...warnings.map(
-              (warning) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(warning.title),
-                subtitle: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    WarningSeverityChip(severity: warning.severity),
-                    Text(formatDateTime(warning.createdAt)),
-                  ],
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => onSelectWarning(warning),
-              ),
-            ),
-          ],
         ),
       ),
     );
