@@ -1,0 +1,42 @@
+import 'package:flutter/material.dart';
+
+import '../../api/health_service.dart';
+import '../../features/events/services/events_service.dart';
+import '../../features/news/services/news_service.dart';
+import '../../features/warnings/services/warnings_service.dart';
+
+class AppServices {
+  const AppServices({
+    required this.eventsService,
+    required this.newsService,
+    required this.healthService,
+    required this.warningsService,
+  });
+
+  final EventsService eventsService;
+  final NewsService newsService;
+  final HealthService healthService;
+  final WarningsService warningsService;
+}
+
+class AppServicesScope extends InheritedWidget {
+  const AppServicesScope({
+    super.key,
+    required this.services,
+    required super.child,
+  });
+
+  final AppServices services;
+
+  static AppServices of(BuildContext context) {
+    final scope =
+        context.dependOnInheritedWidgetOfExactType<AppServicesScope>();
+    assert(scope != null, 'AppServicesScope not found in widget tree.');
+    return scope!.services;
+  }
+
+  @override
+  bool updateShouldNotify(AppServicesScope oldWidget) {
+    return services != oldWidget.services;
+  }
+}
