@@ -21,14 +21,13 @@ class WarningItem {
 
   factory WarningItem.fromJson(Map<String, dynamic> json) {
     final publishedAtValue = json['publishedAt'] ?? json['createdAt'];
+    final bodyValue = json['body'] ?? json['description'];
+    final severityValue = json['severity'];
     return WarningItem(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      body: json['body'] as String,
-      severity: WarningSeverity.values.firstWhere(
-        (severity) => severity.name == json['severity'],
-        orElse: () => WarningSeverity.info,
-      ),
+      id: (json['id'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      body: (bodyValue ?? '').toString(),
+      severity: _parseSeverity(severityValue),
       publishedAt: _parseDateTime(publishedAtValue),
       validUntil: _parseOptionalDateTime(json['validUntil']),
       source: json['source'] as String?,
@@ -50,6 +49,22 @@ class WarningItem {
       return null;
     }
     return _parseDateTime(value);
+  }
+
+  static WarningSeverity _parseSeverity(dynamic value) {
+    final severity = value?.toString();
+    switch (severity) {
+      case 'minor':
+      case 'warning':
+        return WarningSeverity.warning;
+      case 'major':
+      case 'critical':
+        return WarningSeverity.critical;
+      case 'info':
+        return WarningSeverity.info;
+      default:
+        return WarningSeverity.info;
+    }
   }
 }
 
