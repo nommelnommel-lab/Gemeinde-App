@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/di/app_services_scope.dart';
+import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../events/models/event.dart';
-import '../../events/models/event_permissions.dart';
 import '../../events/screens/event_detail_screen.dart';
 import '../../events/services/events_service.dart';
 import '../../news/models/news_item.dart';
@@ -31,8 +31,6 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   late final NewsService _newsService;
   late final WarningsService _warningsService;
   bool _initialized = false;
-  EventsPermissions _permissions =
-      const EventsPermissions(canManageContent: false);
 
   bool _loading = true;
   String? _error;
@@ -64,14 +62,11 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
         _eventsService.getEvents(),
         _newsService.getNews(),
         _warningsService.getWarnings(),
-        _eventsService.getPermissions(),
       ]);
       final events = results[0] as List<Event>;
       final news = results[1] as List<NewsItem>;
       final warnings = results[2] as List<WarningItem>;
-      final permissions = results[3] as EventsPermissions;
       setState(() {
-        _permissions = permissions;
         _items = _buildFeedItems(
           events: events,
           news: news,
@@ -213,26 +208,40 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     switch (item.type) {
       case _FeedItemType.event:
         if (item.event == null) return;
+        final canEdit =
+            AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+                false;
         AppRouterScope.of(context).push(
           EventDetailScreen(
             event: item.event!,
             eventsService: _eventsService,
-            canEdit: _permissions.canManageContent,
+            canEdit: canEdit,
           ),
         );
         return;
       case _FeedItemType.news:
         if (item.news == null) return;
+        final canEdit =
+            AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+                false;
         AppRouterScope.of(context).push(
-          NewsDetailScreen(item: item.news!, newsService: _newsService),
+          NewsDetailScreen(
+            item: item.news!,
+            newsService: _newsService,
+            canEdit: canEdit,
+          ),
         );
         return;
       case _FeedItemType.warning:
         if (item.warning == null) return;
+        final canEdit =
+            AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+                false;
         AppRouterScope.of(context).push(
           WarningDetailScreen(
             warning: item.warning!,
             warningsService: _warningsService,
+            canEdit: canEdit,
           ),
         );
         return;

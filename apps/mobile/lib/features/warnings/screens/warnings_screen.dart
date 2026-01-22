@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/warning_item.dart';
 import '../services/warnings_service.dart';
 import '../utils/warning_formatters.dart';
 import 'warning_detail_screen.dart';
+import 'warning_form_screen.dart';
 
 class WarningsScreen extends StatefulWidget {
   const WarningsScreen({super.key});
@@ -21,10 +23,15 @@ class _WarningsScreenState extends State<WarningsScreen> {
   String? _error;
   List<WarningItem> _warnings = const [];
   WarningFilter _selectedFilter = WarningFilter.all;
+  bool _canManageContent = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final canManage =
+        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+            false;
+    _canManageContent = canManage;
     if (_initialized) {
       return;
     }
@@ -56,6 +63,13 @@ class _WarningsScreenState extends State<WarningsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Warnungen')),
+      floatingActionButton: _canManageContent
+          ? FloatingActionButton.extended(
+              onPressed: _openCreateWarning,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Warning'),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -84,14 +98,21 @@ class _WarningsScreenState extends State<WarningsScreen> {
                       '${warning.severity.label} · ${formatDateTime(warning.publishedAt)}',
                     ),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => AppRouterScope.of(context).push(
+                  onTap: () async {
+                    final updated = await AppRouterScope.of(context)
+                        .push<bool>(
                       WarningDetailScreen(
                         warning: warning,
                         warningsService: _warningsService,
+                        canEdit: _canManageContent,
                       ),
-                    ),
-                  ),
+                    );
+                    if (updated == true) {
+                      await _load();
+                    }
+                  },
                 ),
+              ),
               ),
           ],
         ),
@@ -177,6 +198,18 @@ class _WarningsScreenState extends State<WarningsScreen> {
       case WarningSeverity.critical:
         return const Icon(Icons.report, color: Colors.red);
     }
+  }
+
+  Future<void> _openCreateWarning() async {
+    final created = await AppRouterScope.of(context).push<WarningItem>(
+      WarningFormScreen(warningsService: _warningsService),
+    );
+    if (!mounted || created == null) {
+      return;
+    }
+    setState(() {
+      _warnings = [created, ..._warnings];
+    });
   }
 }
 
