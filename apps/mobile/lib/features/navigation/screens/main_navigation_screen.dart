@@ -4,7 +4,7 @@ import '../../../api/health_service.dart';
 import '../../events/services/events_service.dart';
 import '../../gemeinde_app/screens/gemeinde_app_hub_screen.dart';
 import '../../mehr/screens/mehr_screen.dart';
-import '../../start/screens/start_screen.dart';
+import '../../start_feed/screens/start_feed_screen.dart';
 import '../../verwaltung/screens/verwaltung_hub_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -28,7 +28,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final screens = <Widget>[
       StartFeedScreen(
-        onSelectTab: _onSelectTab,
         eventsService: widget.eventsService,
       ),
       GemeindeAppHubScreen(eventsService: widget.eventsService),
@@ -62,7 +61,4 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  void _onSelectTab(int index) {
-    setState(() => _selectedIndex = index);
-  }
 }
