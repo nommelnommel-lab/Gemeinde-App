@@ -8,7 +8,10 @@ class PermissionsService {
 
   Future<AppPermissions> getPermissions() async {
     try {
-      final data = await _apiClient.getJsonFlexible('/permissions');
+      final data = await _apiClient.getJsonFlexible(
+        '/permissions',
+        includeAdminKey: true,
+      );
       final payload = _extractPayload(data);
       final canManage = _readBool(
             payload['canManageContent'],

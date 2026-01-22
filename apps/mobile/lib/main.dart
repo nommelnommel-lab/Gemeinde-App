@@ -8,6 +8,7 @@ import 'features/events/services/events_service.dart';
 import 'features/news/services/news_service.dart';
 import 'features/navigation/screens/main_navigation_screen.dart';
 import 'features/posts/services/posts_service.dart';
+import 'features/tenant/services/tenant_service.dart';
 import 'features/warnings/services/warnings_service.dart';
 import 'shared/auth/admin_key_store.dart';
 import 'shared/auth/app_permissions.dart';
@@ -44,6 +45,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
     _router = AppRouter(GlobalKey<NavigatorState>());
     _apiClient = ApiClient(
       baseUrl: AppConfig.apiBaseUrl,
+      tenantId: AppConfig.tenantId,
       adminKeyStore: widget.adminKeyStore,
     );
     _services = AppServices(
@@ -54,6 +56,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
       warningsService: WarningsService(_apiClient),
       permissionsService: PermissionsService(_apiClient),
       adminKeyStore: widget.adminKeyStore,
+      tenantService: TenantService(_apiClient),
     );
     _loadPermissions();
   }
