@@ -19,6 +19,7 @@ services:
       - "${API_PORT:-3000}:3000"
     environment:
       PORT: "3000"
+      SITE_KEYS_JSON: '{"HD-2026-9f3c1a2b-KEY":"hilders"}'
     depends_on:
       - postgres
 
