@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
 import '../models/event.dart';
-import '../models/event_permissions.dart';
 import '../services/events_service.dart';
 import 'event_form_screen.dart';
 
@@ -11,12 +10,12 @@ class EventDetailScreen extends StatefulWidget {
     super.key,
     required this.event,
     required this.eventsService,
-    required this.permissions,
+    required this.canEdit,
   });
 
   final Event event;
   final EventsService eventsService;
-  final EventsPermissions permissions;
+  final bool canEdit;
 
   @override
   State<EventDetailScreen> createState() => _EventDetailScreenState();
@@ -61,7 +60,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             icon: const Icon(Icons.arrow_back),
             label: const Text('Zurück'),
           ),
-          actions: widget.permissions.canManageContent
+          actions: widget.canEdit
               ? [
                   IconButton(
                     tooltip: 'Bearbeiten',
@@ -113,13 +112,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
     if (!mounted) return;
     if (updated != null) {
-      setState(() {
-        _event = updated;
-        _hasChanges = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Event aktualisiert.')),
-      );
+      _hasChanges = true;
+      AppRouterScope.of(context).pop(true);
     }
   }
 
