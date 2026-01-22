@@ -1,140 +1,94 @@
-import 'dart:math';
-
+import '../../../api/api_client.dart';
 import '../models/post.dart';
 
 class PostsService {
-  factory PostsService() => _instance;
+  PostsService(this._apiClient);
 
-  PostsService._internal() {
-    if (_postsByCategory.isEmpty) {
-      _seedPosts();
-    }
+  final ApiClient _apiClient;
+
+  static const String postsEndpoint = '/posts';
+  static String postByIdEndpoint(String id) => '/posts/$id';
+
+  /// Endpoint: GET /posts
+  Future<List<Post>> getPosts({PostType? type}) async {
+    final path = type == null
+        ? postsEndpoint
+        : '$postsEndpoint?type=${type.apiValue}';
+    final response = await _apiClient.getJsonFlexible(path);
+    final items = _extractList(response);
+    return items
+        .whereType<Map<String, dynamic>>()
+        .map(Post.fromJson)
+        .toList();
   }
 
-  static final PostsService _instance = PostsService._internal();
-  final Map<PostCategory, List<Post>> _postsByCategory = {};
-
-  Future<List<Post>> getPosts(PostCategory category) async {
-    final posts = List<Post>.from(_postsByCategory[category] ?? const []);
-    posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return List<Post>.unmodifiable(posts);
+  /// Endpoint: GET /posts/:id
+  Future<Post> getPost(String id) async {
+    final response = await _apiClient.getJsonFlexible(postByIdEndpoint(id));
+    final data = _extractMap(response);
+    return Post.fromJson(data);
   }
 
-  Future<Post> createPost(PostCategory category, PostInput input) async {
-    final post = Post(
-      id: _generateId(),
-      category: category,
-      title: input.title,
-      body: input.body,
-      createdAt: DateTime.now(),
+  /// Endpoint: POST /posts
+  Future<Post> createPost(
+    PostInput input, {
+    bool isAdmin = false,
+  }) async {
+    _assertAdmin(isAdmin);
+    final data = await _apiClient.postJson(postsEndpoint, input.toJson());
+    return Post.fromJson(data);
+  }
+
+  /// Endpoint: PUT /posts/:id
+  Future<Post> updatePost(
+    String id,
+    PostInput input, {
+    bool isAdmin = false,
+  }) async {
+    _assertAdmin(isAdmin);
+    final data = await _apiClient.putJson(
+      postByIdEndpoint(id),
+      input.toJson(),
     );
-    final list = _postsByCategory.putIfAbsent(category, () => []);
-    list.add(post);
-    return post;
+    return Post.fromJson(data);
   }
 
-  Future<Post> updatePost(String id, PostInput input) async {
-    for (final entry in _postsByCategory.entries) {
-      final index = entry.value.indexWhere((post) => post.id == id);
-      if (index != -1) {
-        final updated = entry.value[index].copyWith(
-          title: input.title,
-          body: input.body,
-        );
-        entry.value[index] = updated;
-        return updated;
+  /// Endpoint: DELETE /posts/:id
+  Future<void> deletePost(
+    String id, {
+    bool isAdmin = false,
+  }) async {
+    _assertAdmin(isAdmin);
+    await _apiClient.deleteJson(postByIdEndpoint(id));
+  }
+
+  List<dynamic> _extractList(dynamic response) {
+    if (response is List<dynamic>) {
+      return response;
+    }
+    if (response is Map<String, dynamic>) {
+      final data = response['data'] ?? response['posts'];
+      if (data is List<dynamic>) {
+        return data;
       }
     }
-    throw StateError('Post nicht gefunden');
+    return const <dynamic>[];
   }
 
-  void _seedPosts() {
-    final now = DateTime.now();
-    _postsByCategory[PostCategory.flohmarkt] = [
-      Post(
-        id: _generateId(),
-        category: PostCategory.flohmarkt,
-        title: 'Kinderfahrrad zu verkaufen',
-        body: 'Gepflegtes 16-Zoll-Rad, Abholung in der Lindenstraße.',
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-      Post(
-        id: _generateId(),
-        category: PostCategory.flohmarkt,
-        title: 'Flohmarktstand teilen',
-        body: 'Suche Mitstreiter für den Hofflohmarkt am Samstag.',
-        createdAt: now.subtract(const Duration(days: 3)),
-      ),
-    ];
-    _postsByCategory[PostCategory.cafeTreff] = [
-      Post(
-        id: _generateId(),
-        category: PostCategory.cafeTreff,
-        title: 'Kaffeerunde am Mittwoch',
-        body: 'Treffen um 15 Uhr im Gemeindezentrum. Kuchen bitte mitbringen.',
-        createdAt: now.subtract(const Duration(days: 2)),
-      ),
-      Post(
-        id: _generateId(),
-        category: PostCategory.cafeTreff,
-        title: 'Neue Nachbarn willkommen',
-        body: 'Samstagsfrühstück im Café am Markt – alle sind eingeladen.',
-        createdAt: now.subtract(const Duration(days: 5)),
-      ),
-    ];
-    _postsByCategory[PostCategory.seniorenHilfe] = [
-      Post(
-        id: _generateId(),
-        category: PostCategory.seniorenHilfe,
-        title: 'Fahrdienst zum Arzt gesucht',
-        body: 'Wer kann mich nächste Woche Dienstag zum Arzt begleiten?',
-        createdAt: now.subtract(const Duration(days: 1, hours: 5)),
-      ),
-      Post(
-        id: _generateId(),
-        category: PostCategory.seniorenHilfe,
-        title: 'Telefonpatenschaft',
-        body: 'Ich rufe gern einmal pro Woche an. Bitte melden!',
-        createdAt: now.subtract(const Duration(days: 4)),
-      ),
-    ];
-    _postsByCategory[PostCategory.umzugEntruempelung] = [
-      Post(
-        id: _generateId(),
-        category: PostCategory.umzugEntruempelung,
-        title: 'Helfer für Umzug gesucht',
-        body: 'Brauche zwei kräftige Hände für Samstagvormittag.',
-        createdAt: now.subtract(const Duration(days: 2, hours: 3)),
-      ),
-      Post(
-        id: _generateId(),
-        category: PostCategory.umzugEntruempelung,
-        title: 'Keller entrümpeln',
-        body: 'Suche Unterstützung beim Ausräumen. Werkzeug vorhanden.',
-        createdAt: now.subtract(const Duration(days: 6)),
-      ),
-    ];
-    _postsByCategory[PostCategory.kinderSpielen] = [
-      Post(
-        id: _generateId(),
-        category: PostCategory.kinderSpielen,
-        title: 'Spielplatz-Treff',
-        body: 'Freitag 16 Uhr am See-Spielplatz, Snacks willkommen.',
-        createdAt: now.subtract(const Duration(days: 1, hours: 2)),
-      ),
-      Post(
-        id: _generateId(),
-        category: PostCategory.kinderSpielen,
-        title: 'Eltern-Kind-Spielgruppe',
-        body: 'Neue Runde im Gemeindehaus, montags um 10 Uhr.',
-        createdAt: now.subtract(const Duration(days: 3)),
-      ),
-    ];
+  Map<String, dynamic> _extractMap(dynamic response) {
+    if (response is Map<String, dynamic>) {
+      final data = response['data'] ?? response['post'];
+      if (data is Map<String, dynamic>) {
+        return data;
+      }
+      return response;
+    }
+    throw ApiException('Unerwartetes JSON-Format');
   }
 
-  String _generateId() {
-    final timestamp = DateTime.now().microsecondsSinceEpoch;
-    final random = Random().nextInt(1000);
-    return 'post_$timestamp$random';
+  void _assertAdmin(bool isAdmin) {
+    if (!isAdmin) {
+      throw StateError('Keine Berechtigung für diese Aktion.');
+    }
   }
 }

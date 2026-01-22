@@ -7,6 +7,7 @@ import 'config/app_config.dart';
 import 'features/events/services/events_service.dart';
 import 'features/news/services/news_service.dart';
 import 'features/navigation/screens/main_navigation_screen.dart';
+import 'features/posts/services/posts_service.dart';
 import 'features/warnings/services/warnings_service.dart';
 import 'shared/auth/admin_key_store.dart';
 import 'shared/auth/app_permissions.dart';
@@ -48,6 +49,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
     _services = AppServices(
       eventsService: EventsService(_apiClient),
       newsService: NewsService(_apiClient),
+      postsService: PostsService(_apiClient),
       healthService: HealthService(_apiClient),
       warningsService: WarningsService(_apiClient),
       permissionsService: PermissionsService(_apiClient),

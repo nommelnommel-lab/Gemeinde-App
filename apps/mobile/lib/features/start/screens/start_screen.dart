@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/auth/app_permissions.dart';
+import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../warnings/utils/warning_formatters.dart';
 import '../../posts/models/post.dart';
 import '../../posts/screens/post_detail_screen.dart';
 import '../../posts/services/posts_service.dart';
@@ -25,7 +27,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   bool _loading = true;
   String? _error;
   List<Post> _items = const [];
-  PostCategory? _selectedCategory;
+  _FeedFilter _selectedFilter = _FeedFilter.all;
 
   @override
   void didChangeDependencies() {
@@ -33,7 +35,8 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     if (_initialized) {
       return;
     }
-    _postsService = PostsService();
+    final services = AppServicesScope.of(context);
+    _postsService = services.postsService;
     _initialized = true;
     _load();
   }
@@ -45,16 +48,10 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     });
 
     try {
-      final categories = PostCategory.values;
-      final results = await Future.wait(
-        categories.map(_postsService.getPosts),
-      );
-      final items = <Post>[];
-      for (final posts in results) {
-        items.addAll(posts);
-      }
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      setState(() => _items = items);
+      final posts = await _postsService.getPosts();
+      setState(() {
+        _items = _buildFeedItems(posts);
+      });
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -108,7 +105,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
             ...filteredItems.map(
               (item) => _FeedListTile(
                 item: item,
-                formattedDate: _formatDate(item.createdAt),
+                formattedDate: _formatDate(_displayDate(item)),
                 onTap: () => _handleTap(item),
               ),
             ),
@@ -117,33 +114,67 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     );
   }
 
+  String _formatDate(DateTime date) {
+    return formatDate(date);
+  }
+
+  List<Post> _buildFeedItems(List<Post> posts) {
+    final filtered = _activePosts(posts);
+    filtered.sort((a, b) => _displayDate(b).compareTo(_displayDate(a)));
+    return filtered;
+  }
+
   List<Post> _filteredItems() {
-    if (_selectedCategory == null) {
-      return _items;
+    switch (_selectedFilter) {
+      case _FeedFilter.all:
+        return _items;
+      case _FeedFilter.events:
+        return _items
+            .where((item) => item.type == PostType.event)
+            .toList();
+      case _FeedFilter.news:
+        return _items
+            .where((item) => item.type == PostType.news)
+            .toList();
+      case _FeedFilter.warnings:
+        return _items
+            .where((item) => item.type == PostType.warning)
+            .toList();
     }
     return _items
         .where((item) => item.category == _selectedCategory)
         .toList();
   }
 
+  List<Post> _activePosts(List<Post> posts) {
+    final now = DateTime.now();
+    return posts
+        .where(
+          (post) =>
+              post.type != PostType.warning ||
+              post.validUntil == null ||
+              post.validUntil!.isAfter(now),
+        )
+        .toList();
+  }
+
   void _handleTap(Post item) {
-    final canEdit =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-            false;
     AppRouterScope.of(context).push(
       PostDetailScreen(
         post: item,
         postsService: _postsService,
-        isAdmin: canEdit,
+        isAdmin:
+            AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+                false,
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final year = date.year.toString();
-    return '$day.$month.$year';
+  DateTime _displayDate(Post post) {
+    if (post.type == PostType.event && post.date != null) {
+      return post.date!;
+    }
+    return post.createdAt;
   }
 }
 
@@ -198,6 +229,13 @@ class _StartCard extends StatelessWidget {
       ),
     );
   }
+}
+
+enum _FeedFilter {
+  all,
+  events,
+  news,
+  warnings,
 }
 
 class _FeedFilters extends StatelessWidget {
@@ -257,14 +295,18 @@ class _FeedListTile extends StatelessWidget {
     );
   }
 
-  String _preview(String body) {
-    const maxLength = 70;
-    final cleaned = body.trim();
-    if (cleaned.length <= maxLength) {
-      return cleaned;
+  IconData _iconForType(PostType type) {
+    switch (type) {
+      case PostType.event:
+        return Icons.event;
+      case PostType.news:
+        return Icons.newspaper;
+      case PostType.warning:
+        return Icons.warning_amber;
     }
-    return '${cleaned.substring(0, maxLength)}…';
   }
+
+  String _labelForType(PostType type) => type.label;
 }
 
 class _ErrorView extends StatelessWidget {
