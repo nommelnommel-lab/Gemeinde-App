@@ -4,6 +4,7 @@ import '../../../api/health_service.dart';
 import '../../events/services/events_service.dart';
 import '../../gemeinde_app/screens/gemeinde_app_hub_screen.dart';
 import '../../mehr/screens/mehr_screen.dart';
+import '../../news/services/news_service.dart';
 import '../../start/screens/start_screen.dart';
 import '../../verwaltung/screens/verwaltung_hub_screen.dart';
 import '../../warnings/screens/warnings_screen.dart';
@@ -15,11 +16,13 @@ class MainNavigationScreen extends StatefulWidget {
     required this.healthService,
     required this.eventsService,
     required this.warningsService,
+    required this.newsService,
   });
 
   final HealthService healthService;
   final EventsService eventsService;
   final WarningsService warningsService;
+  final NewsService newsService;
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -35,9 +38,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onSelectTab: _onSelectTab,
         eventsService: widget.eventsService,
         warningsService: widget.warningsService,
+        newsService: widget.newsService,
       ),
       WarningsScreen(warningsService: widget.warningsService),
-      GemeindeAppHubScreen(eventsService: widget.eventsService),
+      GemeindeAppHubScreen(
+        eventsService: widget.eventsService,
+        newsService: widget.newsService,
+      ),
       const VerwaltungHubScreen(),
       MehrScreen(healthService: widget.healthService),
     ];

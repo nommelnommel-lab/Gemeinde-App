@@ -1,20 +1,92 @@
-import '../../../api/api_client.dart';
 import '../models/news_item.dart';
 
 class NewsService {
-  NewsService([ApiClient? apiClient])
-      : _apiClient = apiClient ?? ApiClient.platform();
+  NewsService({this.isAdmin = true}) : _newsStore = [..._stubNews];
 
-  final ApiClient _apiClient;
+  final bool isAdmin;
+  final List<NewsItem> _newsStore;
 
-  /// Usage idea for StartFeed:
-  /// ```dart
-  /// final news = await NewsService().getNews();
-  /// // setState(() => _news = news);
-  /// ```
+  static const String newsEndpoint = '/news';
+  static String newsByIdEndpoint(String id) => '/news/$id';
+
+  /// Endpoint: GET /news
   Future<List<NewsItem>> getNews() async {
-    assert(_apiClient.baseUrl.isNotEmpty);
-    return List<NewsItem>.unmodifiable(_stubNews);
+    return List<NewsItem>.unmodifiable(_newsStore);
+  }
+
+  /// Endpoint: POST /news
+  Future<NewsItem> createNews({
+    required String title,
+    required String category,
+    required String body,
+  }) async {
+    _assertAdminAccess();
+    final item = NewsItem(
+      id: 'news-${DateTime.now().millisecondsSinceEpoch}',
+      title: title.trim(),
+      excerpt: _createExcerpt(body),
+      body: body.trim(),
+      publishedAt: DateTime.now(),
+      category: category.trim(),
+    );
+    _newsStore.add(item);
+    return item;
+  }
+
+  /// Endpoint: PUT /news/:id
+  Future<NewsItem> updateNews({
+    required String id,
+    required String title,
+    required String category,
+    required String body,
+  }) async {
+    _assertAdminAccess();
+    final index = _newsStore.indexWhere((item) => item.id == id);
+    if (index == -1) {
+      throw StateError('News item not found');
+    }
+    final updated = _newsStore[index].copyWith(
+      title: title.trim(),
+      excerpt: _createExcerpt(body),
+      body: body.trim(),
+      category: category.trim(),
+    );
+    _newsStore[index] = updated;
+    return updated;
+  }
+
+  /// Endpoint: DELETE /news/:id
+  Future<void> deleteNews(String id) async {
+    _assertAdminAccess();
+    _newsStore.removeWhere((item) => item.id == id);
+  }
+
+  List<String> get availableCategories {
+    final categories = _newsStore.map((item) => item.category).toSet();
+    return [
+      'Allgemein',
+      'Verwaltung',
+      'Gemeinschaft',
+      'Infrastruktur',
+      'Familie',
+      'Kultur',
+      ...categories,
+    ].toSet().toList()
+      ..sort();
+  }
+
+  void _assertAdminAccess() {
+    if (!isAdmin) {
+      throw StateError('Admin access required');
+    }
+  }
+
+  String _createExcerpt(String body) {
+    final trimmed = body.trim();
+    if (trimmed.length <= 120) {
+      return trimmed;
+    }
+    return '${trimmed.substring(0, 117)}...';
   }
 }
 
