@@ -7,7 +7,28 @@ class TenantConfigService {
   final ApiClient _apiClient;
 
   Future<TenantConfig> getTenantConfig() async {
-    final data = await _apiClient.getJson('/tenant/config');
+    final data = await _loadConfig('/tenant/config');
     return TenantConfig.fromJson(data);
+  }
+
+  Future<Map<String, dynamic>> _loadConfig(String path) async {
+    try {
+      final data = await _apiClient.getJson(path);
+      return _extractPayload(data);
+    } on ApiException catch (error) {
+      if (error.statusCode == 404 && path == '/tenant/config') {
+        final data = await _apiClient.getJson('/api/tenant/config');
+        return _extractPayload(data);
+      }
+      rethrow;
+    }
+  }
+
+  Map<String, dynamic> _extractPayload(Map<String, dynamic> data) {
+    final nested = data['data'] ?? data['tenant'] ?? data['config'];
+    if (nested is Map<String, dynamic>) {
+      return nested;
+    }
+    return data;
   }
 }
