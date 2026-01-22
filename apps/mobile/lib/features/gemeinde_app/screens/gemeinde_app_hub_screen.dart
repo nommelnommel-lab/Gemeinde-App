@@ -62,20 +62,20 @@ class GemeindeAppHubScreen extends StatelessWidget {
         ),
       ),
       _HubItem(
-        title: 'Kinderspielen (3j-5j)',
+        title: 'Kinderspielen',
         icon: Icons.child_friendly,
         onTap: () => _openPlaceholder(
           context,
-          title: 'Kinderspielen (3j-5j)',
-          description: 'Spiel- und Betreuungsangebote für Kinder von 3 bis 5 Jahren.',
+          title: 'Kinderspielen',
+          description: 'Spiel- und Betreuungsangebote für Kinder folgen hier.',
         ),
       ),
       _HubItem(
-        title: 'News / Aktuelles in der Umgebung',
+        title: 'News',
         icon: Icons.newspaper,
         onTap: () => _openPlaceholder(
           context,
-          title: 'News / Aktuelles in der Umgebung',
+          title: 'News',
           description: 'Aktuelle Meldungen aus der Umgebung folgen hier.',
         ),
       ),
