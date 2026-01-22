@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../api/health_service.dart';
 import '../../features/events/services/events_service.dart';
 import '../../features/news/services/news_service.dart';
+import '../../features/posts/services/posts_service.dart';
 import '../../features/warnings/services/warnings_service.dart';
 import '../auth/admin_key_store.dart';
 import '../auth/permissions_service.dart';
@@ -11,6 +12,7 @@ class AppServices {
   const AppServices({
     required this.eventsService,
     required this.newsService,
+    required this.postsService,
     required this.healthService,
     required this.warningsService,
     required this.permissionsService,
@@ -19,6 +21,7 @@ class AppServices {
 
   final EventsService eventsService;
   final NewsService newsService;
+  final PostsService postsService;
   final HealthService healthService;
   final WarningsService warningsService;
   final PermissionsService permissionsService;

@@ -9,12 +9,12 @@ import 'post_form_screen.dart';
 class PostsScreen extends StatefulWidget {
   const PostsScreen({
     super.key,
-    required this.category,
+    required this.type,
     required this.postsService,
     this.isAdmin = false,
   });
 
-  final PostCategory category;
+  final PostType type;
   final PostsService postsService;
   final bool isAdmin;
 
@@ -40,7 +40,7 @@ class _PostsScreenState extends State<PostsScreen> {
     });
 
     try {
-      final posts = await widget.postsService.getPosts(widget.category);
+      final posts = await widget.postsService.getPosts(type: widget.type);
       setState(() => _posts = posts);
     } catch (e) {
       setState(() => _error = 'Beiträge konnten nicht geladen werden.');
@@ -54,7 +54,7 @@ class _PostsScreenState extends State<PostsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.category.label)),
+      appBar: AppBar(title: Text(widget.type.label)),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -72,7 +72,7 @@ class _PostsScreenState extends State<PostsScreen> {
                   child: ListTile(
                     title: Text(post.title),
                     subtitle: Text(
-                      '${_formatDate(post.createdAt)} · ${_preview(post.body)}',
+                      '${_formatDate(_displayDate(post))} · ${_preview(post.body)}',
                     ),
                     trailing: widget.isAdmin
                         ? const Icon(Icons.chevron_right)
@@ -111,7 +111,8 @@ class _PostsScreenState extends State<PostsScreen> {
     final result = await AppRouterScope.of(context).push<bool>(
       PostFormScreen(
         postsService: widget.postsService,
-        category: widget.category,
+        type: widget.type,
+        isAdmin: widget.isAdmin,
       ),
     );
 
@@ -134,6 +135,13 @@ class _PostsScreenState extends State<PostsScreen> {
       return cleaned;
     }
     return '${cleaned.substring(0, maxLength)}…';
+  }
+
+  DateTime _displayDate(Post post) {
+    if (post.type == PostType.event && post.date != null) {
+      return post.date!;
+    }
+    return post.createdAt;
   }
 }
 

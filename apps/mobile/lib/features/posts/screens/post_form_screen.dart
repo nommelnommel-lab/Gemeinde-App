@@ -7,13 +7,15 @@ class PostFormScreen extends StatefulWidget {
   const PostFormScreen({
     super.key,
     required this.postsService,
-    required this.category,
+    required this.type,
     this.post,
+    this.isAdmin = false,
   });
 
   final PostsService postsService;
-  final PostCategory category;
+  final PostType type;
   final Post? post;
+  final bool isAdmin;
 
   @override
   State<PostFormScreen> createState() => _PostFormScreenState();
@@ -52,7 +54,7 @@ class _PostFormScreenState extends State<PostFormScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             Text(
-              widget.category.label,
+              widget.type.label,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
@@ -95,11 +97,19 @@ class _PostFormScreenState extends State<PostFormScreen> {
 
     setState(() => _saving = true);
     try {
-      final input = PostInput(title: title, body: body);
+      final input = PostInput(
+        type: widget.type,
+        title: title,
+        body: body,
+      );
       if (widget.post == null) {
-        await widget.postsService.createPost(widget.category, input);
+        await widget.postsService.createPost(input, isAdmin: widget.isAdmin);
       } else {
-        await widget.postsService.updatePost(widget.post!.id, input);
+        await widget.postsService.updatePost(
+          widget.post!.id,
+          input,
+          isAdmin: widget.isAdmin,
+        );
       }
       if (!mounted) return;
       _showSnackBar('Beitrag gespeichert.');
