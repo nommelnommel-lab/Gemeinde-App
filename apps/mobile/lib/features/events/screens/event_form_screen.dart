@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/auth/app_permissions.dart';
 import '../models/event.dart';
 import '../services/events_service.dart';
 
@@ -47,6 +48,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
   Widget build(BuildContext context) {
     final isEdit = widget.event != null;
     final saveLabel = isEdit ? 'Aktualisieren' : 'Erstellen';
+    final canManageContent =
+        AppPermissionsScope.permissionsOf(context).canManageContent;
 
     return Scaffold(
       appBar: AppBar(title: Text(isEdit ? 'Event bearbeiten' : 'Neues Event')),
@@ -83,7 +86,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: _saving ? null : _save,
+              onPressed: (!canManageContent || _saving) ? null : _save,
               icon: _saving
                   ? const SizedBox(
                       width: 16,
