@@ -19,8 +19,24 @@ class EventDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = event.title.trim();
+    final location = event.location.trim().isEmpty
+        ? 'Ort wird noch bekannt gegeben'
+        : event.location.trim();
+    final description = event.description.trim().isEmpty
+        ? 'Keine Beschreibung verfügbar.'
+        : event.description.trim();
+
     return Scaffold(
-      appBar: AppBar(title: Text(event.title)),
+      appBar: AppBar(
+        title: Text(title.isEmpty ? 'Event' : title),
+        leadingWidth: 96,
+        leading: TextButton.icon(
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back),
+          label: const Text('Zurück'),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -37,14 +53,14 @@ class EventDetailScreen extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    event.location,
+                    location,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            Text(event.description, style: Theme.of(context).textTheme.bodyLarge),
+            Text(description, style: Theme.of(context).textTheme.bodyLarge),
           ],
         ),
       ),

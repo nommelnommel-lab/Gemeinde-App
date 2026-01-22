@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
@@ -41,7 +42,11 @@ class _EventsScreenState extends State<EventsScreen> {
       final events = await _eventsService.getEvents();
       setState(() => _events = events);
     } catch (e) {
-      setState(() => _error = e.toString());
+      debugPrint('Events loading failed: $e');
+      setState(
+        () => _error =
+            'Events konnten nicht geladen werden. Bitte später erneut versuchen.',
+      );
     } finally {
       setState(() => _loading = false);
     }
@@ -49,48 +54,74 @@ class _EventsScreenState extends State<EventsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const _LoadingSkeleton();
     }
 
     if (_error != null) {
-      return _ErrorView(error: _error!, onRetry: _load);
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _ErrorView(error: _error!, onRetry: _load),
+        ],
+      );
     }
 
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: _events.isEmpty
-          ? ListView(
-              children: const [
-                SizedBox(height: 120),
-                Center(
-                  child: Text(
-                    'Zurzeit sind keine Veranstaltungen geplant.',
-                  ),
-                ),
-              ],
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _events.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final event = _events[index];
-                return Card(
-                  child: ListTile(
-                    title: Text(event.title),
-                    subtitle:
-                        Text('${_formatDate(event.date)} · ${event.location}'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      AppRouterScope.of(context).push(
-                        EventDetailScreen(event: event),
-                      );
-                    },
-                  ),
-                );
-              },
+    if (_events.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.all(24),
+        children: const [
+          SizedBox(height: 80),
+          Icon(Icons.event_busy, size: 64, color: Colors.black54),
+          SizedBox(height: 16),
+          Center(
+            child: Text(
+              'Zurzeit sind keine Veranstaltungen geplant.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
+          ),
+          SizedBox(height: 8),
+          Center(
+            child: Text(
+              'Schau später noch einmal vorbei.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: _events.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final event = _events[index];
+        return Card(
+          child: ListTile(
+            title: Text(
+              event.title.isEmpty ? 'Unbenanntes Event' : event.title,
+            ),
+            subtitle: Text(
+              '${_formatDate(event.date)} · ${_displayLocation(event.location)}',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              AppRouterScope.of(context).push(
+                EventDetailScreen(event: event),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -101,6 +132,10 @@ class _EventsScreenState extends State<EventsScreen> {
     return '$day.$month.$year';
   }
 
+  String _displayLocation(String location) {
+    final trimmed = location.trim();
+    return trimmed.isEmpty ? 'Ort wird noch bekannt gegeben' : trimmed;
+  }
 }
 
 class _ErrorView extends StatelessWidget {
@@ -111,29 +146,68 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Card(
-        margin: const EdgeInsets.all(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Events konnten nicht geladen werden',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              Text(error, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: onRetry,
-                child: const Text('Erneut versuchen'),
-              ),
-            ],
-          ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Etwas ist schiefgelaufen',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            Text(error, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: onRetry,
+              child: const Text('Erneut versuchen'),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _LoadingSkeleton extends StatelessWidget {
+  const _LoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 16,
+                  width: 180,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 12,
+                  width: 140,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
