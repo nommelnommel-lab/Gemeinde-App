@@ -319,8 +319,12 @@ class ApiClient {
     }
     final hasTenant = headers.containsKey('X-TENANT');
     final hasSiteKey = headers.containsKey('X-SITE-KEY');
+    final siteKeyValue = headers['X-SITE-KEY'];
+    final siteKeyPreview = siteKeyValue == null || siteKeyValue.isEmpty
+        ? 'missing'
+        : '${siteKeyValue.substring(0, siteKeyValue.length < 4 ? siteKeyValue.length : 4)}***';
     debugPrint(
-      'API $method $uri headers: tenant=$hasTenant siteKey=$hasSiteKey',
+      'API $method $uri headers: tenant=$hasTenant siteKey=$hasSiteKey siteKeyPreview=$siteKeyPreview',
     );
   }
 }

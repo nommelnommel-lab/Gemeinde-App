@@ -7,7 +7,7 @@ class AppConfig {
   static const String tenantHeaderValue = 'hilders';
   static const String siteKey = String.fromEnvironment(
     'SITE_KEY',
-    defaultValue: '',
+    defaultValue: 'HD-2026-9f3c1a2b-KEY',
   );
 
   static String get apiBaseUrl {
