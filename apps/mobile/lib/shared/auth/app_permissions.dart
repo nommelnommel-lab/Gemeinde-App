@@ -39,6 +39,12 @@ class AppPermissionsScope extends StatefulWidget {
     return scope!.permissions;
   }
 
+  static AppPermissions? maybePermissionsOf(BuildContext context) {
+    final scope =
+        context.dependOnInheritedWidgetOfExactType<_AppPermissionsInherited>();
+    return scope?.permissions;
+  }
+
   static AppPermissionsScopeState controllerOf(BuildContext context) {
     final state = context.findAncestorStateOfType<AppPermissionsScopeState>();
     assert(state != null, 'No AppPermissionsScope found in context');
