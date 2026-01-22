@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../config/app_config.dart';
+
 class ApiException implements Exception {
   final String message;
   final int? statusCode;
@@ -17,6 +19,13 @@ class ApiClient {
     required this.baseUrl,
     http.Client? httpClient,
   }) : _http = httpClient ?? http.Client();
+
+  factory ApiClient.platform({http.Client? httpClient}) {
+    return ApiClient(
+      baseUrl: AppConfig.apiBaseUrl,
+      httpClient: httpClient,
+    );
+  }
 
   final String baseUrl;
   final http.Client _http;

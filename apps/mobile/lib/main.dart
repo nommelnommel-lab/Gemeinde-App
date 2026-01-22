@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'api/api_client.dart';
 import 'api/health_service.dart';
-import 'config/app_config.dart';
 import 'features/events/services/events_service.dart';
 import 'features/navigation/screens/main_navigation_screen.dart';
 import 'features/warnings/services/warnings_service.dart';
@@ -20,7 +19,7 @@ class GemeindeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final api = ApiClient(baseUrl: AppConfig.apiBaseUrl);
+    final api = ApiClient.platform();
     final healthService = HealthService(api);
     final eventsService = EventsService(api);
     final warningsService = WarningsService(api);

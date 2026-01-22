@@ -2,9 +2,10 @@ import '../../../api/api_client.dart';
 import '../models/warning_item.dart';
 
 class WarningsService {
-  WarningsService([this._apiClient]);
+  WarningsService([ApiClient? apiClient])
+      : _apiClient = apiClient ?? ApiClient.platform();
 
-  final ApiClient? _apiClient;
+  final ApiClient _apiClient;
 
   /// Usage idea for StartFeed:
   /// ```dart
@@ -12,9 +13,10 @@ class WarningsService {
   /// // setState(() => _warnings = warnings);
   /// ```
   Future<List<WarningItem>> getWarnings() async {
+    assert(_apiClient.baseUrl.isNotEmpty);
     // TODO: replace with real API call once endpoint is available.
     // Example:
-    // final response = await _apiClient?.getJson('/warnings');
+    // final response = await _apiClient.getJson('/warnings');
     // parse response into WarningItem list.
     return List<WarningItem>.unmodifiable(_stubWarnings);
   }

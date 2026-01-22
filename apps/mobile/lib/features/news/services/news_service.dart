@@ -1,12 +1,19 @@
+import '../../../api/api_client.dart';
 import '../models/news_item.dart';
 
 class NewsService {
+  NewsService([ApiClient? apiClient])
+      : _apiClient = apiClient ?? ApiClient.platform();
+
+  final ApiClient _apiClient;
+
   /// Usage idea for StartFeed:
   /// ```dart
   /// final news = await NewsService().getNews();
   /// // setState(() => _news = news);
   /// ```
   Future<List<NewsItem>> getNews() async {
+    assert(_apiClient.baseUrl.isNotEmpty);
     return List<NewsItem>.unmodifiable(_stubNews);
   }
 }
