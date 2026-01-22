@@ -3,22 +3,23 @@ import 'package:flutter/material.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../events/models/event.dart';
 import '../../events/services/events_service.dart';
-import '../../news/models/news_item.dart';
-import '../../news/screens/news_detail_screen.dart';
-import '../../news/screens/news_screen.dart';
-import '../../news/services/news_service.dart';
+import '../../warnings/models/warning_item.dart';
+import '../../warnings/screens/warning_detail_screen.dart';
+import '../../warnings/screens/warnings_screen.dart';
+import '../../warnings/services/warnings_service.dart';
+import '../../warnings/utils/warning_formatters.dart';
 
 class StartFeedScreen extends StatefulWidget {
   const StartFeedScreen({
     super.key,
     required this.onSelectTab,
     required this.eventsService,
-    required this.newsService,
+    required this.warningsService,
   });
 
   final ValueChanged<int> onSelectTab;
   final EventsService eventsService;
-  final NewsService newsService;
+  final WarningsService warningsService;
 
   @override
   State<StartFeedScreen> createState() => _StartFeedScreenState();
@@ -26,18 +27,18 @@ class StartFeedScreen extends StatefulWidget {
 
 class _StartFeedScreenState extends State<StartFeedScreen> {
   late final EventsService _eventsService;
-  late final NewsService _newsService;
+  late final WarningsService _warningsService;
 
   bool _loading = true;
   String? _error;
   List<Event> _events = const [];
-  List<NewsItem> _news = const [];
+  List<WarningItem> _warnings = const [];
 
   @override
   void initState() {
     super.initState();
     _eventsService = widget.eventsService;
-    _newsService = widget.newsService;
+    _warningsService = widget.warningsService;
     _load();
   }
 
@@ -48,13 +49,11 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     });
 
     try {
-      final results = await Future.wait([
-        _eventsService.getEvents(),
-        _newsService.getNews(),
-      ]);
+      final events = await _eventsService.getEvents();
+      final warnings = await _warningsService.getWarnings();
       setState(() {
-        _events = results[0] as List<Event>;
-        _news = results[1] as List<NewsItem>;
+        _events = events;
+        _warnings = warnings;
       });
     } catch (e) {
       setState(() => _error = e.toString());
@@ -76,14 +75,24 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
             title: 'GemeindeApp',
             subtitle: 'Angebote und Veranstaltungen entdecken',
             icon: Icons.groups,
-            onTap: () => widget.onSelectTab(1),
+            onTap: () => widget.onSelectTab(2),
           ),
           const SizedBox(height: 16),
           _StartCard(
             title: 'Verwaltung',
             subtitle: 'Formulare und Infos aus der Gemeinde',
             icon: Icons.admin_panel_settings,
-            onTap: () => widget.onSelectTab(2),
+            onTap: () => widget.onSelectTab(3),
+          ),
+          const SizedBox(height: 24),
+          _WarningsSection(
+            warnings: _sortedWarnings(_warnings).take(2).toList(),
+            onShowAll: () => AppRouterScope.of(context).push(
+              WarningsScreen(warningsService: _warningsService),
+            ),
+            onSelectWarning: (warning) => AppRouterScope.of(context).push(
+              WarningDetailScreen(warning: warning),
+            ),
           ),
           const SizedBox(height: 24),
           Text(
@@ -108,63 +117,26 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
                     ),
                   ),
                 ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Aktuelles/News',
-                style: theme.textTheme.titleMedium,
-              ),
-              TextButton(
-                onPressed: () {
-                  AppRouterScope.of(context).push(
-                    NewsScreen(newsService: _newsService),
-                  );
-                },
-                child: const Text('Alle anzeigen'),
-              ),
-            ],
-          ),
-          if (_loading)
-            const Center(child: CircularProgressIndicator())
-          else if (_error != null)
-            _EventsErrorView(error: _error!, onRetry: _load)
-          else if (_news.isEmpty)
-            const Text('Zurzeit sind keine News verfügbar.')
-          else
-            ..._topNews.map(
-              (item) => Card(
-                child: ListTile(
-                  title: Text(item.title),
-                  subtitle: Text(
-                    '${_formatDate(item.publishedAt)} · ${item.excerpt}',
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    AppRouterScope.of(context).push(
-                      NewsDetailScreen(item: item),
-                    );
-                  },
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
 
-  List<NewsItem> get _topNews {
-    final items = _news.toList()
-      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
-    return items.take(3).toList();
+  String _formatDate(DateTime date) {
+    return formatDate(date);
   }
 
-  String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final year = date.year.toString();
-    return '$day.$month.$year';
+  List<WarningItem> _sortedWarnings(List<WarningItem> warnings) {
+    final indexed = warnings.asMap().entries.toList();
+    indexed.sort((a, b) {
+      final dateCompare =
+          b.value.publishedAt.compareTo(a.value.publishedAt);
+      if (dateCompare != 0) {
+        return dateCompare;
+      }
+      return a.key.compareTo(b.key);
+    });
+    return indexed.map((entry) => entry.value).toList();
   }
 }
 
@@ -232,7 +204,7 @@ class _EventsErrorView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Inhalte konnten nicht geladen werden.'),
+        Text('Events konnten nicht geladen werden.'),
         const SizedBox(height: 8),
         Text(
           error,
@@ -244,5 +216,88 @@ class _EventsErrorView extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _WarningsSection extends StatelessWidget {
+  const _WarningsSection({
+    required this.warnings,
+    required this.onShowAll,
+    required this.onSelectWarning,
+  });
+
+  final List<WarningItem> warnings;
+  final VoidCallback onShowAll;
+  final ValueChanged<WarningItem> onSelectWarning;
+
+  @override
+  Widget build(BuildContext context) {
+    if (warnings.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber_outlined),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Aktuell gibt es keine Warnungen.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Warnungen',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: onShowAll,
+                  child: const Text('Alle anzeigen'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...warnings.map(
+              (warning) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: _severityIcon(warning.severity),
+                title: Text(warning.title),
+                subtitle: Text(
+                  '${warning.severity.label} · ${formatDateTime(warning.publishedAt)}',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => onSelectWarning(warning),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _severityIcon(WarningSeverity severity) {
+    switch (severity) {
+      case WarningSeverity.info:
+        return const Icon(Icons.info_outline, color: Colors.blue);
+      case WarningSeverity.warning:
+        return const Icon(Icons.warning_amber, color: Colors.orange);
+      case WarningSeverity.critical:
+        return const Icon(Icons.report, color: Colors.red);
+    }
   }
 }

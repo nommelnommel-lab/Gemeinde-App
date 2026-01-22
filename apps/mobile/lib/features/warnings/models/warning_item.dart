@@ -2,20 +2,37 @@ class WarningItem {
   const WarningItem({
     required this.id,
     required this.title,
-    required this.message,
+    required this.body,
     required this.severity,
-    required this.issuedAt,
+    required this.publishedAt,
+    this.validUntil,
+    this.source,
   });
 
   final String id;
   final String title;
-  final String message;
+  final String body;
   final WarningSeverity severity;
-  final DateTime issuedAt;
+  final DateTime publishedAt;
+  final DateTime? validUntil;
+  final String? source;
 }
 
 enum WarningSeverity {
   info,
   warning,
   critical,
+}
+
+extension WarningSeverityLabels on WarningSeverity {
+  String get label {
+    switch (this) {
+      case WarningSeverity.info:
+        return 'Info';
+      case WarningSeverity.warning:
+        return 'Warnung';
+      case WarningSeverity.critical:
+        return 'Kritisch';
+    }
+  }
 }
