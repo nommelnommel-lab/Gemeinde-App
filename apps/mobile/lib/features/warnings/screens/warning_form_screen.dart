@@ -143,7 +143,7 @@ class _WarningFormScreenState extends State<WarningFormScreen> {
             title: _titleController.text.trim(),
             body: _bodyController.text.trim(),
             severity: _severity,
-            createdAt: warning.createdAt,
+            publishedAt: warning.publishedAt,
             validUntil: _validUntil,
             source: warning.source,
           ),
