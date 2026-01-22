@@ -141,13 +141,13 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
       () async {
         final warnings = await _warningsService.getWarnings();
         final sorted = [...warnings]
-          ..sort((a, b) => b.issuedAt.compareTo(a.issuedAt));
+          ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
         return sorted
             .take(3)
             .map(
               (warning) => StartFeedPreviewItem(
                 title: warning.title,
-                subtitle: warning.message,
+                subtitle: warning.body,
               ),
             )
             .toList();
