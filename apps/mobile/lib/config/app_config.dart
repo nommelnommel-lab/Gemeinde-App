@@ -4,6 +4,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AppConfig {
   static const String tenantId = 'default';
+  static const String tenantHeaderValue = 'hilders';
+  static const String siteKey = String.fromEnvironment(
+    'SITE_KEY',
+    defaultValue: '',
+  );
 
   static String get apiBaseUrl {
     if (kIsWeb) {
