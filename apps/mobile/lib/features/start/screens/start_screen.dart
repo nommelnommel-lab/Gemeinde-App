@@ -3,10 +3,16 @@ import 'package:flutter/material.dart';
 import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../events/models/event.dart';
+import '../../events/screens/event_detail_screen.dart';
+import '../../events/services/events_service.dart';
+import '../../news/models/news_item.dart';
+import '../../news/screens/news_detail_screen.dart';
+import '../../news/services/news_service.dart';
+import '../../warnings/models/warning_item.dart';
+import '../../warnings/screens/warning_detail_screen.dart';
+import '../../warnings/services/warnings_service.dart';
 import '../../warnings/utils/warning_formatters.dart';
-import '../../posts/models/post.dart';
-import '../../posts/screens/post_detail_screen.dart';
-import '../../posts/services/posts_service.dart';
 
 class StartFeedScreen extends StatefulWidget {
   const StartFeedScreen({
@@ -21,12 +27,14 @@ class StartFeedScreen extends StatefulWidget {
 }
 
 class _StartFeedScreenState extends State<StartFeedScreen> {
-  late final PostsService _postsService;
+  late final EventsService _eventsService;
+  late final NewsService _newsService;
+  late final WarningsService _warningsService;
   bool _initialized = false;
 
   bool _loading = true;
   String? _error;
-  List<Post> _items = const [];
+  List<_FeedItem> _items = const [];
   _FeedFilter _selectedFilter = _FeedFilter.all;
 
   @override
@@ -36,7 +44,9 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
       return;
     }
     final services = AppServicesScope.of(context);
-    _postsService = services.postsService;
+    _eventsService = services.eventsService;
+    _newsService = services.newsService;
+    _warningsService = services.warningsService;
     _initialized = true;
     _load();
   }
@@ -48,9 +58,16 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     });
 
     try {
-      final posts = await _postsService.getPosts();
+      final events = await _eventsService.getEvents();
+      final news = await _newsService.getNews();
+      final warnings = await _warningsService.getWarnings();
+      if (!mounted) return;
       setState(() {
-        _items = _buildFeedItems(posts);
+        _items = _buildFeedItems(
+          events: events,
+          news: news,
+          warnings: warnings,
+        );
       });
     } catch (e) {
       setState(() => _error = e.toString());
@@ -105,7 +122,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
             ...filteredItems.map(
               (item) => _FeedListTile(
                 item: item,
-                formattedDate: _formatDate(_displayDate(item)),
+                formattedDate: _formatDate(item.date),
                 onTap: () => _handleTap(item),
               ),
             ),
@@ -118,56 +135,177 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     return formatDate(date);
   }
 
-  List<Post> _buildFeedItems(List<Post> posts) {
-    final filtered = _activePosts(posts);
-    filtered.sort((a, b) => _displayDate(b).compareTo(_displayDate(a)));
-    return filtered;
+  List<_FeedItem> _buildFeedItems({
+    required List<Event> events,
+    required List<NewsItem> news,
+    required List<WarningItem> warnings,
+  }) {
+    final now = DateTime.now();
+    final start = _startOfDay(now);
+    final end = _endOfDay(now.add(const Duration(days: 28)));
+
+    final upcomingEvents = events
+        .where(
+          (event) =>
+              !event.date.isBefore(start) && !event.date.isAfter(end),
+        )
+        .toList();
+
+    final activeWarnings = warnings
+        .where(
+          (warning) =>
+              warning.validUntil == null || warning.validUntil!.isAfter(now),
+        )
+        .toList();
+
+    final items = <_FeedItem>[
+      ...upcomingEvents.map(
+        (event) => _FeedItem(
+          type: _FeedItemType.event,
+          title: event.title,
+          body: event.description,
+          date: event.date,
+          location: event.location,
+          event: event,
+        ),
+      ),
+      ...news.map(
+        (item) => _FeedItem(
+          type: _FeedItemType.news,
+          title: item.title,
+          body: item.summary,
+          date: _newsDate(item),
+          news: item,
+        ),
+      ),
+      ...activeWarnings.map(
+        (warning) => _FeedItem(
+          type: _FeedItemType.warning,
+          title: warning.title,
+          body: warning.body,
+          date: _warningDate(warning),
+          warning: warning,
+        ),
+      ),
+    ];
+
+    items.sort((a, b) => b.date.compareTo(a.date));
+    return items;
   }
 
-  List<Post> _filteredItems() {
+  List<_FeedItem> _filteredItems() {
     switch (_selectedFilter) {
       case _FeedFilter.all:
         return _items;
       case _FeedFilter.events:
         return _items
-            .where((item) => item.type == PostType.event)
+            .where((item) => item.type == _FeedItemType.event)
             .toList();
       case _FeedFilter.news:
         return _items
-            .where((item) => item.type == PostType.news)
+            .where((item) => item.type == _FeedItemType.news)
+            .toList();
+      case _FeedFilter.warnings:
+        return _items
+            .where((item) => item.type == _FeedItemType.warning)
             .toList();
     }
   }
 
-  List<Post> _activePosts(List<Post> posts) {
-    final now = DateTime.now();
-    return posts
-        .where((post) => post.type != PostType.warning)
-        .where(
-          (post) =>
-              post.validUntil == null || post.validUntil!.isAfter(now),
-        )
-        .toList();
+  DateTime _startOfDay(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
   }
 
-  void _handleTap(Post item) {
-    AppRouterScope.of(context).push(
-      PostDetailScreen(
-        post: item,
-        postsService: _postsService,
-        isAdmin:
-            AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-                false,
-      ),
-    );
+  DateTime _endOfDay(DateTime date) {
+    return DateTime(date.year, date.month, date.day, 23, 59, 59, 999);
   }
 
-  DateTime _displayDate(Post post) {
-    if (post.type == PostType.event && post.date != null) {
-      return post.date!;
+  DateTime _newsDate(NewsItem item) {
+    final DateTime? publishedAt = item.publishedAt;
+    final DateTime? createdAt = item.createdAt;
+    return publishedAt ?? createdAt ?? DateTime.now();
+  }
+
+  DateTime _warningDate(WarningItem warning) {
+    final DateTime? createdAt = warning.createdAt;
+    final DateTime? publishedAt = warning.publishedAt;
+    return createdAt ?? publishedAt ?? DateTime.now();
+  }
+
+  Future<void> _handleTap(_FeedItem item) async {
+    final canEdit =
+        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+            false;
+    switch (item.type) {
+      case _FeedItemType.event:
+        if (item.event == null) return;
+        final result = await AppRouterScope.of(context).push(
+          EventDetailScreen(
+            event: item.event!,
+            eventsService: _eventsService,
+            canEdit: canEdit,
+          ),
+        );
+        if (result == true) {
+          await _load();
+        }
+        return;
+      case _FeedItemType.news:
+        if (item.news == null) return;
+        final result = await AppRouterScope.of(context).push(
+          NewsDetailScreen(
+            item: item.news!,
+            newsService: _newsService,
+            canEdit: canEdit,
+          ),
+        );
+        if (result == true) {
+          await _load();
+        }
+        return;
+      case _FeedItemType.warning:
+        if (item.warning == null) return;
+        final result = await AppRouterScope.of(context).push(
+          WarningDetailScreen(
+            warning: item.warning!,
+            warningsService: _warningsService,
+            canEdit: canEdit,
+          ),
+        );
+        if (result == true) {
+          await _load();
+        }
+        return;
     }
-    return post.createdAt;
   }
+}
+
+class _FeedItem {
+  const _FeedItem({
+    required this.type,
+    required this.title,
+    required this.body,
+    required this.date,
+    this.location,
+    this.event,
+    this.news,
+    this.warning,
+  });
+
+  final _FeedItemType type;
+  final String title;
+  final String body;
+  final DateTime date;
+  final String? location;
+  final Event? event;
+  final NewsItem? news;
+  final WarningItem? warning;
+}
+
+enum _FeedItemType {
+  event,
+  news,
+  warning,
 }
 
 class _StartCard extends StatelessWidget {
@@ -227,6 +365,7 @@ enum _FeedFilter {
   all,
   events,
   news,
+  warnings,
 }
 
 class _FeedFilters extends StatelessWidget {
@@ -263,6 +402,8 @@ class _FeedFilters extends StatelessWidget {
         return 'Events';
       case _FeedFilter.news:
         return 'News';
+      case _FeedFilter.warnings:
+        return 'Warnungen';
     }
   }
 }
@@ -274,7 +415,7 @@ class _FeedListTile extends StatelessWidget {
     required this.onTap,
   });
 
-  final Post item;
+  final _FeedItem item;
   final String formattedDate;
   final VoidCallback onTap;
 
@@ -285,9 +426,9 @@ class _FeedListTile extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: Icon(_iconForType(item.type)),
-        title: Text(item.title),
+        title: Text(item.title.isEmpty ? _fallbackTitle(item.type) : item.title),
         subtitle: Text(
-          '${_labelForType(item.type)} · $formattedDate\n${_preview(item.body)}',
+          _subtitle(item, formattedDate),
           style: theme.textTheme.bodySmall,
         ),
         isThreeLine: true,
@@ -297,18 +438,62 @@ class _FeedListTile extends StatelessWidget {
     );
   }
 
-  IconData _iconForType(PostType type) {
+  IconData _iconForType(_FeedItemType type) {
     switch (type) {
-      case PostType.event:
+      case _FeedItemType.event:
         return Icons.event;
-      case PostType.news:
+      case _FeedItemType.news:
         return Icons.newspaper;
-      case PostType.warning:
+      case _FeedItemType.warning:
         return Icons.warning_amber;
     }
   }
 
-  String _labelForType(PostType type) => type.label;
+  String _fallbackTitle(_FeedItemType type) {
+    switch (type) {
+      case _FeedItemType.event:
+        return 'Event';
+      case _FeedItemType.news:
+        return 'News';
+      case _FeedItemType.warning:
+        return 'Warnung';
+    }
+  }
+
+  String _subtitle(_FeedItem item, String formattedDate) {
+    final label = _labelForType(item.type);
+    final detail = _detailLine(item);
+    if (detail.isEmpty) {
+      return '$label · $formattedDate';
+    }
+    return '$label · $formattedDate\n$detail';
+  }
+
+  String _labelForType(_FeedItemType type) {
+    switch (type) {
+      case _FeedItemType.event:
+        return 'Event';
+      case _FeedItemType.news:
+        return 'News';
+      case _FeedItemType.warning:
+        return 'Warnung';
+    }
+  }
+
+  String _detailLine(_FeedItem item) {
+    switch (item.type) {
+      case _FeedItemType.event:
+        return _displayLocation(item.location ?? '');
+      case _FeedItemType.news:
+      case _FeedItemType.warning:
+        return _preview(item.body);
+    }
+  }
+
+  String _displayLocation(String location) {
+    final trimmed = location.trim();
+    return trimmed.isEmpty ? 'Ort wird noch bekannt gegeben' : trimmed;
+  }
 
   String _preview(String body) {
     const maxLength = 60;
