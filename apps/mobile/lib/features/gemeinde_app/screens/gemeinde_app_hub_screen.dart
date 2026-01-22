@@ -4,14 +4,18 @@ import '../../../shared/navigation/app_router.dart';
 import '../../../shared/widgets/placeholder_screen.dart';
 import '../../events/screens/events_screen.dart';
 import '../../events/services/events_service.dart';
+import '../../news/screens/news_screen.dart';
+import '../../news/services/news_service.dart';
 
 class GemeindeAppHubScreen extends StatelessWidget {
   const GemeindeAppHubScreen({
     super.key,
     required this.eventsService,
+    required this.newsService,
   });
 
   final EventsService eventsService;
+  final NewsService newsService;
 
   @override
   Widget build(BuildContext context) {
@@ -62,22 +66,22 @@ class GemeindeAppHubScreen extends StatelessWidget {
         ),
       ),
       _HubItem(
-        title: 'Kinderspielen',
+        title: 'Kinderspielen (3j-5j)',
         icon: Icons.child_friendly,
         onTap: () => _openPlaceholder(
           context,
-          title: 'Kinderspielen',
-          description: 'Spiel- und Betreuungsangebote für Kinder folgen hier.',
+          title: 'Kinderspielen (3j-5j)',
+          description: 'Spiel- und Betreuungsangebote für Kinder von 3 bis 5 Jahren.',
         ),
       ),
       _HubItem(
-        title: 'News',
+        title: 'News / Aktuelles in der Umgebung',
         icon: Icons.newspaper,
-        onTap: () => _openPlaceholder(
-          context,
-          title: 'News',
-          description: 'Aktuelle Meldungen aus der Umgebung folgen hier.',
-        ),
+        onTap: () {
+          AppRouterScope.of(context).push(
+            NewsScreen(newsService: newsService),
+          );
+        },
       ),
       _HubItem(
         title: 'Warnungen',
