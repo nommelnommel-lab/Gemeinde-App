@@ -89,7 +89,10 @@ class _NewsScreenState extends State<NewsScreen> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     AppRouterScope.of(context).push(
-                      NewsDetailScreen(item: item),
+                      NewsDetailScreen(
+                        item: item,
+                        newsService: widget.newsService,
+                      ),
                     );
                   },
                 ),

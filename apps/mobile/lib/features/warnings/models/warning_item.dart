@@ -16,6 +16,8 @@ class WarningItem {
   final DateTime createdAt;
   final DateTime? validUntil;
   final String? source;
+
+  DateTime get createdAt => publishedAt;
 }
 
 enum WarningSeverity {

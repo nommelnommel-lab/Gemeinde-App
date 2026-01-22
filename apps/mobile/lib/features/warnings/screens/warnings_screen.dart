@@ -81,11 +81,14 @@ class _WarningsScreenState extends State<WarningsScreen> {
                     leading: _severityIcon(warning.severity),
                     title: Text(warning.title),
                     subtitle: Text(
-                      '${warning.severity.label} · ${formatDateTime(warning.publishedAt)}',
+                      '${warning.severity.label} · ${formatDateTime(warning.createdAt)}',
                     ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => AppRouterScope.of(context).push(
-                      WarningDetailScreen(warning: warning),
+                      WarningDetailScreen(
+                        warning: warning,
+                        warningsService: _warningsService,
+                      ),
                     ),
                   ),
                 ),
@@ -100,7 +103,7 @@ class _WarningsScreenState extends State<WarningsScreen> {
     final indexed = warnings.asMap().entries.toList();
     indexed.sort((a, b) {
       final dateCompare =
-          b.value.publishedAt.compareTo(a.value.publishedAt);
+          b.value.createdAt.compareTo(a.value.createdAt);
       if (dateCompare != 0) {
         return dateCompare;
       }
@@ -139,9 +142,9 @@ class _WarningsScreenState extends State<WarningsScreen> {
 
   bool _isToday(WarningItem warning) {
     final now = DateTime.now();
-    return warning.publishedAt.year == now.year &&
-        warning.publishedAt.month == now.month &&
-        warning.publishedAt.day == now.day;
+    return warning.createdAt.year == now.year &&
+        warning.createdAt.month == now.month &&
+        warning.createdAt.day == now.day;
   }
 
   bool _isWeatherWarning(WarningItem warning) {
