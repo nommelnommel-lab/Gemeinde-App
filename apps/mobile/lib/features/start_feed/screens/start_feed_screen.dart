@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../../shared/widgets/placeholder_content.dart';
 import '../../events/screens/events_screen.dart';
@@ -23,15 +24,9 @@ enum StartFeedSectionType {
 class StartFeedScreen extends StatefulWidget {
   const StartFeedScreen({
     super.key,
-    required this.eventsService,
-    this.warningsService,
-    this.newsService,
     this.extrasService,
   });
 
-  final EventsService eventsService;
-  final WarningsService? warningsService;
-  final NewsService? newsService;
   final StartFeedExtrasService? extrasService;
 
   @override
@@ -39,9 +34,11 @@ class StartFeedScreen extends StatefulWidget {
 }
 
 class _StartFeedScreenState extends State<StartFeedScreen> {
+  late final EventsService _eventsService;
   late final WarningsService _warningsService;
   late final NewsService _newsService;
   late final StartFeedExtrasService _extrasService;
+  bool _initialized = false;
 
   final Map<StartFeedSectionType, _SectionState> _sections = {};
 
@@ -99,12 +96,23 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   @override
   void initState() {
     super.initState();
-    _warningsService = widget.warningsService ?? WarningsService();
-    _newsService = widget.newsService ?? NewsService();
-    _extrasService = widget.extrasService ?? StartFeedExtrasService();
     for (final type in StartFeedSectionType.values) {
       _sections[type] = const _SectionState.loading();
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    final services = AppServicesScope.of(context);
+    _eventsService = services.eventsService;
+    _warningsService = services.warningsService;
+    _newsService = services.newsService;
+    _extrasService = widget.extrasService ?? StartFeedExtrasService();
+    _initialized = true;
     _loadAllSections();
   }
 
@@ -133,13 +141,13 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
       () async {
         final warnings = await _warningsService.getWarnings();
         final sorted = [...warnings]
-          ..sort((a, b) => b.issuedAt.compareTo(a.issuedAt));
+          ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
         return sorted
             .take(3)
             .map(
               (warning) => StartFeedPreviewItem(
                 title: warning.title,
-                subtitle: warning.message,
+                subtitle: warning.body,
               ),
             )
             .toList();
@@ -171,7 +179,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     await _loadSection(
       StartFeedSectionType.events,
       () async {
-        final events = await widget.eventsService.getEvents();
+        final events = await _eventsService.getEvents();
         final sorted = [...events]..sort((a, b) => a.date.compareTo(b.date));
         return sorted
             .take(3)
@@ -261,9 +269,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   void _handleAction(StartFeedSectionType type) {
     switch (type) {
       case StartFeedSectionType.events:
-        AppRouterScope.of(context).push(
-          EventsScreen(eventsService: widget.eventsService),
-        );
+        AppRouterScope.of(context).push(const EventsScreen());
         return;
       case StartFeedSectionType.warnings:
         _openComingSoon(
