@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../../shared/widgets/coming_soon_content.dart';
@@ -168,8 +169,15 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
 
   void _handleTap(FeedItem item) {
     if (item.type == FeedItemType.event && item.event != null) {
+      final canEdit =
+          AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+              false;
       AppRouterScope.of(context).push(
-        EventDetailScreen(event: item.event!),
+        EventDetailScreen(
+          event: item.event!,
+          eventsService: _eventsService,
+          canEdit: canEdit,
+        ),
       );
       return;
     }
