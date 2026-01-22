@@ -40,7 +40,6 @@ class ApiClient {
   }
 
   final String baseUrl;
-  final String tenantId;
   final http.Client _http;
   final AdminKeyStore? _adminKeyStore;
   final TenantStore _tenantStore;
@@ -255,7 +254,7 @@ class ApiClient {
     if (tenantId.isNotEmpty) {
       headers['X-Tenant'] = tenantId;
     }
-    final adminKey = _adminKeyStore?.adminKey;
+    final adminKey = _adminKeyStore?.getAdminKey(tenantId);
     if (adminKey != null && adminKey.isNotEmpty) {
       headers['x-admin-key'] = adminKey;
     }
