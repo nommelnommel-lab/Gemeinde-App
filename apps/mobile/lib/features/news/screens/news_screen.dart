@@ -4,6 +4,7 @@ import '../../../shared/navigation/app_router.dart';
 import '../models/news_item.dart';
 import '../services/news_service.dart';
 import 'news_detail_screen.dart';
+import 'news_form_screen.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key, required this.newsService});
@@ -48,51 +49,57 @@ class _NewsScreenState extends State<NewsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Suche',
-              hintText: 'Titel oder Stichwort',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
+    return Scaffold(
+      floatingActionButton: widget.newsService.isAdmin
+          ? FloatingActionButton.extended(
+              onPressed: _openCreate,
+              icon: const Icon(Icons.add),
+              label: const Text('Create News'),
+            )
+          : null,
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Suche',
+                hintText: 'Titel oder Stichwort',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() => _searchTerm = value),
             ),
-            onChanged: (value) => setState(() => _searchTerm = value),
-          ),
-          const SizedBox(height: 12),
-          _CategoryFilter(
-            categories: _availableCategories,
-            selected: _selectedCategory,
-            onSelected: (value) => setState(() => _selectedCategory = value),
-          ),
-          const SizedBox(height: 16),
-          if (_loading)
-            const Center(child: CircularProgressIndicator())
-          else if (_error != null)
-            _ErrorView(error: _error!, onRetry: _load)
-          else if (_filteredNews.isEmpty)
-            const Text('Keine News gefunden.')
-          else
-            ..._filteredNews.map(
-              (item) => Card(
-                child: ListTile(
-                  title: Text(item.title),
-                  subtitle: Text(
-                    '${_formatDate(item.publishedAt)} · ${item.excerpt}',
+            const SizedBox(height: 12),
+            _CategoryFilter(
+              categories: _availableCategories,
+              selected: _selectedCategory,
+              onSelected: (value) => setState(() => _selectedCategory = value),
+            ),
+            const SizedBox(height: 16),
+            if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (_error != null)
+              _ErrorView(error: _error!, onRetry: _load)
+            else if (_filteredNews.isEmpty)
+              const Text('Keine News gefunden.')
+            else
+              ..._filteredNews.map(
+                (item) => Card(
+                  child: ListTile(
+                    title: Text(item.title),
+                    subtitle: Text(
+                      '${_formatDate(item.publishedAt)} · ${item.excerpt}',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _openDetail(item),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    AppRouterScope.of(context).push(
-                      NewsDetailScreen(item: item),
-                    );
-                  },
                 ),
               ),
-            ),
-        ],
+            const SizedBox(height: 80),
+          ],
+        ),
       ),
     );
   }
@@ -128,6 +135,26 @@ class _NewsScreenState extends State<NewsScreen> {
     final month = date.month.toString().padLeft(2, '0');
     final year = date.year.toString();
     return '$day.$month.$year';
+  }
+
+  Future<void> _openCreate() async {
+    final created = await AppRouterScope.of(context).push<NewsItem>(
+      NewsFormScreen(newsService: widget.newsService),
+    );
+
+    if (created != null) {
+      await _load();
+    }
+  }
+
+  Future<void> _openDetail(NewsItem item) async {
+    final shouldReload = await AppRouterScope.of(context).push<bool>(
+      NewsDetailScreen(item: item, newsService: widget.newsService),
+    );
+
+    if (shouldReload == true) {
+      await _load();
+    }
   }
 }
 

@@ -5,6 +5,7 @@ import 'api/health_service.dart';
 import 'config/app_config.dart';
 import 'features/events/services/events_service.dart';
 import 'features/navigation/screens/main_navigation_screen.dart';
+import 'features/news/services/news_service.dart';
 import 'features/warnings/services/warnings_service.dart';
 import 'shared/navigation/app_router.dart';
 import 'shared/theme/app_theme.dart';
@@ -24,6 +25,7 @@ class GemeindeApp extends StatelessWidget {
     final healthService = HealthService(api);
     final eventsService = EventsService(api);
     final warningsService = WarningsService(api);
+    final newsService = NewsService();
 
     return AppRouterScope(
       router: _router,
@@ -35,6 +37,7 @@ class GemeindeApp extends StatelessWidget {
           healthService: healthService,
           eventsService: eventsService,
           warningsService: warningsService,
+          newsService: newsService,
         ),
       ),
     );
