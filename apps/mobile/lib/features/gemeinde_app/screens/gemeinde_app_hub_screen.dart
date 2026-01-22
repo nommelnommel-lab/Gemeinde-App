@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../../shared/widgets/placeholder_screen.dart';
 import '../../events/screens/events_screen.dart';
@@ -11,14 +10,13 @@ class GemeindeAppHubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final services = AppServicesScope.of(context);
     final items = [
       _HubItem(
         title: 'Events',
         icon: Icons.event,
         onTap: () {
           AppRouterScope.of(context).push(
-            EventsScreen(eventsService: services.eventsService),
+            const EventsScreen(),
           );
         },
       ),
@@ -72,7 +70,7 @@ class GemeindeAppHubScreen extends StatelessWidget {
         icon: Icons.newspaper,
         onTap: () {
           AppRouterScope.of(context).push(
-            NewsScreen(newsService: services.newsService),
+            const NewsScreen(),
           );
         },
       ),

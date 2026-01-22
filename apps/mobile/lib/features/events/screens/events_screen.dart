@@ -8,19 +8,14 @@ import '../services/events_service.dart';
 import 'event_detail_screen.dart';
 
 class EventsScreen extends StatefulWidget {
-  const EventsScreen({
-    super.key,
-    this.eventsService,
-  });
-
-  final EventsService? eventsService;
+  const EventsScreen({super.key});
 
   @override
   State<EventsScreen> createState() => _EventsScreenState();
 }
 
 class _EventsScreenState extends State<EventsScreen> {
-  late EventsService _eventsService;
+  late final EventsService _eventsService;
   bool _initialized = false;
 
   bool _loading = true;
@@ -33,8 +28,7 @@ class _EventsScreenState extends State<EventsScreen> {
     if (_initialized) {
       return;
     }
-    _eventsService =
-        widget.eventsService ?? AppServicesScope.of(context).eventsService;
+    _eventsService = AppServicesScope.of(context).eventsService;
     _initialized = true;
     _load();
   }

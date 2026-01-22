@@ -8,19 +8,14 @@ import '../utils/warning_formatters.dart';
 import 'warning_detail_screen.dart';
 
 class WarningsScreen extends StatefulWidget {
-  const WarningsScreen({
-    super.key,
-    this.warningsService,
-  });
-
-  final WarningsService? warningsService;
+  const WarningsScreen({super.key});
 
   @override
   State<WarningsScreen> createState() => _WarningsScreenState();
 }
 
 class _WarningsScreenState extends State<WarningsScreen> {
-  late WarningsService _warningsService;
+  late final WarningsService _warningsService;
   bool _initialized = false;
   bool _loading = true;
   String? _error;
@@ -33,8 +28,7 @@ class _WarningsScreenState extends State<WarningsScreen> {
     if (_initialized) {
       return;
     }
-    _warningsService =
-        widget.warningsService ?? AppServicesScope.of(context).warningsService;
+    _warningsService = AppServicesScope.of(context).warningsService;
     _initialized = true;
     _load();
   }

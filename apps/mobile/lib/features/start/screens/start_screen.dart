@@ -14,21 +14,17 @@ class StartFeedScreen extends StatefulWidget {
   const StartFeedScreen({
     super.key,
     required this.onSelectTab,
-    this.eventsService,
-    this.warningsService,
   });
 
   final ValueChanged<int> onSelectTab;
-  final EventsService? eventsService;
-  final WarningsService? warningsService;
 
   @override
   State<StartFeedScreen> createState() => _StartFeedScreenState();
 }
 
 class _StartFeedScreenState extends State<StartFeedScreen> {
-  late EventsService _eventsService;
-  late WarningsService _warningsService;
+  late final EventsService _eventsService;
+  late final WarningsService _warningsService;
   bool _initialized = false;
 
   bool _loading = true;
@@ -43,8 +39,8 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
       return;
     }
     final services = AppServicesScope.of(context);
-    _eventsService = widget.eventsService ?? services.eventsService;
-    _warningsService = widget.warningsService ?? services.warningsService;
+    _eventsService = services.eventsService;
+    _warningsService = services.warningsService;
     _initialized = true;
     _load();
   }
