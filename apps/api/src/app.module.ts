@@ -7,6 +7,7 @@ import { PermissionsModule } from './permissions/permissions.module';
 import { PostsModule } from './posts/posts.module';
 import { TenantModule } from './tenant/tenant.module';
 import { WarningsModule } from './warnings/warnings.module';
+import { MunicipalityModule } from './municipality/municipality.module';
 
 @Module({
   controllers: [AppController],
@@ -18,6 +19,7 @@ import { WarningsModule } from './warnings/warnings.module';
     PostsModule,
     TenantModule,
     WarningsModule,
+    MunicipalityModule,
   ],
 })
 export class AppModule {}
