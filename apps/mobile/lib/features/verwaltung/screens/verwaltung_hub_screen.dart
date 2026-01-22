@@ -1,74 +1,114 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
-import '../../../shared/widgets/placeholder_screen.dart';
+import '../../../shared/widgets/coming_soon_screen.dart';
 
 class VerwaltungHubScreen extends StatelessWidget {
   const VerwaltungHubScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    final items = [
+      _VerwaltungItem(
+        title: 'Formulare',
+        description: 'Formulare und Anträge folgen hier.',
+        icon: Icons.description_outlined,
+      ),
+      _VerwaltungItem(
+        title: 'Müllkalender',
+        description: 'Abholtermine und Erinnerungen werden hier angezeigt.',
+        icon: Icons.delete_outline,
+      ),
+      _VerwaltungItem(
+        title: 'Öffnungszeiten',
+        description: 'Hier findest du die Öffnungszeiten der Verwaltung.',
+        icon: Icons.schedule,
+      ),
+      _VerwaltungItem(
+        title: 'Ansprechpartner',
+        description: 'Kontaktpersonen der Verwaltung folgen hier.',
+        icon: Icons.support_agent,
+      ),
+      _VerwaltungItem(
+        title: 'Schäden melden',
+        description: 'Melde Schäden oder Anliegen direkt an die Gemeinde.',
+        icon: Icons.report_problem_outlined,
+      ),
+      _VerwaltungItem(
+        title: 'Gebühren/Steuern',
+        description: 'Übersicht zu Gebühren und Steuern kommt bald.',
+        icon: Icons.receipt_long_outlined,
+      ),
+    ];
+
+    return GridView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        _VerwaltungTile(
-          title: 'Formulare',
-          subtitle: 'Anträge und Dokumente',
-          icon: Icons.description_outlined,
-          onTap: () => _openPlaceholder(
-            context,
-            title: 'Formulare',
-            description: 'Formulare und Anträge folgen hier.',
-          ),
-        ),
-        const SizedBox(height: 12),
-        _VerwaltungTile(
-          title: 'Infos aus der Gemeinde',
-          subtitle: 'Amtliche Mitteilungen',
-          icon: Icons.account_balance,
-          onTap: () => _openPlaceholder(
-            context,
-            title: 'Infos aus der Gemeinde',
-            description: 'Amtliche Informationen werden hier veröffentlicht.',
-          ),
-        ),
-      ],
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.05,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return _VerwaltungTile(
+          item: item,
+          onTap: () => _openComingSoon(context, item: item),
+        );
+      },
     );
   }
 
-  void _openPlaceholder(
-    BuildContext context, {
-    required String title,
-    required String description,
-  }) {
+  void _openComingSoon(BuildContext context, {required _VerwaltungItem item}) {
     AppRouterScope.of(context).push(
-      PlaceholderScreen(title: title, description: description),
+      ComingSoonScreen(title: item.title, description: item.description),
     );
   }
 }
 
-class _VerwaltungTile extends StatelessWidget {
-  const _VerwaltungTile({
+class _VerwaltungItem {
+  const _VerwaltungItem({
     required this.title,
-    required this.subtitle,
+    required this.description,
     required this.icon,
-    required this.onTap,
   });
 
   final String title;
-  final String subtitle;
+  final String description;
   final IconData icon;
+}
+
+class _VerwaltungTile extends StatelessWidget {
+  const _VerwaltungTile({
+    required this.item,
+    required this.onTap,
+  });
+
+  final _VerwaltungItem item;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: ListTile(
-        leading: Icon(icon),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(item.icon, size: 32),
+              const SizedBox(height: 12),
+              Text(
+                item.title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
