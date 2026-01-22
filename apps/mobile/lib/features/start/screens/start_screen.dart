@@ -136,21 +136,16 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
         return _items
             .where((item) => item.type == PostType.news)
             .toList();
-      case _FeedFilter.warnings:
-        return _items
-            .where((item) => item.type == PostType.warning)
-            .toList();
     }
   }
 
   List<Post> _activePosts(List<Post> posts) {
     final now = DateTime.now();
     return posts
+        .where((post) => post.type != PostType.warning)
         .where(
           (post) =>
-              post.type != PostType.warning ||
-              post.validUntil == null ||
-              post.validUntil!.isAfter(now),
+              post.validUntil == null || post.validUntil!.isAfter(now),
         )
         .toList();
   }
@@ -232,7 +227,6 @@ enum _FeedFilter {
   all,
   events,
   news,
-  warnings,
 }
 
 class _FeedFilters extends StatelessWidget {
@@ -269,8 +263,6 @@ class _FeedFilters extends StatelessWidget {
         return 'Events';
       case _FeedFilter.news:
         return 'News';
-      case _FeedFilter.warnings:
-        return 'Warnungen';
     }
   }
 }

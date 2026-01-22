@@ -1,5 +1,8 @@
 # Gemeinde-App MVP
 
+## Zusammenfassung (Stand)
+- Mobile Startseite zeigt Nachbarschafts-Posts (Events/News); Warnungen erscheinen nicht mehr auf der Startseite, sondern im Warnungen-Tab.
+
 ## Voraussetzungen
 - Flutter SDK installiert (Windows)
 - Docker Desktop installiert und laufend
