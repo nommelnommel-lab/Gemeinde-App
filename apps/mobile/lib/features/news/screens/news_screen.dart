@@ -6,7 +6,10 @@ import '../services/news_service.dart';
 import 'news_detail_screen.dart';
 
 class NewsScreen extends StatefulWidget {
-  const NewsScreen({super.key, required this.newsService});
+  const NewsScreen({
+    super.key,
+    required this.newsService,
+  });
 
   final NewsService newsService;
 

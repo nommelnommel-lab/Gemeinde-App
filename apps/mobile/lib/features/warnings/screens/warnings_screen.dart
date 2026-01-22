@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/warning_item.dart';
 import '../services/warnings_service.dart';
@@ -7,26 +8,28 @@ import '../utils/warning_formatters.dart';
 import 'warning_detail_screen.dart';
 
 class WarningsScreen extends StatefulWidget {
-  const WarningsScreen({
-    super.key,
-    required this.warningsService,
-  });
-
-  final WarningsService warningsService;
+  const WarningsScreen({super.key});
 
   @override
   State<WarningsScreen> createState() => _WarningsScreenState();
 }
 
 class _WarningsScreenState extends State<WarningsScreen> {
+  late final WarningsService _warningsService;
+  bool _initialized = false;
   bool _loading = true;
   String? _error;
   List<WarningItem> _warnings = const [];
   WarningFilter _selectedFilter = WarningFilter.all;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    _warningsService = AppServicesScope.of(context).warningsService;
+    _initialized = true;
     _load();
   }
 
@@ -37,7 +40,7 @@ class _WarningsScreenState extends State<WarningsScreen> {
     });
 
     try {
-      final warnings = await widget.warningsService.getWarnings();
+      final warnings = await _warningsService.getWarnings();
       setState(() => _warnings = warnings);
     } catch (e) {
       setState(() => _error = e.toString());

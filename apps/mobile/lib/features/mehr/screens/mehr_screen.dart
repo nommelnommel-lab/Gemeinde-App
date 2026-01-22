@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../api/health_service.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../hilfe/screens/hilfe_screen.dart';
 import '../../info/screens/info_screen.dart';
 import '../../systemstatus/screens/health_screen.dart';
 
 class MehrScreen extends StatelessWidget {
-  const MehrScreen({super.key, required this.healthService});
-
-  final HealthService healthService;
+  const MehrScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +19,7 @@ class MehrScreen extends StatelessWidget {
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             AppRouterScope.of(context).push(
-              HealthScreen(healthService: healthService),
+              const HealthScreen(),
             );
           },
         ),

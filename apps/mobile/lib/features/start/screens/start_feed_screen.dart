@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../../shared/widgets/coming_soon_content.dart';
 import '../../events/models/event.dart';
@@ -16,26 +17,31 @@ import '../widgets/feed_card.dart';
 class StartFeedScreen extends StatefulWidget {
   const StartFeedScreen({
     super.key,
-    required this.eventsService,
-    required this.warningsService,
   });
-
-  final EventsService eventsService;
-  final WarningsService warningsService;
 
   @override
   State<StartFeedScreen> createState() => _StartFeedScreenState();
 }
 
 class _StartFeedScreenState extends State<StartFeedScreen> {
+  late final EventsService _eventsService;
+  late final WarningsService _warningsService;
+  bool _initialized = false;
   bool _loading = true;
   String? _error;
   List<FeedItem> _items = const [];
   List<WarningItem> _warnings = const [];
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    final services = AppServicesScope.of(context);
+    _eventsService = services.eventsService;
+    _warningsService = services.warningsService;
+    _initialized = true;
     _load();
   }
 
@@ -46,8 +52,8 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     });
 
     try {
-      final events = await widget.eventsService.getEvents();
-      final warnings = await widget.warningsService.getWarnings();
+      final events = await _eventsService.getEvents();
+      final warnings = await _warningsService.getWarnings();
       final items = _buildFeedItems(events);
       setState(() {
         _items = items;
@@ -133,9 +139,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
                   return _WarningsSection(
                     warnings: _sortedWarnings(_warnings).take(2).toList(),
                     onShowAll: () => AppRouterScope.of(context).push(
-                      WarningsScreen(
-                        warningsService: widget.warningsService,
-                      ),
+                      const WarningsScreen(),
                     ),
                     onSelectWarning: (warning) =>
                         AppRouterScope.of(context).push(

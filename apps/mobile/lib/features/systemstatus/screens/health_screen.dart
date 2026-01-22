@@ -1,24 +1,30 @@
 import 'package:flutter/material.dart';
 
 import '../../../api/health_service.dart';
+import '../../../shared/di/app_services_scope.dart';
 
 class HealthScreen extends StatefulWidget {
-  const HealthScreen({super.key, required this.healthService});
-
-  final HealthService healthService;
+  const HealthScreen({super.key});
 
   @override
   State<HealthScreen> createState() => _HealthScreenState();
 }
 
 class _HealthScreenState extends State<HealthScreen> {
+  late final HealthService _healthService;
+  bool _initialized = false;
   bool _loading = true;
   String? _status;
   String? _error;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    _healthService = AppServicesScope.of(context).healthService;
+    _initialized = true;
     _load();
   }
 
@@ -30,7 +36,7 @@ class _HealthScreenState extends State<HealthScreen> {
     });
 
     try {
-      final status = await widget.healthService.getStatus();
+      final status = await _healthService.getStatus();
       setState(() => _status = status);
     } catch (e) {
       setState(() => _error = e.toString());

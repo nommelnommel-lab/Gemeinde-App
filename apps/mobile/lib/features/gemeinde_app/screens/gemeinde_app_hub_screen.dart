@@ -1,31 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../../shared/widgets/placeholder_screen.dart';
 import '../../events/screens/events_screen.dart';
-import '../../events/services/events_service.dart';
 import '../../news/screens/news_screen.dart';
-import '../../news/services/news_service.dart';
 
 class GemeindeAppHubScreen extends StatelessWidget {
-  const GemeindeAppHubScreen({
-    super.key,
-    required this.eventsService,
-    required this.newsService,
-  });
-
-  final EventsService eventsService;
-  final NewsService newsService;
+  const GemeindeAppHubScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final services = AppServicesScope.of(context);
     final items = [
       _HubItem(
         title: 'Events',
         icon: Icons.event,
         onTap: () {
           AppRouterScope.of(context).push(
-            EventsScreen(eventsService: eventsService),
+            const EventsScreen(),
           );
         },
       ),
@@ -79,7 +72,7 @@ class GemeindeAppHubScreen extends StatelessWidget {
         icon: Icons.newspaper,
         onTap: () {
           AppRouterScope.of(context).push(
-            NewsScreen(newsService: newsService),
+            NewsScreen(newsService: services.newsService),
           );
         },
       ),
