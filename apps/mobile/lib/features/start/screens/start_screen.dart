@@ -165,7 +165,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
           EventDetailScreen(
             event: item.event!,
             eventsService: _eventsService,
-            permissions: _permissions,
+            canEdit: _permissions.canManageContent,
           ),
         );
         return;
