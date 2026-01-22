@@ -1,17 +1,26 @@
+import '../../../api/api_client.dart';
 import '../models/news_item.dart';
 
 class NewsService {
-  NewsService({this.isAdmin = true}) : _newsStore = [..._stubNews];
+  NewsService(this._apiClient);
 
-  final bool isAdmin;
-  final List<NewsItem> _newsStore;
+  final ApiClient _apiClient;
 
   static const String newsEndpoint = '/news';
   static String newsByIdEndpoint(String id) => '/news/$id';
 
+  List<NewsItem> _cachedNews = [];
+
   /// Endpoint: GET /news
   Future<List<NewsItem>> getNews() async {
-    return List<NewsItem>.unmodifiable(_newsStore);
+    final response = await _apiClient.getJsonFlexible(newsEndpoint);
+    final items = _extractList(response);
+    final newsItems = items
+        .whereType<Map<String, dynamic>>()
+        .map(NewsItem.fromJson)
+        .toList();
+    _cachedNews = newsItems;
+    return newsItems;
   }
 
   /// Endpoint: POST /news
@@ -20,16 +29,10 @@ class NewsService {
     required String category,
     required String body,
   }) async {
-    _assertAdminAccess();
-    final item = NewsItem(
-      id: 'news-${DateTime.now().millisecondsSinceEpoch}',
-      title: title.trim(),
-      excerpt: _createExcerpt(body),
-      body: body.trim(),
-      publishedAt: DateTime.now(),
-      category: category.trim(),
-    );
-    _newsStore.add(item);
+    final payload = _buildPayload(title, category, body);
+    final data = await _apiClient.postJson(newsEndpoint, payload);
+    final item = NewsItem.fromJson(data);
+    _cachedNews = [item, ..._cachedNews];
     return item;
   }
 
@@ -40,29 +43,23 @@ class NewsService {
     required String category,
     required String body,
   }) async {
-    _assertAdminAccess();
-    final index = _newsStore.indexWhere((item) => item.id == id);
-    if (index == -1) {
-      throw StateError('News item not found');
-    }
-    final updated = _newsStore[index].copyWith(
-      title: title.trim(),
-      excerpt: _createExcerpt(body),
-      body: body.trim(),
-      category: category.trim(),
-    );
-    _newsStore[index] = updated;
+    final payload = _buildPayload(title, category, body);
+    final data = await _apiClient.putJson(newsByIdEndpoint(id), payload);
+    final updated = NewsItem.fromJson(data);
+    _cachedNews = _cachedNews
+        .map((item) => item.id == id ? updated : item)
+        .toList();
     return updated;
   }
 
   /// Endpoint: DELETE /news/:id
   Future<void> deleteNews(String id) async {
-    _assertAdminAccess();
-    _newsStore.removeWhere((item) => item.id == id);
+    await _apiClient.deleteJson(newsByIdEndpoint(id));
+    _cachedNews = _cachedNews.where((item) => item.id != id).toList();
   }
 
   List<String> get availableCategories {
-    final categories = _newsStore.map((item) => item.category).toSet();
+    final categories = _cachedNews.map((item) => item.category).toSet();
     return [
       'Allgemein',
       'Verwaltung',
@@ -75,10 +72,30 @@ class NewsService {
       ..sort();
   }
 
-  void _assertAdminAccess() {
-    if (!isAdmin) {
-      throw StateError('Admin access required');
+  Map<String, dynamic> _buildPayload(
+    String title,
+    String category,
+    String body,
+  ) {
+    return {
+      'title': title.trim(),
+      'category': category.trim(),
+      'body': body.trim(),
+      'excerpt': _createExcerpt(body),
+    };
+  }
+
+  List<dynamic> _extractList(dynamic response) {
+    if (response is List<dynamic>) {
+      return response;
     }
+    if (response is Map<String, dynamic>) {
+      final data = response['data'] ?? response['news'];
+      if (data is List<dynamic>) {
+        return data;
+      }
+    }
+    return const <dynamic>[];
   }
 
   String _createExcerpt(String body) {
@@ -89,64 +106,3 @@ class NewsService {
     return '${trimmed.substring(0, 117)}...';
   }
 }
-
-final List<NewsItem> _stubNews = [
-  NewsItem(
-    id: 'news-1',
-    title: 'Neue Öffnungszeiten im Bürgerbüro',
-    excerpt:
-        'Ab nächster Woche ist das Bürgerbüro dienstags länger geöffnet.',
-    body:
-        'Das Bürgerbüro erweitert seine Öffnungszeiten: Dienstags ist der '
-        'Service künftig bis 19:00 Uhr geöffnet. Damit sollen Terminvergaben '
-        'flexibler werden und Berufstätige besser erreicht werden.',
-    publishedAt: DateTime(2024, 9, 12),
-    category: 'Verwaltung',
-  ),
-  NewsItem(
-    id: 'news-2',
-    title: 'Herbstmarkt auf dem Rathausplatz',
-    excerpt: 'Regionale Stände und Musik am Samstag von 10 bis 18 Uhr.',
-    body:
-        'Der Herbstmarkt lädt mit regionalen Ständen, Musik und '
-        'Kinderangeboten auf den Rathausplatz. Besucherinnen und Besucher '
-        'können lokale Produkte entdecken und bei Live-Musik verweilen.',
-    publishedAt: DateTime(2024, 9, 14),
-    category: 'Gemeinschaft',
-    imageUrl:
-        'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0',
-  ),
-  NewsItem(
-    id: 'news-3',
-    title: 'Sanierung der Hauptstraße',
-    excerpt: 'Kurzfristige Umleitungen wegen Asphaltarbeiten einplanen.',
-    body:
-        'Ab Mitte September wird die Hauptstraße abschnittsweise saniert. '
-        'Bitte beachten Sie die ausgeschilderten Umleitungen und planen Sie '
-        'mehr Zeit für Ihre Wege ein.',
-    publishedAt: DateTime(2024, 9, 16),
-    category: 'Infrastruktur',
-  ),
-  NewsItem(
-    id: 'news-4',
-    title: 'Mehr Grünflächen am Spielplatz',
-    excerpt: 'Neue Sitzbereiche und Schattenplätze werden eingerichtet.',
-    body:
-        'Der Spielplatz am Stadtpark bekommt zusätzliche Sitzbereiche und '
-        'Schattenplätze. Die Arbeiten beginnen in der kommenden Woche und '
-        'sollen bis zum Monatsende abgeschlossen sein.',
-    publishedAt: DateTime(2024, 9, 18),
-    category: 'Familie',
-  ),
-  NewsItem(
-    id: 'news-5',
-    title: 'Stadtbibliothek feiert Jubiläum',
-    excerpt: 'Lesungen und Aktionen im Rahmen der Jubiläumswoche.',
-    body:
-        'Die Stadtbibliothek feiert ihr Jubiläum mit einer Aktionswoche. '
-        'Auf dem Programm stehen Lesungen, Workshops und eine Mitmach-Ecke '
-        'für Kinder.',
-    publishedAt: DateTime(2024, 9, 20),
-    category: 'Kultur',
-  ),
-];
