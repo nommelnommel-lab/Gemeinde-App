@@ -15,19 +15,32 @@ import 'shared/auth/app_permissions.dart';
 import 'shared/auth/permissions_service.dart';
 import 'shared/di/app_services_scope.dart';
 import 'shared/navigation/app_router.dart';
+import 'shared/tenant/tenant_store.dart';
 import 'shared/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
+  final tenantStore = TenantStore(prefs);
+  await tenantStore.getTenantId();
   final adminKeyStore = AdminKeyStore(prefs);
-  runApp(GemeindeApp(adminKeyStore: adminKeyStore));
+  runApp(
+    GemeindeApp(
+      adminKeyStore: adminKeyStore,
+      tenantStore: tenantStore,
+    ),
+  );
 }
 
 class GemeindeApp extends StatefulWidget {
-  const GemeindeApp({super.key, required this.adminKeyStore});
+  const GemeindeApp({
+    super.key,
+    required this.adminKeyStore,
+    required this.tenantStore,
+  });
 
   final AdminKeyStore adminKeyStore;
+  final TenantStore tenantStore;
 
   @override
   State<GemeindeApp> createState() => _GemeindeAppState();
@@ -45,6 +58,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
     _router = AppRouter(GlobalKey<NavigatorState>());
     _apiClient = ApiClient(
       baseUrl: AppConfig.apiBaseUrl,
+      tenantStore: widget.tenantStore,
       adminKeyStore: widget.adminKeyStore,
     );
     _services = AppServices(
@@ -55,7 +69,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
       warningsService: WarningsService(_apiClient),
       permissionsService: PermissionsService(_apiClient),
       adminKeyStore: widget.adminKeyStore,
-      tenantConfigService: TenantConfigService(_apiClient),
+      tenantStore: widget.tenantStore,
     );
     _loadPermissions();
   }
