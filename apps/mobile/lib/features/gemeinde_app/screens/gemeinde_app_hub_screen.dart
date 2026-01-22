@@ -6,19 +6,25 @@ import '../../events/screens/events_screen.dart';
 import '../../events/services/events_service.dart';
 import '../../news/screens/news_screen.dart';
 import '../../news/services/news_service.dart';
+import '../../posts/models/post.dart';
+import '../../posts/screens/posts_screen.dart';
+import '../../posts/services/posts_service.dart';
 
 class GemeindeAppHubScreen extends StatelessWidget {
   const GemeindeAppHubScreen({
     super.key,
     required this.eventsService,
     required this.newsService,
+    this.postsService,
   });
 
   final EventsService eventsService;
   final NewsService newsService;
+  final PostsService? postsService;
 
   @override
   Widget build(BuildContext context) {
+    final postsService = this.postsService ?? PostsService();
     final items = [
       _HubItem(
         title: 'Events',
@@ -32,46 +38,46 @@ class GemeindeAppHubScreen extends StatelessWidget {
       _HubItem(
         title: 'Online Flohmarkt',
         icon: Icons.storefront,
-        onTap: () => _openPlaceholder(
+        onTap: () => _openPosts(
           context,
-          title: 'Online Flohmarkt',
-          description: 'Hier entsteht der digitale Flohmarkt der Gemeinde.',
+          category: PostCategory.flohmarkt,
+          postsService: postsService,
         ),
       ),
       _HubItem(
         title: 'Umzug/Entrümpelung',
         icon: Icons.local_shipping,
-        onTap: () => _openPlaceholder(
+        onTap: () => _openPosts(
           context,
-          title: 'Umzug/Entrümpelung',
-          description: 'Hier kannst du künftig Hilfe bei Umzug und Entrümpelung finden.',
+          category: PostCategory.umzugEntruempelung,
+          postsService: postsService,
         ),
       ),
       _HubItem(
         title: 'Senioren Hilfe',
         icon: Icons.volunteer_activism,
-        onTap: () => _openPlaceholder(
+        onTap: () => _openPosts(
           context,
-          title: 'Senioren Hilfe',
-          description: 'Unterstützungsangebote für Seniorinnen und Senioren.',
+          category: PostCategory.seniorenHilfe,
+          postsService: postsService,
         ),
       ),
       _HubItem(
         title: 'Café Treff',
         icon: Icons.local_cafe,
-        onTap: () => _openPlaceholder(
+        onTap: () => _openPosts(
           context,
-          title: 'Café Treff',
-          description: 'Hier findest du bald Treffpunkte und Termine für den Café Treff.',
+          category: PostCategory.cafeTreff,
+          postsService: postsService,
         ),
       ),
       _HubItem(
         title: 'Kinderspielen (3j-5j)',
         icon: Icons.child_friendly,
-        onTap: () => _openPlaceholder(
+        onTap: () => _openPosts(
           context,
-          title: 'Kinderspielen (3j-5j)',
-          description: 'Spiel- und Betreuungsangebote für Kinder von 3 bis 5 Jahren.',
+          category: PostCategory.kinderSpielen,
+          postsService: postsService,
         ),
       ),
       _HubItem(
@@ -117,6 +123,19 @@ class GemeindeAppHubScreen extends StatelessWidget {
   }) {
     AppRouterScope.of(context).push(
       PlaceholderScreen(title: title, description: description),
+    );
+  }
+
+  void _openPosts(
+    BuildContext context, {
+    required PostCategory category,
+    required PostsService postsService,
+  }) {
+    AppRouterScope.of(context).push(
+      PostsScreen(
+        category: category,
+        postsService: postsService,
+      ),
     );
   }
 }
