@@ -108,28 +108,92 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 },
               ),
               const SizedBox(height: 12),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Datum'),
-                subtitle: Text(
-                  _selectedDate == null
-                      ? 'Bitte auswählen'
-                      : _formatDate(_selectedDate!),
-                ),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: _pickDate,
+              FormField<DateTime>(
+                initialValue: _selectedDate,
+                validator: (value) {
+                  if (value == null) {
+                    return 'Bitte ein Datum auswählen.';
+                  }
+                  return null;
+                },
+                builder: (field) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Datum'),
+                        subtitle: Text(
+                          _selectedDate == null
+                              ? 'Bitte auswählen'
+                              : _formatDate(_selectedDate!),
+                        ),
+                        trailing: const Icon(Icons.calendar_today),
+                        onTap: () async {
+                          final date = await _pickDate();
+                          if (date != null) {
+                            field.didChange(date);
+                          }
+                        },
+                      ),
+                      if (field.hasError)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 16, bottom: 4),
+                          child: Text(
+                            field.errorText ?? '',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 8),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Uhrzeit'),
-                subtitle: Text(
-                  _selectedTime == null
-                      ? 'Bitte auswählen'
-                      : _formatTime(_selectedTime!),
-                ),
-                trailing: const Icon(Icons.schedule),
-                onTap: _pickTime,
+              FormField<TimeOfDay>(
+                initialValue: _selectedTime,
+                validator: (value) {
+                  if (value == null) {
+                    return 'Bitte eine Uhrzeit auswählen.';
+                  }
+                  return null;
+                },
+                builder: (field) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Uhrzeit'),
+                        subtitle: Text(
+                          _selectedTime == null
+                              ? 'Bitte auswählen'
+                              : _formatTime(_selectedTime!),
+                        ),
+                        trailing: const Icon(Icons.schedule),
+                        onTap: () async {
+                          final time = await _pickTime();
+                          if (time != null) {
+                            field.didChange(time);
+                          }
+                        },
+                      ),
+                      if (field.hasError)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 16, bottom: 4),
+                          child: Text(
+                            field.errorText ?? '',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
@@ -150,7 +214,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
     );
   }
 
-  Future<void> _pickDate() async {
+  Future<DateTime?> _pickDate() async {
     final now = DateTime.now();
     final initial = _selectedDate ?? now;
     final date = await showDatePicker(
@@ -163,9 +227,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
     if (date != null) {
       setState(() => _selectedDate = date);
     }
+    return date;
   }
 
-  Future<void> _pickTime() async {
+  Future<TimeOfDay?> _pickTime() async {
     final initial = _selectedTime ?? TimeOfDay.fromDateTime(DateTime.now());
     final time = await showTimePicker(
       context: context,
@@ -175,6 +240,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
     if (time != null) {
       setState(() => _selectedTime = time);
     }
+    return time;
   }
 
   Future<void> _save() async {
@@ -187,7 +253,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
     final time = _selectedTime;
 
     if (date == null || time == null) {
-      _showSnackBar('Bitte Datum und Uhrzeit auswählen.');
+      _showSnackBar('Bitte die Pflichtfelder ausfüllen.');
       return;
     }
 

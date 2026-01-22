@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/event.dart';
-import '../models/event_permissions.dart';
 import '../services/events_service.dart';
 import 'event_detail_screen.dart';
 import 'event_form_screen.dart';
@@ -23,8 +23,6 @@ class _EventsScreenState extends State<EventsScreen> {
   bool _loading = true;
   String? _error;
   List<Event> _events = const [];
-  EventsPermissions _permissions =
-      const EventsPermissions(canManageContent: false);
 
   @override
   void didChangeDependencies() {
@@ -44,14 +42,10 @@ class _EventsScreenState extends State<EventsScreen> {
     });
 
     try {
-      final results = await Future.wait([
-        _eventsService.getEvents(),
-        _eventsService.getPermissions(),
-      ]);
+      final events = await _eventsService.getEvents();
       if (!mounted) return;
       setState(() {
-        _events = results[0] as List<Event>;
-        _permissions = results[1] as EventsPermissions;
+        _events = events;
       });
     } catch (e) {
       debugPrint('Events loading failed: $e');
@@ -66,6 +60,10 @@ class _EventsScreenState extends State<EventsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canEdit =
+        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+            false;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Events'),
@@ -74,11 +72,11 @@ class _EventsScreenState extends State<EventsScreen> {
           onPressed: () => AppRouterScope.of(context).pop(),
         ),
       ),
-      floatingActionButton: _permissions.canManageContent
+      floatingActionButton: canEdit
           ? FloatingActionButton.extended(
               onPressed: _openCreateEvent,
               icon: const Icon(Icons.add),
-              label: const Text('Create Event'),
+              label: const Text('Add'),
             )
           : null,
       body: RefreshIndicator(
@@ -164,11 +162,14 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   Future<void> _openEventDetail(Event event) async {
+    final canEdit =
+        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+            false;
     final result = await AppRouterScope.of(context).push(
       EventDetailScreen(
         event: event,
         eventsService: _eventsService,
-        permissions: _permissions,
+        canEdit: canEdit,
       ),
     );
     if (result == true) {
