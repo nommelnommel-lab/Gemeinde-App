@@ -7,7 +7,7 @@ class TenantConfigService {
   final ApiClient _apiClient;
 
   Future<TenantConfig> getTenantConfig() async {
-    final data = await _loadConfig('/tenant/config');
+    final data = await _loadConfig('/api/tenant/settings');
     return TenantConfig.fromJson(data);
   }
 
@@ -16,7 +16,7 @@ class TenantConfigService {
       final data = await _apiClient.getJson(path);
       return _extractPayload(data);
     } on ApiException catch (error) {
-      if (error.statusCode == 404 && path == '/tenant/config') {
+      if (error.statusCode == 404 && path == '/api/tenant/settings') {
         final data = await _apiClient.getJson('/api/tenant/config');
         return _extractPayload(data);
       }
