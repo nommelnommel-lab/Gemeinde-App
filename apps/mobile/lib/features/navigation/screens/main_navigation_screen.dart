@@ -27,7 +27,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final screens = <Widget>[
-      StartScreen(onSelectTab: _onSelectTab),
+      StartFeedScreen(
+        onSelectTab: _onSelectTab,
+        eventsService: widget.eventsService,
+      ),
       GemeindeAppHubScreen(eventsService: widget.eventsService),
       const VerwaltungHubScreen(),
       MehrScreen(healthService: widget.healthService),
