@@ -54,10 +54,10 @@ export class MunicipalityEventsController {
   ): Promise<MunicipalityEvent[]> {
     const tenantId = requireTenant(headers);
     const fromDate = this.parseDate(from, 'from') ?? new Date();
-    const parsedWeeks = weeks ? this.parsePositiveNumber(weeks, 'weeks') : 4;
+    const parsedWeeks = this.parseWeeks(weeks);
     const toDate = new Date(fromDate);
     toDate.setDate(toDate.getDate() + parsedWeeks * 7);
-    const parsedLimit = limit ? this.parseLimit(limit) : 50;
+    const parsedLimit = this.parseFeedLimit(limit);
     return this.municipalityEventsService.listFeed(
       tenantId,
       fromDate,
@@ -202,5 +202,27 @@ export class MunicipalityEventsController {
       throw new BadRequestException(`${field} muss eine positive Zahl sein`);
     }
     return parsed;
+  }
+
+  private parseWeeks(value: string | undefined): number {
+    if (!value) {
+      return 4;
+    }
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return 4;
+    }
+    return Math.min(Math.max(parsed, 1), 52);
+  }
+
+  private parseFeedLimit(value: string | undefined): number {
+    if (!value) {
+      return 50;
+    }
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return 50;
+    }
+    return Math.min(Math.max(parsed, 1), 200);
   }
 }

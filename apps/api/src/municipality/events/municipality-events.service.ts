@@ -57,12 +57,15 @@ export class MunicipalityEventsService {
     to: Date,
     limit: number,
   ): Promise<MunicipalityEvent[]> {
-    return this.list(tenantId, {
+    const events = await this.list(tenantId, {
       from,
       to,
       status: 'PUBLISHED',
-      limit,
     });
+    const filtered = events.filter(
+      (event) => Date.parse(event.startAt) < to.getTime(),
+    );
+    return filtered.slice(0, limit);
   }
 
   async create(
