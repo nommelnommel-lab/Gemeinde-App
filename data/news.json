@@ -1,0 +1,34 @@
+[
+  {
+    "id": "d6f5ff4d-31c7-4b7b-9c24-1db7e7b46e1f",
+    "title": "Neuer Gemeindebrief online",
+    "body": "Der aktuelle Gemeindebrief steht ab sofort als PDF zum Download bereit.",
+    "category": "Aktuelles",
+    "createdAt": "2024-08-15T09:00:00.000Z",
+    "updatedAt": "2024-08-15T09:00:00.000Z"
+  },
+  {
+    "id": "9c2f5cf7-7c32-4f7f-8bb0-5dd1f8a6e9ef",
+    "title": "Spendenaktion abgeschlossen",
+    "body": "Dank eurer Hilfe konnten wir das Spendenziel für die Dachsanierung erreichen.",
+    "category": "Gemeinde",
+    "createdAt": "2024-08-20T12:30:00.000Z",
+    "updatedAt": "2024-08-20T12:30:00.000Z"
+  },
+  {
+    "id": "f0c4123d-2a7d-4b75-9120-992b0a74d7b9",
+    "title": "Neues Kursangebot startet",
+    "body": "Ab Oktober bieten wir einen wöchentlichen Kurs zum Thema Achtsamkeit an.",
+    "category": "Angebote",
+    "createdAt": "2024-08-25T07:45:00.000Z",
+    "updatedAt": "2024-08-25T07:45:00.000Z"
+  },
+  {
+    "id": "0b0a4d46-7a9f-4cb4-8e0a-6bcb5d7c6f36",
+    "title": "Freiwillige gesucht",
+    "body": "Für das Herbstfest werden helfende Hände für Auf- und Abbau benötigt.",
+    "category": "Mitmachen",
+    "createdAt": "2024-08-30T15:15:00.000Z",
+    "updatedAt": "2024-08-30T15:15:00.000Z"
+  }
+]
