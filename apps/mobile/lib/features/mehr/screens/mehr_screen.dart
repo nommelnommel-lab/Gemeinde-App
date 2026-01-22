@@ -7,6 +7,7 @@ import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../hilfe/screens/hilfe_screen.dart';
 import '../../systemstatus/screens/health_screen.dart';
+import '../../verwaltung/screens/tenant_info_screen.dart';
 import 'tenant_selection_screen.dart';
 
 class MehrScreen extends StatefulWidget {
