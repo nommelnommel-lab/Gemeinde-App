@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../shared/auth/app_permissions.dart';
+import '../../../shared/navigation/app_router.dart';
 import '../models/event.dart';
+import '../models/event_input.dart';
 import '../services/events_service.dart';
 
 class EventFormScreen extends StatefulWidget {
@@ -19,10 +20,12 @@ class EventFormScreen extends StatefulWidget {
 }
 
 class _EventFormScreenState extends State<EventFormScreen> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _locationController;
   late final TextEditingController _descriptionController;
   DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
   bool _saving = false;
 
   @override
@@ -34,6 +37,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _descriptionController =
         TextEditingController(text: widget.event?.description ?? '');
     _selectedDate = widget.event?.date;
+    if (widget.event != null) {
+      _selectedTime = TimeOfDay.fromDateTime(widget.event!.date);
+    }
   }
 
   @override
@@ -48,55 +54,97 @@ class _EventFormScreenState extends State<EventFormScreen> {
   Widget build(BuildContext context) {
     final isEdit = widget.event != null;
     final saveLabel = isEdit ? 'Aktualisieren' : 'Erstellen';
-    final canManageContent =
-        AppPermissionsScope.permissionsOf(context).canManageContent;
 
     return Scaffold(
       appBar: AppBar(title: Text(isEdit ? 'Event bearbeiten' : 'Neues Event')),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Titel'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _locationController,
-              decoration: const InputDecoration(labelText: 'Ort'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _descriptionController,
-              maxLines: 4,
-              decoration: const InputDecoration(labelText: 'Beschreibung'),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Datum'),
-              subtitle: Text(
-                _selectedDate == null
-                    ? 'Bitte auswählen'
-                    : _formatDate(_selectedDate!),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Titel'),
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  final trimmed = value?.trim() ?? '';
+                  if (trimmed.isEmpty) {
+                    return 'Bitte einen Titel angeben.';
+                  }
+                  if (trimmed.length < 3) {
+                    return 'Bitte einen aussagekräftigen Titel wählen.';
+                  }
+                  return null;
+                },
               ),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: _pickDate,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: (!canManageContent || _saving) ? null : _save,
-              icon: _saving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(saveLabel),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _locationController,
+                decoration: const InputDecoration(labelText: 'Ort'),
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  final trimmed = value?.trim() ?? '';
+                  if (trimmed.isEmpty) {
+                    return 'Bitte einen Ort angeben.';
+                  }
+                  if (trimmed.length < 2) {
+                    return 'Bitte einen gültigen Ort angeben.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 4,
+                decoration: const InputDecoration(labelText: 'Beschreibung'),
+                validator: (value) {
+                  final trimmed = value?.trim() ?? '';
+                  if (trimmed.isNotEmpty && trimmed.length < 10) {
+                    return 'Bitte eine etwas längere Beschreibung angeben.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Datum'),
+                subtitle: Text(
+                  _selectedDate == null
+                      ? 'Bitte auswählen'
+                      : _formatDate(_selectedDate!),
+                ),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: _pickDate,
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Uhrzeit'),
+                subtitle: Text(
+                  _selectedTime == null
+                      ? 'Bitte auswählen'
+                      : _formatTime(_selectedTime!),
+                ),
+                trailing: const Icon(Icons.schedule),
+                onTap: _pickTime,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save),
+                label: Text(saveLabel),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -117,38 +165,64 @@ class _EventFormScreenState extends State<EventFormScreen> {
     }
   }
 
-  Future<void> _save() async {
-    final title = _titleController.text.trim();
-    final location = _locationController.text.trim();
-    final description = _descriptionController.text.trim();
-    final date = _selectedDate;
+  Future<void> _pickTime() async {
+    final initial = _selectedTime ?? TimeOfDay.fromDateTime(DateTime.now());
+    final time = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
 
-    if (title.isEmpty || location.isEmpty || date == null) {
-      _showSnackBar('Titel, Ort und Datum sind erforderlich.');
+    if (time != null) {
+      setState(() => _selectedTime = time);
+    }
+  }
+
+  Future<void> _save() async {
+    final formState = _formKey.currentState;
+    if (formState == null || !formState.validate()) {
+      return;
+    }
+
+    final date = _selectedDate;
+    final time = _selectedTime;
+
+    if (date == null || time == null) {
+      _showSnackBar('Bitte Datum und Uhrzeit auswählen.');
+      return;
+    }
+
+    final scheduledAt = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    if (scheduledAt.isBefore(DateTime.now())) {
+      _showSnackBar('Das Event sollte in der Zukunft liegen.');
       return;
     }
 
     setState(() => _saving = true);
     try {
+      final input = EventInput(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        date: scheduledAt,
+        location: _locationController.text.trim(),
+      );
+      final Event savedEvent;
       if (widget.event == null) {
-        await widget.eventsService.createEvent(
-          title: title,
-          description: description,
-          date: date,
-          location: location,
-        );
+        savedEvent = await widget.eventsService.createEvent(input);
       } else {
-        await widget.eventsService.updateEvent(
+        savedEvent = await widget.eventsService.updateEvent(
           widget.event!.id,
-          title: title,
-          description: description,
-          date: date,
-          location: location,
+          input,
         );
       }
       if (!mounted) return;
       _showSnackBar('Event gespeichert.');
-      Navigator.of(context).pop(true);
+      AppRouterScope.of(context).pop(savedEvent);
     } catch (e) {
       if (!mounted) return;
       _showSnackBar('Fehler beim Speichern: $e');
@@ -164,6 +238,12 @@ class _EventFormScreenState extends State<EventFormScreen> {
     final month = date.month.toString().padLeft(2, '0');
     final year = date.year.toString();
     return '$day.$month.$year';
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute Uhr';
   }
 
   void _showSnackBar(String message) {

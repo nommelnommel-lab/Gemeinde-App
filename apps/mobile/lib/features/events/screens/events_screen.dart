@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
 import '../models/event.dart';
+import '../models/event_permissions.dart';
 import '../services/events_service.dart';
 import 'event_detail_screen.dart';
+import 'event_form_screen.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({
@@ -24,6 +26,8 @@ class _EventsScreenState extends State<EventsScreen> {
   bool _loading = true;
   String? _error;
   List<Event> _events = const [];
+  EventsPermissions _permissions =
+      const EventsPermissions(canManageContent: false);
 
   @override
   void initState() {
@@ -39,8 +43,15 @@ class _EventsScreenState extends State<EventsScreen> {
     });
 
     try {
-      final events = await _eventsService.getEvents();
-      setState(() => _events = events);
+      final results = await Future.wait([
+        _eventsService.getEvents(),
+        _eventsService.getPermissions(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _events = results[0] as List<Event>;
+        _permissions = results[1] as EventsPermissions;
+      });
     } catch (e) {
       debugPrint('Events loading failed: $e');
       setState(
@@ -54,9 +65,25 @@ class _EventsScreenState extends State<EventsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: _buildBody(),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Events'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => AppRouterScope.of(context).pop(),
+        ),
+      ),
+      floatingActionButton: _permissions.canManageContent
+          ? FloatingActionButton.extended(
+              onPressed: _openCreateEvent,
+              icon: const Icon(Icons.add),
+              label: const Text('Create Event'),
+            )
+          : null,
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: _buildBody(),
+      ),
     );
   }
 
@@ -115,9 +142,7 @@ class _EventsScreenState extends State<EventsScreen> {
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              AppRouterScope.of(context).push(
-                EventDetailScreen(event: event),
-              );
+              _openEventDetail(event);
             },
           ),
         );
@@ -135,6 +160,28 @@ class _EventsScreenState extends State<EventsScreen> {
   String _displayLocation(String location) {
     final trimmed = location.trim();
     return trimmed.isEmpty ? 'Ort wird noch bekannt gegeben' : trimmed;
+  }
+
+  Future<void> _openEventDetail(Event event) async {
+    final result = await AppRouterScope.of(context).push(
+      EventDetailScreen(
+        event: event,
+        eventsService: _eventsService,
+        permissions: _permissions,
+      ),
+    );
+    if (result == true) {
+      await _load();
+    }
+  }
+
+  Future<void> _openCreateEvent() async {
+    final result = await AppRouterScope.of(context).push(
+      EventFormScreen(eventsService: _eventsService),
+    );
+    if (result != null) {
+      await _load();
+    }
   }
 }
 
