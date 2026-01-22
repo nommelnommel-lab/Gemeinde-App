@@ -5,9 +5,11 @@ import '../../../shared/widgets/placeholder_content.dart';
 import '../../events/screens/events_screen.dart';
 import '../../events/services/events_service.dart';
 import '../../news/services/news_service.dart';
+import '../../posts/models/post.dart';
+import '../../posts/screens/posts_screen.dart';
+import '../../posts/services/posts_service.dart';
 import '../../warnings/services/warnings_service.dart';
 import '../models/start_feed_preview_item.dart';
-import '../services/start_feed_extras_service.dart';
 
 enum StartFeedSectionType {
   warnings,
@@ -26,13 +28,13 @@ class StartFeedScreen extends StatefulWidget {
     required this.eventsService,
     this.warningsService,
     this.newsService,
-    this.extrasService,
+    this.postsService,
   });
 
   final EventsService eventsService;
   final WarningsService? warningsService;
   final NewsService? newsService;
-  final StartFeedExtrasService? extrasService;
+  final PostsService? postsService;
 
   @override
   State<StartFeedScreen> createState() => _StartFeedScreenState();
@@ -41,7 +43,7 @@ class StartFeedScreen extends StatefulWidget {
 class _StartFeedScreenState extends State<StartFeedScreen> {
   late final WarningsService _warningsService;
   late final NewsService _newsService;
-  late final StartFeedExtrasService _extrasService;
+  late final PostsService _postsService;
 
   final Map<StartFeedSectionType, _SectionState> _sections = {};
 
@@ -101,7 +103,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     super.initState();
     _warningsService = widget.warningsService ?? WarningsService();
     _newsService = widget.newsService ?? NewsService();
-    _extrasService = widget.extrasService ?? StartFeedExtrasService();
+    _postsService = widget.postsService ?? PostsService();
     for (final type in StartFeedSectionType.values) {
       _sections[type] = const _SectionState.loading();
     }
@@ -189,35 +191,35 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   Future<void> _loadCafeTreff() async {
     await _loadSection(
       StartFeedSectionType.cafeTreff,
-      _extrasService.getCafeTreff,
+      () => _loadPostPreviews(PostCategory.cafeTreff),
     );
   }
 
   Future<void> _loadSeniorenHilfe() async {
     await _loadSection(
       StartFeedSectionType.seniorenHilfe,
-      _extrasService.getSeniorenHilfe,
+      () => _loadPostPreviews(PostCategory.seniorenHilfe),
     );
   }
 
   Future<void> _loadFlohmarkt() async {
     await _loadSection(
       StartFeedSectionType.flohmarkt,
-      _extrasService.getFlohmarkt,
+      () => _loadPostPreviews(PostCategory.flohmarkt),
     );
   }
 
   Future<void> _loadUmzugEntruempelung() async {
     await _loadSection(
       StartFeedSectionType.umzugEntruempelung,
-      _extrasService.getUmzugEntruempelung,
+      () => _loadPostPreviews(PostCategory.umzugEntruempelung),
     );
   }
 
   Future<void> _loadKinderSpielen() async {
     await _loadSection(
       StartFeedSectionType.kinderSpielen,
-      _extrasService.getKinderSpielen,
+      () => _loadPostPreviews(PostCategory.kinderSpielen),
     );
   }
 
@@ -278,34 +280,19 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
         );
         return;
       case StartFeedSectionType.cafeTreff:
-        _openComingSoon(
-          title: 'Café Treff',
-          description: 'Entdecke bald alle Café-Treffen in deiner Umgebung.',
-        );
+        _openPosts(PostCategory.cafeTreff);
         return;
       case StartFeedSectionType.seniorenHilfe:
-        _openComingSoon(
-          title: 'Senioren Hilfe',
-          description: 'Angebote zur Unterstützung werden hier gesammelt.',
-        );
+        _openPosts(PostCategory.seniorenHilfe);
         return;
       case StartFeedSectionType.flohmarkt:
-        _openComingSoon(
-          title: 'Flohmarkt',
-          description: 'Finde bald alle Flohmarkt-Angebote auf einen Blick.',
-        );
+        _openPosts(PostCategory.flohmarkt);
         return;
       case StartFeedSectionType.umzugEntruempelung:
-        _openComingSoon(
-          title: 'Umzug / Entrümpelung',
-          description: 'Hilfegesuche und Angebote werden hier sichtbar.',
-        );
+        _openPosts(PostCategory.umzugEntruempelung);
         return;
       case StartFeedSectionType.kinderSpielen:
-        _openComingSoon(
-          title: 'Kinderspielen',
-          description: 'Spielgruppen und Treffen werden hier gesammelt.',
-        );
+        _openPosts(PostCategory.kinderSpielen);
         return;
     }
   }
@@ -314,6 +301,40 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     AppRouterScope.of(context).push(
       ComingSoonScreen(title: title, description: description),
     );
+  }
+
+  void _openPosts(PostCategory category) {
+    AppRouterScope.of(context).push(
+      PostsScreen(
+        category: category,
+        postsService: _postsService,
+      ),
+    );
+  }
+
+  Future<List<StartFeedPreviewItem>> _loadPostPreviews(
+    PostCategory category,
+  ) async {
+    final posts = await _postsService.getPosts(category);
+    return posts
+        .take(1)
+        .map(
+          (post) => StartFeedPreviewItem(
+            title: post.title,
+            subtitle: _previewSubtitle(post),
+          ),
+        )
+        .toList();
+  }
+
+  String _previewSubtitle(Post post) {
+    final date = _formatDate(post.createdAt);
+    final body = post.body.trim();
+    if (body.isEmpty) {
+      return date;
+    }
+    final snippet = body.length > 40 ? '${body.substring(0, 40)}…' : body;
+    return '$date · $snippet';
   }
 
   String _formatDate(DateTime date) {
