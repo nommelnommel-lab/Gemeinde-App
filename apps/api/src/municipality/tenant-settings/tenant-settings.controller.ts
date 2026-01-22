@@ -27,15 +27,6 @@ export class TenantSettingsController {
     return this.tenantSettingsService.getSettings(tenantId);
   }
 
-  @Get('config')
-  @Header('Cache-Control', 'private, max-age=30')
-  // Deprecated: /api/tenant/config — use /api/tenant/settings. Remove after client migration.
-  async getConfig(
-    @Headers() headers: Record<string, string | string[] | undefined>,
-  ): Promise<TenantSettings> {
-    return this.getSettings(headers);
-  }
-
   @Put('settings')
   @Header('Cache-Control', 'no-store')
   async updateSettings(
@@ -45,16 +36,6 @@ export class TenantSettingsController {
     const tenantId = requireTenant(headers);
     this.validatePayload(payload);
     return this.tenantSettingsService.upsertSettings(tenantId, payload);
-  }
-
-  @Put('config')
-  @Header('Cache-Control', 'no-store')
-  // Deprecated: /api/tenant/config — use /api/tenant/settings. Remove after client migration.
-  async updateConfig(
-    @Headers() headers: Record<string, string | string[] | undefined>,
-    @Body() payload: TenantSettingsPayload,
-  ): Promise<TenantSettings> {
-    return this.updateSettings(headers, payload);
   }
 
   private validatePayload(payload: TenantSettingsPayload) {
