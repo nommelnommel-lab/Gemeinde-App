@@ -3,7 +3,9 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
+  Headers,
   Param,
   Post,
   Put,
@@ -33,7 +35,11 @@ export class EventsController {
   }
 
   @Post()
-  async createEvent(@Body() payload: EventPayload): Promise<EventEntity> {
+  async createEvent(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Body() payload: EventPayload,
+  ): Promise<EventEntity> {
+    this.requireAdmin(headers);
     const data = this.validatePayload(payload);
     return this.eventsService.create(data);
   }
@@ -41,14 +47,20 @@ export class EventsController {
   @Put(':id')
   async updateEvent(
     @Param('id') id: string,
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: EventPayload,
   ): Promise<EventEntity> {
+    this.requireAdmin(headers);
     const data = this.validatePayload(payload);
     return this.eventsService.update(id, data);
   }
 
   @Delete(':id')
-  async deleteEvent(@Param('id') id: string) {
+  async deleteEvent(
+    @Param('id') id: string,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+  ) {
+    this.requireAdmin(headers);
     await this.eventsService.remove(id);
     return { ok: true };
   }
@@ -70,5 +82,23 @@ export class EventsController {
       throw new BadRequestException(`${field} ist erforderlich`);
     }
     return value.trim();
+  }
+
+  private requireAdmin(
+    headers: Record<string, string | string[] | undefined>,
+  ) {
+    const adminKey = process.env.ADMIN_KEY;
+    if (!adminKey) {
+      return;
+    }
+
+    const providedHeader = headers['x-admin-key'];
+    const provided = Array.isArray(providedHeader)
+      ? providedHeader[0]
+      : providedHeader;
+
+    if (provided !== adminKey) {
+      throw new ForbiddenException('Ungültiger Admin-Schlüssel');
+    }
   }
 }
