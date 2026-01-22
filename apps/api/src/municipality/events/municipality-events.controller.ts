@@ -209,16 +209,10 @@ export class MunicipalityEventsController {
       return 4;
     }
     const parsed = Number.parseInt(value, 10);
-    if (!Number.isFinite(parsed)) {
+    if (!Number.isFinite(parsed) || parsed <= 0) {
       return 4;
     }
-    if (parsed < 1) {
-      return 1;
-    }
-    if (parsed > 52) {
-      return 52;
-    }
-    return parsed;
+    return Math.min(Math.max(parsed, 1), 52);
   }
 
   private parseFeedLimit(value: string | undefined): number {
@@ -226,15 +220,9 @@ export class MunicipalityEventsController {
       return 50;
     }
     const parsed = Number.parseInt(value, 10);
-    if (!Number.isFinite(parsed)) {
+    if (!Number.isFinite(parsed) || parsed <= 0) {
       return 50;
     }
-    if (parsed < 1) {
-      return 1;
-    }
-    if (parsed > 200) {
-      return 200;
-    }
-    return parsed;
+    return Math.min(Math.max(parsed, 1), 200);
   }
 }
