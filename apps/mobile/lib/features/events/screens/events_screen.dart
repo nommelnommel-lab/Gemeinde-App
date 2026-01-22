@@ -109,7 +109,7 @@ class _EventsScreenState extends State<EventsScreen> {
           SizedBox(height: 16),
           Center(
             child: Text(
-              'Zurzeit sind keine Veranstaltungen geplant.',
+              'Keine Events in den nächsten 4 Wochen.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
