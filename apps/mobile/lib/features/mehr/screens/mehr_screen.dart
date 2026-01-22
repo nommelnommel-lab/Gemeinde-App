@@ -7,7 +7,7 @@ import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../hilfe/screens/hilfe_screen.dart';
 import '../../systemstatus/screens/health_screen.dart';
-import '../../tenant/screens/tenant_info_screen.dart';
+import 'tenant_selection_screen.dart';
 
 class MehrScreen extends StatefulWidget {
   const MehrScreen({super.key});
@@ -17,6 +17,12 @@ class MehrScreen extends StatefulWidget {
 }
 
 class _MehrScreenState extends State<MehrScreen> {
+  static const Map<String, String> _tenantLabels = {
+    'demo': 'Demo',
+    'hilders': 'Hilders',
+    'fulda': 'Fulda',
+  };
+
   final TextEditingController _adminKeyController = TextEditingController();
   bool _initialized = false;
   bool _saving = false;
@@ -78,6 +84,25 @@ class _MehrScreenState extends State<MehrScreen> {
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             AppRouterScope.of(context).push(const HilfeScreen());
+          },
+        ),
+        const Divider(height: 0),
+        ValueListenableBuilder<String>(
+          valueListenable:
+              AppServicesScope.of(context).tenantStore.tenantIdNotifier,
+          builder: (context, tenantId, _) {
+            final label = _tenantLabels[tenantId] ?? tenantId;
+            return ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('Gemeinde wechseln'),
+              subtitle: Text(label),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                AppRouterScope.of(context).push(
+                  const TenantSelectionScreen(),
+                );
+              },
+            );
           },
         ),
         const Divider(height: 0),

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
 import '../shared/auth/admin_key_store.dart';
+import '../shared/tenant/tenant_store.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -18,19 +19,21 @@ class ApiException implements Exception {
 class ApiClient {
   ApiClient({
     required this.baseUrl,
-    required this.tenantId,
+    required TenantStore tenantStore,
     http.Client? httpClient,
     AdminKeyStore? adminKeyStore,
   })  : _http = httpClient ?? http.Client(),
-        _adminKeyStore = adminKeyStore;
+        _adminKeyStore = adminKeyStore,
+        _tenantStore = tenantStore;
 
   factory ApiClient.platform({
+    required TenantStore tenantStore,
     http.Client? httpClient,
     AdminKeyStore? adminKeyStore,
   }) {
     return ApiClient(
       baseUrl: AppConfig.apiBaseUrl,
-      tenantId: AppConfig.tenantId,
+      tenantStore: tenantStore,
       httpClient: httpClient,
       adminKeyStore: adminKeyStore,
     );
@@ -40,6 +43,7 @@ class ApiClient {
   final String tenantId;
   final http.Client _http;
   final AdminKeyStore? _adminKeyStore;
+  final TenantStore _tenantStore;
 
   Future<Map<String, dynamic>> getJson(
     String path, {
@@ -247,13 +251,13 @@ class ApiClient {
     if (includeJson) {
       headers['Content-Type'] = 'application/json';
     }
-    headers['X-Tenant'] = tenantId;
-    if (includeAdminKey || adminKeyOverride != null) {
-      final adminKey =
-          adminKeyOverride ?? _adminKeyStore?.getAdminKey(tenantId);
-      if (adminKey != null && adminKey.isNotEmpty) {
-        headers['x-admin-key'] = adminKey;
-      }
+    final tenantId = _tenantStore.tenantIdNotifier.value;
+    if (tenantId.isNotEmpty) {
+      headers['X-Tenant'] = tenantId;
+    }
+    final adminKey = _adminKeyStore?.adminKey;
+    if (adminKey != null && adminKey.isNotEmpty) {
+      headers['x-admin-key'] = adminKey;
     }
     return headers;
   }
