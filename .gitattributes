@@ -1,0 +1,5 @@
+apps/mobile/linux/flutter/generated_plugin_registrant.* text eol=lf
+apps/mobile/windows/flutter/generated_plugin_registrant.* text eol=lf
+apps/mobile/macos/Flutter/GeneratedPluginRegistrant.swift text eol=lf
+apps/mobile/linux/flutter/generated_plugins.cmake text eol=lf
+apps/mobile/windows/flutter/generated_plugins.cmake text eol=lf
