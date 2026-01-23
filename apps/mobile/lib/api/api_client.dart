@@ -302,7 +302,7 @@ class ApiClient {
     if (includeJson) {
       headers['Content-Type'] = 'application/json';
     }
-    headers['X-TENANT'] = AppConfig.tenantHeaderValue;
+    headers['X-TENANT'] = _tenantStore.tenantIdNotifier.value;
     headers['X-SITE-KEY'] = AppConfig.siteKey;
     final tenantId = _tenantStore.tenantIdNotifier.value;
     final adminKey =

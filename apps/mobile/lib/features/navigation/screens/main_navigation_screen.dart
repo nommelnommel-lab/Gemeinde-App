@@ -5,6 +5,8 @@ import '../../mehr/screens/mehr_screen.dart';
 import '../../start/screens/start_screen.dart';
 import '../../verwaltung/screens/verwaltung_hub_screen.dart';
 import '../../warnings/screens/warnings_screen.dart';
+import '../../../shared/tenant/tenant_settings_scope.dart';
+import '../../../shared/tenant/tenant_settings_store.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -18,42 +20,85 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screens = <Widget>[
-      StartFeedScreen(
-        onSelectTab: _onSelectTab,
+    final settingsStore = TenantSettingsScope.of(context);
+    final showWarnings = settingsStore.isFeatureEnabled('warnings');
+    final showGemeindeApp = _isAnyEnabled(settingsStore, const [
+      'events',
+      'posts',
+      'services',
+      'places',
+      'clubs',
+      'waste',
+    ]);
+    final showVerwaltung = _isAnyEnabled(settingsStore, const [
+      'services',
+      'places',
+      'waste',
+    ]);
+
+    final items = <_NavItem>[
+      _NavItem(
+        title: 'Start',
+        screen: StartFeedScreen(onSelectTab: _onSelectTab),
+        destination: const NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          label: 'Start',
+        ),
       ),
-      const WarningsScreen(),
-      const GemeindeAppHubScreen(),
-      const VerwaltungHubScreen(),
-      const MehrScreen(),
-    ];
-
-    final titles = ['Start', 'Warnungen', 'GemeindeApp', 'Verwaltung', 'Mehr'];
-
-    return Scaffold(
-      appBar: AppBar(title: Text(titles[_selectedIndex])),
-      body: SafeArea(child: screens[_selectedIndex]),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
-        },
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Start'),
-          NavigationDestination(
+      if (showWarnings)
+        _NavItem(
+          title: 'Warnungen',
+          screen: const WarningsScreen(),
+          destination: const NavigationDestination(
             icon: Icon(Icons.warning_amber_outlined),
             label: 'Warnungen',
           ),
-          NavigationDestination(
+        ),
+      if (showGemeindeApp)
+        _NavItem(
+          title: 'GemeindeApp',
+          screen: const GemeindeAppHubScreen(),
+          destination: const NavigationDestination(
             icon: Icon(Icons.groups_outlined),
             label: 'GemeindeApp',
           ),
-          NavigationDestination(
+        ),
+      if (showVerwaltung)
+        _NavItem(
+          title: 'Verwaltung',
+          screen: const VerwaltungHubScreen(),
+          destination: const NavigationDestination(
             icon: Icon(Icons.admin_panel_settings_outlined),
             label: 'Verwaltung',
           ),
-          NavigationDestination(icon: Icon(Icons.menu), label: 'Mehr'),
-        ],
+        ),
+      _NavItem(
+        title: 'Mehr',
+        screen: const MehrScreen(),
+        destination: const NavigationDestination(
+          icon: Icon(Icons.menu),
+          label: 'Mehr',
+        ),
+      ),
+    ];
+
+    final selectedIndex = items.isEmpty
+        ? 0
+        : _selectedIndex.clamp(0, items.length - 1);
+
+    return Scaffold(
+      appBar: items.isEmpty
+          ? null
+          : AppBar(title: Text(items[selectedIndex].title)),
+      body: items.isEmpty
+          ? const SizedBox.shrink()
+          : SafeArea(child: items[selectedIndex].screen),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: (index) {
+          setState(() => _selectedIndex = index);
+        },
+        destinations: items.map((item) => item.destination).toList(),
       ),
     );
   }
@@ -61,4 +106,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void _onSelectTab(int index) {
     setState(() => _selectedIndex = index);
   }
+
+  bool _isAnyEnabled(TenantSettingsStore store, List<String> keys) {
+    for (final key in keys) {
+      if (store.isFeatureEnabled(key)) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
+class _NavItem {
+  const _NavItem({
+    required this.title,
+    required this.screen,
+    required this.destination,
+  });
+
+  final String title;
+  final Widget screen;
+  final NavigationDestination destination;
 }

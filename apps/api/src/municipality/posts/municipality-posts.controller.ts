@@ -10,7 +10,9 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../../admin/admin.guard';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityPostsService } from './municipality-posts.service';
 import {
@@ -62,7 +64,30 @@ export class MunicipalityPostsController {
     return this.municipalityPostsService.listFeed(tenantId, fromDate, anchor);
   }
 
+  @Get('api/admin/posts')
+  @UseGuards(AdminGuard)
+  @Header('Cache-Control', 'no-store')
+  async getAdminPosts(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query('type') type?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+  ): Promise<MunicipalityPost[]> {
+    const tenantId = requireTenant(headers);
+    return this.municipalityPostsService.list(tenantId, {
+      type: type ? this.parseType(type) : undefined,
+      from: this.parseDate(from, 'from'),
+      to: this.parseDate(to, 'to'),
+      status: status ? this.parseStatus(status) : undefined,
+      limit: limit ? this.parseLimit(limit) : undefined,
+      now: new Date(),
+    });
+  }
+
   @Post('api/admin/posts')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async createPost(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -74,6 +99,7 @@ export class MunicipalityPostsController {
   }
 
   @Patch('api/admin/posts/:id')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async updatePost(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -86,6 +112,7 @@ export class MunicipalityPostsController {
   }
 
   @Delete('api/admin/posts/:id')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async deletePost(
     @Headers() headers: Record<string, string | string[] | undefined>,
