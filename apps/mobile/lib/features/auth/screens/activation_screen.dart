@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../config/app_config.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/auth/auth_store.dart';
+import '../../../shared/auth/activation_code_normalizer.dart';
 
 class ActivationScreen extends StatefulWidget {
   const ActivationScreen({super.key});
@@ -23,22 +26,13 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
   static final _activationCodeFormatter = TextInputFormatter.withFunction(
     (oldValue, newValue) {
-      final normalized = _normalizeActivationCode(newValue.text);
+      final normalized = normalizeActivationCode(newValue.text);
       return TextEditingValue(
         text: normalized,
         selection: TextSelection.collapsed(offset: normalized.length),
       );
     },
   );
-
-  static String _normalizeActivationCode(String input) {
-    return input
-        .trim()
-        .toUpperCase()
-        .replaceAll(RegExp(r'[\u2013\u2014\u2212]'), '-')
-        .replaceAll(RegExp(r'\s+'), '')
-        .replaceAll(RegExp(r'-+'), '-');
-  }
 
   @override
   void dispose() {
@@ -131,14 +125,25 @@ class _ActivationScreenState extends State<ActivationScreen> {
   }
 
   Future<void> _submit(AuthStore authStore) async {
-    final normalizedActivationCode =
-        _normalizeActivationCode(_activationCodeController.text);
+    final rawActivationCode = _activationCodeController.text;
+    final normalizedActivationCode = normalizeActivationCode(rawActivationCode);
     if (normalizedActivationCode.isEmpty ||
         normalizedActivationCode.length < 8) {
       setState(() {
         _error = 'Bitte gib einen gültigen Aktivierungscode ein.';
       });
       return;
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        '[ACTIVATE] codeRawLen=${rawActivationCode.length} '
+        'codeNormLen=${normalizedActivationCode.length} '
+        'codeNorm="$normalizedActivationCode" '
+        'runes=${normalizedActivationCode.runes.toList()} '
+        'tenant=${AppConfig.tenantId} '
+        'baseUrl=${AppConfig.apiBaseUrl}',
+      );
     }
 
     _activationCodeController.value = TextEditingValue(
