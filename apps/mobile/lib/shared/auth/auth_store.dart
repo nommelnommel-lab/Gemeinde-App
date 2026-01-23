@@ -1,61 +1,68 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../../api/api_client.dart';
-import 'auth_user.dart';
+import '../../features/auth/models/auth_models.dart';
+import '../../features/auth/services/auth_service.dart';
 
 class AuthStore extends ChangeNotifier {
-  AuthStore({required FlutterSecureStorage secureStorage})
-      : _secureStorage = secureStorage;
+  AuthStore({
+    required FlutterSecureStorage secureStorage,
+    required AuthService authService,
+  })  : _secureStorage = secureStorage,
+        _authService = authService;
 
-  static const _refreshTokenKey = 'auth_refresh_token';
+  static const _refreshTokenKey = 'refreshToken';
+  static const _userKey = 'authUser';
 
   final FlutterSecureStorage _secureStorage;
-  ApiClient? _apiClient;
+  final AuthService _authService;
 
   AuthUser? _user;
   String? _accessToken;
+  String? _refreshToken;
   bool _isLoading = false;
-  String? _error;
+  String? _lastError;
 
   AuthUser? get user => _user;
   String? get accessToken => _accessToken;
+  String? get refreshToken => _refreshToken;
   bool get isLoading => _isLoading;
-  String? get error => _error;
+  String? get lastError => _lastError;
   bool get isAuthenticated => _accessToken != null;
-
-  void attachApiClient(ApiClient apiClient) {
-    _apiClient = apiClient;
-  }
 
   Future<void> bootstrap() async {
     if (_isLoading) return;
     _isLoading = true;
-    _error = null;
+    _lastError = null;
     notifyListeners();
 
-    final token = await _secureStorage.read(key: _refreshTokenKey);
-    if (token == null || token.isEmpty) {
+    try {
+      final storedUser = await _secureStorage.read(key: _userKey);
+      if (storedUser != null && storedUser.isNotEmpty) {
+        final decoded = jsonDecode(storedUser);
+        if (decoded is Map<String, dynamic>) {
+          _user = AuthUser.fromJson(decoded);
+        }
+      }
+    } catch (_) {}
+
+    _refreshToken = await _secureStorage.read(key: _refreshTokenKey);
+    if (_refreshToken == null || _refreshToken!.isEmpty) {
       _isLoading = false;
       notifyListeners();
       return;
     }
 
     try {
-      final response = await _apiClient!.postJson(
-        '/api/auth/refresh',
-        {'refreshToken': token},
+      final response = await _authService.refresh(
+        refreshToken: _refreshToken!,
       );
-      _accessToken = response['accessToken'] as String?;
-      final newRefreshToken = response['refreshToken'] as String?;
-      if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
-        await _secureStorage.write(key: _refreshTokenKey, value: newRefreshToken);
-      }
+      await _applyAuthResponse(response);
     } catch (error) {
-      await _secureStorage.delete(key: _refreshTokenKey);
-      _accessToken = null;
-      _user = null;
-      _error = error.toString();
+      await _clearSession();
+      _lastError = error.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -70,14 +77,13 @@ class AuthStore extends ChangeNotifier {
     required String password,
   }) async {
     await _authenticate(
-      '/api/auth/activate',
-      {
-        'activationCode': activationCode,
-        'postalCode': postalCode,
-        'houseNumber': houseNumber,
-        'email': email,
-        'password': password,
-      },
+      () => _authService.activate(
+        activationCode: activationCode,
+        postalCode: postalCode,
+        houseNumber: houseNumber,
+        email: email,
+        password: password,
+      ),
     );
   }
 
@@ -86,56 +92,59 @@ class AuthStore extends ChangeNotifier {
     required String password,
   }) async {
     await _authenticate(
-      '/api/auth/login',
-      {
-        'email': email,
-        'password': password,
-      },
+      () => _authService.login(
+        email: email,
+        password: password,
+      ),
     );
   }
 
   Future<void> logout() async {
-    final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
-    if (refreshToken != null && refreshToken.isNotEmpty) {
+    final token = _refreshToken ?? await _secureStorage.read(key: _refreshTokenKey);
+    if (token != null && token.isNotEmpty) {
       try {
-        await _apiClient?.postJson(
-          '/api/auth/logout',
-          {'refreshToken': refreshToken},
-        );
+        await _authService.logout(refreshToken: token);
       } catch (_) {}
     }
-    await _secureStorage.delete(key: _refreshTokenKey);
-    _accessToken = null;
-    _user = null;
+    await _clearSession();
     notifyListeners();
   }
 
-  Future<void> _authenticate(String path, Map<String, dynamic> payload) async {
-    if (_apiClient == null) {
-      throw StateError('ApiClient nicht initialisiert');
-    }
-
+  Future<void> _authenticate(Future<AuthResponse> Function() action) async {
     _isLoading = true;
-    _error = null;
+    _lastError = null;
     notifyListeners();
 
     try {
-      final response = await _apiClient!.postJson(path, payload);
-      _accessToken = response['accessToken'] as String?;
-      final refreshToken = response['refreshToken'] as String?;
-      final userJson = response['user'] as Map<String, dynamic>?;
-      if (refreshToken != null && refreshToken.isNotEmpty) {
-        await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
-      }
-      if (userJson != null) {
-        _user = AuthUser.fromJson(userJson);
-      }
+      final response = await action();
+      await _applyAuthResponse(response);
     } catch (error) {
-      _error = error.toString();
+      _lastError = error.toString();
       rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _applyAuthResponse(AuthResponse response) async {
+    _accessToken = response.accessToken;
+    _refreshToken = response.refreshToken;
+    _user = response.user;
+    if (_refreshToken != null && _refreshToken!.isNotEmpty) {
+      await _secureStorage.write(key: _refreshTokenKey, value: _refreshToken);
+    }
+    await _secureStorage.write(
+      key: _userKey,
+      value: jsonEncode(_user?.toJson() ?? {}),
+    );
+  }
+
+  Future<void> _clearSession() async {
+    await _secureStorage.delete(key: _refreshTokenKey);
+    await _secureStorage.delete(key: _userKey);
+    _refreshToken = null;
+    _accessToken = null;
+    _user = null;
   }
 }
