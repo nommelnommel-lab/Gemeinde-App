@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../config/app_config.dart';
+import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/permissions_service.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../auth/screens/login_screen.dart';
 import '../../hilfe/screens/hilfe_screen.dart';
 import '../../systemstatus/screens/health_screen.dart';
 import '../../verwaltung/screens/tenant_info_screen.dart';
@@ -53,9 +55,31 @@ class _MehrScreenState extends State<MehrScreen> {
     final isAdmin =
         AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
             false;
+    final authStore = AuthScope.of(context);
 
     return ListView(
       children: [
+        if (authStore.isAuthenticated)
+          ListTile(
+            leading: const Icon(Icons.account_circle_outlined),
+            title: Text(authStore.user?.displayName ?? 'Angemeldet'),
+            subtitle: Text(authStore.user?.email ?? ''),
+            trailing: TextButton(
+              onPressed: authStore.isLoading ? null : authStore.logout,
+              child: const Text('Logout'),
+            ),
+          )
+        else
+          ListTile(
+            leading: const Icon(Icons.login),
+            title: const Text('Login'),
+            subtitle: const Text('Jetzt anmelden'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              AppRouterScope.of(context).push(const LoginScreen());
+            },
+          ),
+        const Divider(height: 0),
         ListTile(
           leading: const Icon(Icons.monitor_heart),
           title: const Text('Systemstatus'),

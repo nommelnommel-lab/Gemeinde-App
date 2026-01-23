@@ -10,7 +10,9 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../../admin/admin.guard';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityClubsService } from './municipality-clubs.service';
 import {
@@ -48,7 +50,23 @@ export class MunicipalityClubsController {
     return this.municipalityClubsService.getById(tenantId, id);
   }
 
+  @Get('api/admin/clubs')
+  @UseGuards(AdminGuard)
+  @Header('Cache-Control', 'no-store')
+  async getAdminClubs(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query('q') query?: string,
+    @Query('status') status?: string,
+  ): Promise<MunicipalityClub[]> {
+    const tenantId = requireTenant(headers);
+    return this.municipalityClubsService.list(tenantId, {
+      query: query?.trim() || undefined,
+      status: status ? this.parseStatus(status) : undefined,
+    });
+  }
+
   @Post('api/admin/clubs')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async createClub(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -60,6 +78,7 @@ export class MunicipalityClubsController {
   }
 
   @Patch('api/admin/clubs/:id')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async updateClub(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -72,6 +91,7 @@ export class MunicipalityClubsController {
   }
 
   @Delete('api/admin/clubs/:id')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async deleteClub(
     @Headers() headers: Record<string, string | string[] | undefined>,

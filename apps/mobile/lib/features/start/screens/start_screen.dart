@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/tenant/tenant_settings_scope.dart';
 import '../../events/models/event.dart';
 import '../../events/screens/event_detail_screen.dart';
 import '../../events/services/events_service.dart';
@@ -13,6 +14,7 @@ import '../../warnings/models/warning_item.dart';
 import '../../warnings/screens/warning_detail_screen.dart';
 import '../../warnings/services/warnings_service.dart';
 import '../../warnings/utils/warning_formatters.dart';
+import '../services/feed_service.dart';
 
 class StartFeedScreen extends StatefulWidget {
   const StartFeedScreen({
@@ -28,6 +30,7 @@ class StartFeedScreen extends StatefulWidget {
 
 class _StartFeedScreenState extends State<StartFeedScreen> {
   late final EventsService _eventsService;
+  late final FeedService _feedService;
   late final NewsService _newsService;
   late final WarningsService _warningsService;
   bool _initialized = false;
@@ -45,6 +48,7 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     }
     final services = AppServicesScope.of(context);
     _eventsService = services.eventsService;
+    _feedService = services.feedService;
     _newsService = services.newsService;
     _warningsService = services.warningsService;
     _initialized = true;
@@ -58,15 +62,20 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     });
 
     try {
-      final events = await _eventsService.getEvents();
-      final news = await _newsService.getNews();
-      final warnings = await _warningsService.getWarnings();
+      final feedSnapshot = await _feedService.getFeed();
+      final settingsStore = TenantSettingsScope.of(context);
+      final showEvents = settingsStore.isFeatureEnabled('events');
+      final showNews = settingsStore.isFeatureEnabled('posts');
+      final showWarnings = settingsStore.isFeatureEnabled('warnings');
       if (!mounted) return;
       setState(() {
         _items = _buildFeedItems(
-          events: events,
-          news: news,
-          warnings: warnings,
+          events: feedSnapshot.events,
+          news: feedSnapshot.news,
+          warnings: feedSnapshot.warnings,
+          showEvents: showEvents,
+          showNews: showNews,
+          showWarnings: showWarnings,
         );
       });
     } catch (e) {
@@ -79,26 +88,61 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final filteredItems = _filteredItems();
+    final settingsStore = TenantSettingsScope.of(context);
+    final showEvents = settingsStore.isFeatureEnabled('events');
+    final showNews = settingsStore.isFeatureEnabled('posts');
+    final showWarnings = settingsStore.isFeatureEnabled('warnings');
+    final showGemeindeApp = showEvents ||
+        showNews ||
+        settingsStore.isFeatureEnabled('services') ||
+        settingsStore.isFeatureEnabled('places') ||
+        settingsStore.isFeatureEnabled('clubs');
+    final showVerwaltung = settingsStore.isFeatureEnabled('services') ||
+        settingsStore.isFeatureEnabled('places') ||
+        settingsStore.isFeatureEnabled('waste');
+    int nextIndex = 1;
+    if (showWarnings) {
+      nextIndex += 1;
+    }
+    final gemeindeAppIndex = showGemeindeApp ? nextIndex++ : null;
+    final verwaltungIndex = showVerwaltung ? nextIndex++ : null;
+
+    final resolvedFilter = _resolveFilter(
+      showEvents: showEvents,
+      showNews: showNews,
+      showWarnings: showWarnings,
+    );
+    final filteredItems = _filteredItems(
+      showEvents: showEvents,
+      showNews: showNews,
+      showWarnings: showWarnings,
+      filter: resolvedFilter,
+    );
 
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _StartCard(
-            title: 'GemeindeApp',
-            subtitle: 'Angebote und Veranstaltungen entdecken',
-            icon: Icons.groups,
-            onTap: () => widget.onSelectTab(2),
-          ),
-          const SizedBox(height: 16),
-          _StartCard(
-            title: 'Verwaltung',
-            subtitle: 'Formulare und Infos aus der Gemeinde',
-            icon: Icons.admin_panel_settings,
-            onTap: () => widget.onSelectTab(3),
-          ),
+          if (showGemeindeApp)
+            _StartCard(
+              title: 'GemeindeApp',
+              subtitle: 'Angebote und Veranstaltungen entdecken',
+              icon: Icons.groups,
+              onTap: gemeindeAppIndex == null
+                  ? null
+                  : () => widget.onSelectTab(gemeindeAppIndex),
+            ),
+          if (showGemeindeApp && showVerwaltung) const SizedBox(height: 16),
+          if (showVerwaltung)
+            _StartCard(
+              title: 'Verwaltung',
+              subtitle: 'Formulare und Infos aus der Gemeinde',
+              icon: Icons.admin_panel_settings,
+              onTap: verwaltungIndex == null
+                  ? null
+                  : () => widget.onSelectTab(verwaltungIndex),
+            ),
           const SizedBox(height: 24),
           Text(
             'Nachbarschaft',
@@ -106,7 +150,12 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
           ),
           const SizedBox(height: 8),
           _FeedFilters(
-            selected: _selectedFilter,
+            selected: resolvedFilter,
+            availableFilters: _availableFilters(
+              showEvents: showEvents,
+              showNews: showNews,
+              showWarnings: showWarnings,
+            ),
             onSelected: (filter) {
               setState(() => _selectedFilter = filter);
             },
@@ -139,24 +188,32 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     required List<Event> events,
     required List<NewsItem> news,
     required List<WarningItem> warnings,
+    required bool showEvents,
+    required bool showNews,
+    required bool showWarnings,
   }) {
     final now = DateTime.now();
     final start = _startOfDay(now);
     final end = _endOfDay(now.add(const Duration(days: 28)));
 
-    final upcomingEvents = events
-        .where(
-          (event) =>
-              !event.date.isBefore(start) && !event.date.isAfter(end),
-        )
-        .toList();
+    final upcomingEvents = showEvents
+        ? events
+            .where(
+              (event) =>
+                  !event.date.isBefore(start) && !event.date.isAfter(end),
+            )
+            .toList()
+        : const <Event>[];
 
-    final activeWarnings = warnings
-        .where(
-          (warning) =>
-              warning.validUntil == null || warning.validUntil!.isAfter(now),
-        )
-        .toList();
+    final activeWarnings = showWarnings
+        ? warnings
+            .where(
+              (warning) =>
+                  warning.validUntil == null ||
+                  warning.validUntil!.isAfter(now),
+            )
+            .toList()
+        : const <WarningItem>[];
 
     final items = <_FeedItem>[
       ...upcomingEvents.map(
@@ -169,15 +226,16 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
           event: event,
         ),
       ),
-      ...news.map(
-        (item) => _FeedItem(
-          type: _FeedItemType.news,
-          title: item.title,
-          body: item.summary,
-          date: _newsDate(item),
-          news: item,
+      if (showNews)
+        ...news.map(
+          (item) => _FeedItem(
+            type: _FeedItemType.news,
+            title: item.title,
+            body: item.summary,
+            date: _newsDate(item),
+            news: item,
+          ),
         ),
-      ),
       ...activeWarnings.map(
         (warning) => _FeedItem(
           type: _FeedItemType.warning,
@@ -193,23 +251,61 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     return items;
   }
 
-  List<_FeedItem> _filteredItems() {
-    switch (_selectedFilter) {
+  List<_FeedItem> _filteredItems({
+    required bool showEvents,
+    required bool showNews,
+    required bool showWarnings,
+    required _FeedFilter filter,
+  }) {
+    switch (filter) {
       case _FeedFilter.all:
         return _items;
       case _FeedFilter.events:
+        if (!showEvents) return const [];
         return _items
             .where((item) => item.type == _FeedItemType.event)
             .toList();
       case _FeedFilter.news:
+        if (!showNews) return const [];
         return _items
             .where((item) => item.type == _FeedItemType.news)
             .toList();
       case _FeedFilter.warnings:
+        if (!showWarnings) return const [];
         return _items
             .where((item) => item.type == _FeedItemType.warning)
             .toList();
     }
+  }
+
+  _FeedFilter _resolveFilter({
+    required bool showEvents,
+    required bool showNews,
+    required bool showWarnings,
+  }) {
+    switch (_selectedFilter) {
+      case _FeedFilter.events:
+        return showEvents ? _selectedFilter : _FeedFilter.all;
+      case _FeedFilter.news:
+        return showNews ? _selectedFilter : _FeedFilter.all;
+      case _FeedFilter.warnings:
+        return showWarnings ? _selectedFilter : _FeedFilter.all;
+      case _FeedFilter.all:
+        return _selectedFilter;
+    }
+  }
+
+  List<_FeedFilter> _availableFilters({
+    required bool showEvents,
+    required bool showNews,
+    required bool showWarnings,
+  }) {
+    return [
+      _FeedFilter.all,
+      if (showEvents) _FeedFilter.events,
+      if (showNews) _FeedFilter.news,
+      if (showWarnings) _FeedFilter.warnings,
+    ];
   }
 
   DateTime _startOfDay(DateTime date) {
@@ -371,15 +467,17 @@ enum _FeedFilter {
 class _FeedFilters extends StatelessWidget {
   const _FeedFilters({
     required this.selected,
+    required this.availableFilters,
     required this.onSelected,
   });
 
   final _FeedFilter selected;
+  final List<_FeedFilter> availableFilters;
   final ValueChanged<_FeedFilter> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final filters = _FeedFilter.values;
+    final filters = availableFilters;
 
     return Wrap(
       spacing: 8,

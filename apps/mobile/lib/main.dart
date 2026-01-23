@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api/api_client.dart';
 import 'api/health_service.dart';
@@ -8,14 +9,21 @@ import 'features/events/services/events_service.dart';
 import 'features/news/services/news_service.dart';
 import 'features/navigation/screens/main_navigation_screen.dart';
 import 'features/posts/services/posts_service.dart';
+import 'features/start/services/feed_service.dart';
 import 'features/verwaltung/services/tenant_config_service.dart';
 import 'features/warnings/services/warnings_service.dart';
 import 'shared/auth/admin_key_store.dart';
+import 'shared/auth/auth_bootstrap.dart';
+import 'shared/auth/auth_scope.dart';
+import 'shared/auth/auth_store.dart';
 import 'shared/auth/app_permissions.dart';
 import 'shared/auth/permissions_service.dart';
 import 'shared/di/app_services_scope.dart';
 import 'shared/navigation/app_router.dart';
 import 'shared/tenant/tenant_store.dart';
+import 'shared/tenant/tenant_settings_bootstrap.dart';
+import 'shared/tenant/tenant_settings_scope.dart';
+import 'shared/tenant/tenant_settings_store.dart';
 import 'shared/theme/app_theme.dart';
 
 Future<void> main() async {
@@ -27,6 +35,7 @@ Future<void> main() async {
   runApp(
     GemeindeApp(
       adminKeyStore: adminKeyStore,
+      prefs: prefs,
       tenantStore: tenantStore,
     ),
   );
@@ -36,10 +45,12 @@ class GemeindeApp extends StatefulWidget {
   const GemeindeApp({
     super.key,
     required this.adminKeyStore,
+    required this.prefs,
     required this.tenantStore,
   });
 
   final AdminKeyStore adminKeyStore;
+  final SharedPreferences prefs;
   final TenantStore tenantStore;
 
   @override
@@ -50,19 +61,25 @@ class _GemeindeAppState extends State<GemeindeApp> {
   late final AppRouter _router;
   late final ApiClient _apiClient;
   late final AppServices _services;
+  late final TenantSettingsStore _tenantSettingsStore;
+  late final AuthStore _authStore;
   AppPermissions _permissions = const AppPermissions(canManageContent: false);
 
   @override
   void initState() {
     super.initState();
     _router = AppRouter(GlobalKey<NavigatorState>());
+    _authStore = AuthStore(secureStorage: const FlutterSecureStorage());
     _apiClient = ApiClient(
       baseUrl: AppConfig.apiBaseUrl,
       tenantStore: widget.tenantStore,
       adminKeyStore: widget.adminKeyStore,
+      accessTokenProvider: () => _authStore.accessToken,
     );
+    _authStore.attachApiClient(_apiClient);
     _services = AppServices(
       eventsService: EventsService(_apiClient),
+      feedService: FeedService(_apiClient),
       newsService: NewsService(_apiClient),
       postsService: PostsService(_apiClient),
       healthService: HealthService(_apiClient),
@@ -70,6 +87,11 @@ class _GemeindeAppState extends State<GemeindeApp> {
       warningsService: WarningsService(_apiClient),
       permissionsService: PermissionsService(_apiClient),
       adminKeyStore: widget.adminKeyStore,
+      tenantStore: widget.tenantStore,
+    );
+    _tenantSettingsStore = TenantSettingsStore(
+      prefs: widget.prefs,
+      tenantConfigService: _services.tenantConfigService,
       tenantStore: widget.tenantStore,
     );
     _loadPermissions();
@@ -87,16 +109,33 @@ class _GemeindeAppState extends State<GemeindeApp> {
       router: _router,
       child: AppServicesScope(
         services: _services,
-        child: AppPermissionsScope(
-          permissions: _permissions,
-          child: MaterialApp(
-            title: 'Gemeinde App',
-            theme: AppTheme.light(),
-            navigatorKey: _router.navigatorKey,
-            home: const MainNavigationScreen(),
+        child: TenantSettingsScope(
+          store: _tenantSettingsStore,
+          child: AuthScope(
+            store: _authStore,
+            child: AppPermissionsScope(
+              permissions: _permissions,
+              child: MaterialApp(
+                title: 'Gemeinde App',
+                theme: AppTheme.light(),
+                navigatorKey: _router.navigatorKey,
+                home: const TenantSettingsBootstrap(
+                  child: AuthBootstrap(
+                    child: MainNavigationScreen(),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _authStore.dispose();
+    _tenantSettingsStore.dispose();
+    super.dispose();
   }
 }

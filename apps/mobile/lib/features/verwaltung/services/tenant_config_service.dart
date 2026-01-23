@@ -7,8 +7,12 @@ class TenantConfigService {
   final ApiClient _apiClient;
 
   Future<TenantConfig> getTenantConfig() async {
-    final data = await _loadConfig('/api/tenant/settings');
+    final data = await getTenantConfigRaw();
     return TenantConfig.fromJson(data);
+  }
+
+  Future<Map<String, dynamic>> getTenantConfigRaw() async {
+    return _loadConfig('/api/tenant/settings');
   }
 
   Future<Map<String, dynamic>> _loadConfig(String path) async {

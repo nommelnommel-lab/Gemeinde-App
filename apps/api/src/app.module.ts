@@ -8,6 +8,7 @@ import { PostsModule } from './posts/posts.module';
 import { TenantModule } from './tenant/tenant.module';
 import { WarningsModule } from './warnings/warnings.module';
 import { MunicipalityModule } from './municipality/municipality.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   controllers: [AppController],
@@ -19,6 +20,7 @@ import { MunicipalityModule } from './municipality/municipality.module';
     PostsModule,
     TenantModule,
     WarningsModule,
+    AuthModule,
     MunicipalityModule,
   ],
 })

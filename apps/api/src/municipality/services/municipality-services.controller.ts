@@ -10,7 +10,9 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../../admin/admin.guard';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityServicesService } from './municipality-services.service';
 import {
@@ -52,7 +54,25 @@ export class MunicipalityServicesController {
     return this.municipalityServicesService.getById(tenantId, id);
   }
 
+  @Get('api/admin/services')
+  @UseGuards(AdminGuard)
+  @Header('Cache-Control', 'no-store')
+  async getAdminServices(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query('q') query?: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+  ): Promise<MunicipalityService[]> {
+    const tenantId = requireTenant(headers);
+    return this.municipalityServicesService.list(tenantId, {
+      query: query?.trim() || undefined,
+      status: status ? this.parseStatus(status) : undefined,
+      limit: limit ? this.parseLimit(limit) : undefined,
+    });
+  }
+
   @Post('api/admin/services')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async createService(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -64,6 +84,7 @@ export class MunicipalityServicesController {
   }
 
   @Patch('api/admin/services/:id')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async updateService(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -76,6 +97,7 @@ export class MunicipalityServicesController {
   }
 
   @Delete('api/admin/services/:id')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async deleteService(
     @Headers() headers: Record<string, string | string[] | undefined>,

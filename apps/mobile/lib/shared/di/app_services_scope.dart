@@ -4,6 +4,7 @@ import '../../api/health_service.dart';
 import '../../features/events/services/events_service.dart';
 import '../../features/news/services/news_service.dart';
 import '../../features/posts/services/posts_service.dart';
+import '../../features/start/services/feed_service.dart';
 import '../../features/verwaltung/services/tenant_config_service.dart';
 import '../../features/warnings/services/warnings_service.dart';
 import '../auth/admin_key_store.dart';
@@ -13,6 +14,7 @@ import '../tenant/tenant_store.dart';
 class AppServices {
   const AppServices({
     required this.eventsService,
+    required this.feedService,
     required this.newsService,
     required this.postsService,
     required this.healthService,
@@ -24,6 +26,7 @@ class AppServices {
   });
 
   final EventsService eventsService;
+  final FeedService feedService;
   final NewsService newsService;
   final PostsService postsService;
   final HealthService healthService;

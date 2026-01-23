@@ -10,7 +10,9 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../../admin/admin.guard';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityEventsService } from './municipality-events.service';
 import {
@@ -66,7 +68,27 @@ export class MunicipalityEventsController {
     );
   }
 
+  @Get('api/admin/events')
+  @UseGuards(AdminGuard)
+  @Header('Cache-Control', 'no-store')
+  async getAdminEvents(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+  ): Promise<MunicipalityEvent[]> {
+    const tenantId = requireTenant(headers);
+    return this.municipalityEventsService.list(tenantId, {
+      from: this.parseDate(from, 'from'),
+      to: this.parseDate(to, 'to'),
+      status: status ? this.parseStatus(status) : undefined,
+      limit: limit ? this.parseLimit(limit) : undefined,
+    });
+  }
+
   @Post('api/admin/events')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async createEvent(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -78,6 +100,7 @@ export class MunicipalityEventsController {
   }
 
   @Patch('api/admin/events/:id')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async updateEvent(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -90,6 +113,7 @@ export class MunicipalityEventsController {
   }
 
   @Delete('api/admin/events/:id')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async deleteEvent(
     @Headers() headers: Record<string, string | string[] | undefined>,
