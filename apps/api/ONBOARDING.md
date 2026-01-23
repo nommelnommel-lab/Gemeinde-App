@@ -39,6 +39,28 @@ curl -X POST http://localhost:3000/api/admin/residents \
   -d '{"firstName":"Anna","lastName":"Muster","postalCode":"36115","houseNumber":"12A"}'
 ```
 
+### Create a resident (PowerShell)
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/residents" `
+  -Headers @{
+    "Content-Type" = "application/json"
+    "X-TENANT" = "hilders"
+    "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
+    "X-ADMIN-KEY" = "ADMIN-KEY-1"
+  } `
+  -Body '{"firstName":"Anna","lastName":"Muster","postalCode":"36115","houseNumber":"12A"}'
+```
+
+### List residents (PowerShell)
+```powershell
+Invoke-RestMethod -Method Get -Uri "http://localhost:3000/api/admin/residents?q=mus&limit=50" `
+  -Headers @{
+    "X-TENANT" = "hilders"
+    "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
+    "X-ADMIN-KEY" = "ADMIN-KEY-1"
+  }
+```
+
 ### Create an activation code (PowerShell)
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/activation-codes" `

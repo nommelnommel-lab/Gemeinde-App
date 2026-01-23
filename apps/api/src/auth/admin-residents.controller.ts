@@ -4,7 +4,9 @@ import {
   Controller,
   Header,
   Headers,
+  Get,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AdminGuard } from '../admin/admin.guard';
@@ -30,13 +32,24 @@ export class AdminResidentsController {
     @Body() payload: ResidentPayload,
   ) {
     const tenantId = requireTenant(headers);
-    const normalized = this.normalizeResident(payload);
-    const residentId = await this.residentsService.upsertResident(
+    const residentId = await this.residentsService.createResident(
       tenantId,
-      normalized,
+      payload,
     );
 
     return { residentId };
+  }
+
+  @Get()
+  @Header('Cache-Control', 'no-store')
+  async listResidents(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query('q') q?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const tenantId = requireTenant(headers);
+    const resolvedLimit = limit ? Number.parseInt(limit, 10) : undefined;
+    return this.residentsService.listResidents(tenantId, q, resolvedLimit);
   }
 
   @Post('bulk')
@@ -50,22 +63,6 @@ export class AdminResidentsController {
       throw new BadRequestException('payload muss ein Array sein');
     }
 
-    return this.residentsService.bulkUpsert(tenantId, payload);
-  }
-
-  private normalizeResident(payload: ResidentPayload): ResidentPayload {
-    return {
-      firstName: this.requireString(payload.firstName, 'firstName'),
-      lastName: this.requireString(payload.lastName, 'lastName'),
-      postalCode: this.requireString(payload.postalCode, 'postalCode'),
-      houseNumber: this.requireString(payload.houseNumber, 'houseNumber'),
-    };
-  }
-
-  private requireString(value: string | undefined, field: string) {
-    if (!value || value.trim().length === 0) {
-      throw new BadRequestException(`${field} ist erforderlich`);
-    }
-    return value.trim();
+    return this.residentsService.bulkCreateResidents(tenantId, payload);
   }
 }
