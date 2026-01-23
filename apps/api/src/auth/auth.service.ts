@@ -28,11 +28,13 @@ type ResidentRecord = {
 type ActivationCodeRecord = {
   id: string;
   tenantId: string;
-  residentId: string;
+  residentId?: string;
   codeHash: string;
   expiresAt: string;
   usedAt?: string | null;
   revokedAt?: string | null;
+  createdAt?: string;
+  createdBy?: string;
 };
 
 type UserRecord = {
@@ -133,18 +135,12 @@ export class AuthService {
 
     this.ensureActivationCodeValid(activationEntry);
 
-    const resident = await this.findResident(
+    const resident = await this.resolveActivationResident(
       tenantId,
-      activationEntry.residentId,
+      activationEntry,
+      postalCode,
+      houseNumber,
     );
-
-    if (!resident) {
-      throw new NotFoundException('Bewohner nicht gefunden');
-    }
-
-    if (!this.matchesResident(resident, postalCode, houseNumber)) {
-      throw new UnauthorizedException('Aktivierungsdaten stimmen nicht überein');
-    }
 
     const existingUsers = await this.users.getAll(tenantId);
     if (existingUsers.some((user) => user.email === email)) {
@@ -174,6 +170,79 @@ export class AuthService {
     await this.activationCodes.setAll(tenantId, updatedCodes);
 
     return this.issueAuthResponse(tenantId, user, resident);
+  }
+
+  async createActivationCodes(params: {
+    tenantId: string;
+    count: number;
+    expiresInDays: number;
+    createdBy: string;
+  }) {
+    const { tenantId, count, expiresInDays, createdBy } = params;
+    if (!Number.isInteger(count) || count < 1 || count > 100) {
+      throw new BadRequestException('count muss zwischen 1 und 100 liegen');
+    }
+    if (
+      !Number.isInteger(expiresInDays) ||
+      expiresInDays < 1 ||
+      expiresInDays > 3650
+    ) {
+      throw new BadRequestException(
+        'expiresInDays muss zwischen 1 und 3650 liegen',
+      );
+    }
+
+    const existingCodes = await this.activationCodes.getAll(tenantId);
+    const existingHashes = new Set(existingCodes.map((code) => code.codeHash));
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const expiresAt = new Date(
+      now.getTime() + expiresInDays * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    const generated: { code: string; expiresAt: string }[] = [];
+    const newRecords: ActivationCodeRecord[] = [];
+
+    for (let i = 0; i < count; i += 1) {
+      let code = '';
+      let codeHash = '';
+      let attempts = 0;
+      do {
+        if (attempts > 20) {
+          throw new HttpException(
+            'Aktivierungscode konnte nicht generiert werden',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          );
+        }
+        code = this.generateActivationCode(tenantId);
+        codeHash = this.hashToken(code);
+        attempts += 1;
+      } while (existingHashes.has(codeHash));
+
+      existingHashes.add(codeHash);
+      generated.push({ code, expiresAt });
+      newRecords.push({
+        id: randomUUID(),
+        tenantId,
+        codeHash,
+        expiresAt,
+        usedAt: null,
+        createdAt: nowIso,
+        createdBy,
+      });
+    }
+
+    await this.activationCodes.setAll(tenantId, [
+      ...existingCodes,
+      ...newRecords,
+    ]);
+
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('[activation-codes]', tenantId, generated);
+    }
+
+    return generated;
   }
 
   async login(
@@ -363,6 +432,47 @@ export class AuthService {
     return residents.find((resident) => resident.id === residentId);
   }
 
+  private async resolveActivationResident(
+    tenantId: string,
+    activationEntry: ActivationCodeRecord,
+    postalCode: string,
+    houseNumber: string,
+  ) {
+    if (activationEntry.residentId) {
+      const resident = await this.findResident(
+        tenantId,
+        activationEntry.residentId,
+      );
+
+      if (!resident) {
+        throw new NotFoundException('Bewohner nicht gefunden');
+      }
+
+      if (!this.matchesResident(resident, postalCode, houseNumber)) {
+        throw new UnauthorizedException(
+          'Aktivierungsdaten stimmen nicht überein',
+        );
+      }
+
+      return resident;
+    }
+
+    const residents = await this.residents.getAll(tenantId);
+    const matches = residents.filter((resident) =>
+      this.matchesResident(resident, postalCode, houseNumber),
+    );
+
+    if (matches.length === 0) {
+      throw new UnauthorizedException('Aktivierungsdaten stimmen nicht überein');
+    }
+
+    if (matches.length > 1) {
+      throw new ConflictException('Mehrere Bewohner gefunden');
+    }
+
+    return matches[0];
+  }
+
   private toAuthUserView(user: UserRecord, displayName: string): AuthUserView {
     return {
       id: user.id,
@@ -416,6 +526,32 @@ export class AuthService {
 
   private hashToken(value: string) {
     return createHash('sha256').update(value).digest('hex');
+  }
+
+  private generateActivationCode(tenantId: string) {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const prefix = tenantId
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 4);
+    const usePrefix = prefix.length >= 2;
+    const segments = [];
+    const segmentCount = usePrefix ? 2 : 3;
+
+    for (let i = 0; i < segmentCount; i += 1) {
+      let segment = '';
+      for (let j = 0; j < 4; j += 1) {
+        const index = randomBytes(1)[0] % alphabet.length;
+        segment += alphabet[index];
+      }
+      segments.push(segment);
+    }
+
+    if (usePrefix) {
+      return `${prefix}-${segments.join('-')}`;
+    }
+
+    return segments.join('-');
   }
 
   private rateLimitKey(tenantId: string, email: string, clientKey: string) {
