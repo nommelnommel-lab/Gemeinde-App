@@ -7,7 +7,9 @@ import {
   Headers,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../../admin/admin.guard';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityWastePickupsService } from './municipality-waste-pickups.service';
 import {
@@ -45,6 +47,7 @@ export class MunicipalityWastePickupsController {
   }
 
   @Post('api/admin/waste-pickups/bulk')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async bulkImport(
     @Headers() headers: Record<string, string | string[] | undefined>,

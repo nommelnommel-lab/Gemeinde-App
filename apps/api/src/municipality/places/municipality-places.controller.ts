@@ -10,7 +10,9 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../../admin/admin.guard';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityPlacesService } from './municipality-places.service';
 import {
@@ -52,7 +54,25 @@ export class MunicipalityPlacesController {
     return this.municipalityPlacesService.getById(tenantId, id);
   }
 
+  @Get('api/admin/places')
+  @UseGuards(AdminGuard)
+  @Header('Cache-Control', 'no-store')
+  async getAdminPlaces(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query('type') type?: string,
+    @Query('status') status?: string,
+    @Query('bbox') bbox?: string,
+  ): Promise<MunicipalityPlace[]> {
+    const tenantId = requireTenant(headers);
+    return this.municipalityPlacesService.list(tenantId, {
+      type: type?.trim() || undefined,
+      status: status ? this.parseStatus(status) : undefined,
+      bbox: bbox ? this.parseBbox(bbox) : undefined,
+    });
+  }
+
   @Post('api/admin/places')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async createPlace(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -64,6 +84,7 @@ export class MunicipalityPlacesController {
   }
 
   @Patch('api/admin/places/:id')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async updatePlace(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -76,6 +97,7 @@ export class MunicipalityPlacesController {
   }
 
   @Delete('api/admin/places/:id')
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async deletePlace(
     @Headers() headers: Record<string, string | string[] | undefined>,

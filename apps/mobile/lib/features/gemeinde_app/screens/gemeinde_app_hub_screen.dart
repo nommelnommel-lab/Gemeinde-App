@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/tenant/tenant_settings_scope.dart';
 import '../../../shared/widgets/placeholder_screen.dart';
 import '../../events/screens/events_screen.dart';
 import '../../news/screens/news_screen.dart';
@@ -10,71 +11,102 @@ class GemeindeAppHubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      _HubItem(
-        title: 'Events',
-        icon: Icons.event,
-        onTap: () {
-          AppRouterScope.of(context).push(
-            const EventsScreen(),
-          );
-        },
-      ),
-      _HubItem(
-        title: 'Online Flohmarkt',
-        icon: Icons.storefront,
-        onTap: () => _openPlaceholder(
-          context,
+    final settingsStore = TenantSettingsScope.of(context);
+    final items = <_HubItem>[];
+
+    if (settingsStore.isFeatureEnabled('events')) {
+      items.add(
+        _HubItem(
+          title: 'Events',
+          icon: Icons.event,
+          onTap: () {
+            AppRouterScope.of(context).push(
+              const EventsScreen(),
+            );
+          },
+        ),
+      );
+    }
+    if (settingsStore.isFeatureEnabled('services')) {
+      items.addAll([
+        _HubItem(
           title: 'Online Flohmarkt',
-          description: 'Hier entsteht der digitale Flohmarkt der Gemeinde.',
+          icon: Icons.storefront,
+          onTap: () => _openPlaceholder(
+            context,
+            title: 'Online Flohmarkt',
+            description: 'Hier entsteht der digitale Flohmarkt der Gemeinde.',
+          ),
         ),
-      ),
-      _HubItem(
-        title: 'Umzug/Entrümpelung',
-        icon: Icons.local_shipping,
-        onTap: () => _openPlaceholder(
-          context,
+        _HubItem(
           title: 'Umzug/Entrümpelung',
-          description: 'Hier kannst du künftig Hilfe bei Umzug und Entrümpelung finden.',
+          icon: Icons.local_shipping,
+          onTap: () => _openPlaceholder(
+            context,
+            title: 'Umzug/Entrümpelung',
+            description:
+                'Hier kannst du künftig Hilfe bei Umzug und Entrümpelung finden.',
+          ),
         ),
-      ),
-      _HubItem(
-        title: 'Senioren Hilfe',
-        icon: Icons.volunteer_activism,
-        onTap: () => _openPlaceholder(
-          context,
+        _HubItem(
           title: 'Senioren Hilfe',
-          description: 'Unterstützungsangebote für Seniorinnen und Senioren.',
+          icon: Icons.volunteer_activism,
+          onTap: () => _openPlaceholder(
+            context,
+            title: 'Senioren Hilfe',
+            description:
+                'Unterstützungsangebote für Seniorinnen und Senioren.',
+          ),
         ),
-      ),
-      _HubItem(
-        title: 'Café Treff',
-        icon: Icons.local_cafe,
-        onTap: () => _openPlaceholder(
-          context,
+      ]);
+    }
+    if (settingsStore.isFeatureEnabled('places')) {
+      items.add(
+        _HubItem(
           title: 'Café Treff',
-          description: 'Hier findest du bald Treffpunkte und Termine für den Café Treff.',
+          icon: Icons.local_cafe,
+          onTap: () => _openPlaceholder(
+            context,
+            title: 'Café Treff',
+            description:
+                'Hier findest du bald Treffpunkte und Termine für den Café Treff.',
+          ),
         ),
-      ),
-      _HubItem(
-        title: 'Kinderspielen (3j-5j)',
-        icon: Icons.child_friendly,
-        onTap: () => _openPlaceholder(
-          context,
+      );
+    }
+    if (settingsStore.isFeatureEnabled('clubs')) {
+      items.add(
+        _HubItem(
           title: 'Kinderspielen (3j-5j)',
-          description: 'Spiel- und Betreuungsangebote für Kinder von 3 bis 5 Jahren.',
+          icon: Icons.child_friendly,
+          onTap: () => _openPlaceholder(
+            context,
+            title: 'Kinderspielen (3j-5j)',
+            description:
+                'Spiel- und Betreuungsangebote für Kinder von 3 bis 5 Jahren.',
+          ),
         ),
-      ),
-      _HubItem(
-        title: 'News / Aktuelles in der Umgebung',
-        icon: Icons.newspaper,
-        onTap: () {
-          AppRouterScope.of(context).push(
-            const NewsScreen(),
-          );
-        },
-      ),
-    ];
+      );
+    }
+    if (settingsStore.isFeatureEnabled('posts')) {
+      items.add(
+        _HubItem(
+          title: 'News / Aktuelles in der Umgebung',
+          icon: Icons.newspaper,
+          onTap: () {
+            AppRouterScope.of(context).push(
+              const NewsScreen(),
+            );
+          },
+        ),
+      );
+    }
+
+    if (items.isEmpty) {
+      return const Center(
+        child: Text('Für diese Gemeinde sind keine Module aktiviert.'),
+      );
+    }
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
