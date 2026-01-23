@@ -1,9 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
-  TooManyRequestsException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID } from 'crypto';
@@ -77,8 +78,9 @@ class InMemoryRateLimiter {
     }
 
     if (current.count >= this.max) {
-      throw new TooManyRequestsException(
+      throw new HttpException(
         'Zu viele Versuche, bitte später erneut versuchen',
+        HttpStatus.TOO_MANY_REQUESTS,
       );
     }
 
