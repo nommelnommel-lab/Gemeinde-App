@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomBytes, randomUUID, createHash } from 'crypto';
+import { randomBytes, randomUUID, createHmac } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
 import { ActivationCode } from './auth.types';
 
@@ -15,13 +15,28 @@ export class ActivationCodesService {
     expiresAt: Date,
   ): Promise<{ code: string; activation: ActivationCode }> {
     const codes = await this.repository.getAll(tenantId);
+    const now = new Date().toISOString();
+    const updatedCodes = codes.map((entry) => {
+      if (
+        entry.residentId === residentId &&
+        !entry.usedAt &&
+        !entry.revokedAt &&
+        Date.parse(entry.expiresAt) > Date.now()
+      ) {
+        return {
+          ...entry,
+          revokedAt: now,
+        };
+      }
+      return entry;
+    });
     let code = '';
     let codeHash = '';
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
       code = this.generateCode();
       codeHash = this.hashCode(code);
-      const exists = codes.some((entry) => entry.codeHash === codeHash);
+      const exists = updatedCodes.some((entry) => entry.codeHash === codeHash);
       if (!exists) {
         break;
       }
@@ -31,7 +46,6 @@ export class ActivationCodesService {
       throw new Error('Aktivierungscode konnte nicht erzeugt werden');
     }
 
-    const now = new Date().toISOString();
     const activation: ActivationCode = {
       id: randomUUID(),
       tenantId,
@@ -42,8 +56,8 @@ export class ActivationCodesService {
       createdAt: now,
     };
 
-    codes.push(activation);
-    await this.repository.setAll(tenantId, codes);
+    updatedCodes.push(activation);
+    await this.repository.setAll(tenantId, updatedCodes);
     return { code, activation };
   }
 
@@ -91,7 +105,11 @@ export class ActivationCodesService {
   }
 
   hashCode(code: string): string {
-    return createHash('sha256').update(code).digest('hex');
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET fehlt');
+    }
+    return createHmac('sha256', secret).update(code).digest('hex');
   }
 
   private generateCode() {

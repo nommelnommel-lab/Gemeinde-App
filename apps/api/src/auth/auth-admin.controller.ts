@@ -34,12 +34,20 @@ export class AuthAdminController {
     },
   ) {
     const tenantId = requireTenant(headers);
-    const resident = await this.residentsService.create(tenantId, {
+    const normalized = {
       firstName: this.requireString(payload.firstName, 'firstName'),
       lastName: this.requireString(payload.lastName, 'lastName'),
       postalCode: this.requireString(payload.postalCode, 'postalCode'),
       houseNumber: this.requireString(payload.houseNumber, 'houseNumber'),
-    });
+    };
+    const existing = await this.residentsService.findByAddress(
+      tenantId,
+      normalized.postalCode,
+      normalized.houseNumber,
+    );
+    const resident = existing
+      ? await this.residentsService.update(tenantId, existing.id, normalized)
+      : await this.residentsService.create(tenantId, normalized);
     return { residentId: resident.id };
   }
 
@@ -76,9 +84,10 @@ export class AuthAdminController {
           status: entry.status,
         };
 
-        const existing = await this.residentsService.findByIdentity(
+        const existing = await this.residentsService.findByAddress(
           tenantId,
-          normalized,
+          normalized.postalCode,
+          normalized.houseNumber,
         );
         if (existing) {
           await this.residentsService.update(tenantId, existing.id, normalized);
@@ -180,9 +189,10 @@ export class AuthAdminController {
         status: residentPayload.status,
       };
 
-      const existing = await this.residentsService.findByIdentity(
+      const existing = await this.residentsService.findByAddress(
         tenantId,
-        normalized,
+        normalized.postalCode,
+        normalized.houseNumber,
       );
       const resident = existing
         ? await this.residentsService.update(tenantId, existing.id, normalized)

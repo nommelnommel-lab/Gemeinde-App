@@ -247,7 +247,7 @@ export class AuthService {
   }
 
   private normalizeAddress(value: string) {
-    return value.trim().toLowerCase();
+    return value.trim().toUpperCase();
   }
 
   private hashToken(value: string) {

@@ -81,9 +81,10 @@ const bootstrapTenant = async () => {
     expiresAt.setDate(expiresAt.getDate() + 30);
 
     for (const residentPayload of residents) {
-      const existing = await residentsService.findByIdentity(
+      const existing = await residentsService.findByAddress(
         tenantId,
-        residentPayload,
+        residentPayload.postalCode,
+        residentPayload.houseNumber,
       );
       const resident = existing
         ? await residentsService.update(tenantId, existing.id, residentPayload)

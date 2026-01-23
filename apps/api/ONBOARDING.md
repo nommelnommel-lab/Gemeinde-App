@@ -25,6 +25,7 @@ npm run seed:tenant -- <tenantId>
   ```bash
   JWT_SECRET=dev-secret-change-me
   ```
+  - Used to HMAC-hash activation codes and sign JWTs (changing it invalidates existing codes/tokens).
 
 ## What the seed helper does
 - Ensures tenant settings exist and applies default feature flags.
@@ -83,4 +84,47 @@ curl -X POST http://localhost:3000/api/auth/logout \
   -H "X-TENANT: hilders" \
   -H "X-SITE-KEY: HD-2026-9f3c1a2b-KEY" \
   -d '{"refreshToken":"<refreshToken>"}'
+```
+
+## Auth PowerShell examples
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/residents" `
+  -Headers @{ "X-TENANT"="hilders"; "X-SITE-KEY"="HD-2026-9f3c1a2b-KEY"; "X-ADMIN-KEY"="HD-ADMIN-TEST-KEY" } `
+  -ContentType "application/json" `
+  -Body '{"firstName":"Florian","lastName":"Günkel","postalCode":"36115","houseNumber":"5"}'
+```
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/activation-codes" `
+  -Headers @{ "X-TENANT"="hilders"; "X-SITE-KEY"="HD-2026-9f3c1a2b-KEY"; "X-ADMIN-KEY"="HD-ADMIN-TEST-KEY" } `
+  -ContentType "application/json" `
+  -Body '{"residentId":"<residentId>","expiresInDays":30}'
+```
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/auth/activate" `
+  -Headers @{ "X-TENANT"="hilders"; "X-SITE-KEY"="HD-2026-9f3c1a2b-KEY" } `
+  -ContentType "application/json" `
+  -Body '{"activationCode":"<code>","email":"user@example.de","password":"secret123","postalCode":"36115","houseNumber":"5"}'
+```
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/auth/login" `
+  -Headers @{ "X-TENANT"="hilders"; "X-SITE-KEY"="HD-2026-9f3c1a2b-KEY" } `
+  -ContentType "application/json" `
+  -Body '{"email":"user@example.de","password":"secret123"}'
+```
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/auth/refresh" `
+  -Headers @{ "X-TENANT"="hilders"; "X-SITE-KEY"="HD-2026-9f3c1a2b-KEY" } `
+  -ContentType "application/json" `
+  -Body '{"refreshToken":"<refreshToken>"}'
+```
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/auth/logout" `
+  -Headers @{ "X-TENANT"="hilders"; "X-SITE-KEY"="HD-2026-9f3c1a2b-KEY" } `
+  -ContentType "application/json" `
+  -Body '{"refreshToken":"<refreshToken>"}'
 ```

@@ -118,6 +118,6 @@ export class ResidentsService {
   }
 
   private normalize(value: string) {
-    return value.trim().toLowerCase();
+    return value.trim().toUpperCase();
   }
 }
