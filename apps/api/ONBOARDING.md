@@ -11,6 +11,8 @@ npm install
 npm run seed:tenant -- <tenantId>
 ```
 
+> Hinweis: Wenn der bcrypt Native Build auf Alpine fehlschlägt, installiere die benötigten Build-Abhängigkeiten (z.B. `python3`, `make`, `g++`) oder wechsle alternativ auf `argon2`.
+
 ## Environment variables
 - `SITE_KEYS_JSON` example:
   ```json
