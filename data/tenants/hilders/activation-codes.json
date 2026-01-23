@@ -1,0 +1,20 @@
+[
+  {
+    "id": "7f5f3d0d-2d1b-4c84-b604-9ad0d796fb2b",
+    "tenantId": "hilders",
+    "codeHash": "351ab7a67d06ecd713f4f68b61378458219fbdf1739de677c2ae0aa79d9fed77",
+    "expiresAt": "2026-02-28T00:00:00.000Z",
+    "usedAt": null,
+    "createdAt": "2025-02-01T00:00:00.000Z",
+    "createdBy": "admin"
+  },
+  {
+    "id": "c0f75c0d-4e2b-4c5e-b6c2-8fc3f8bd1a3b",
+    "tenantId": "hilders",
+    "codeHash": "33c2f04c9eb37bc84b20c2aff730d8e4bf2878bf87251743f84869633e352a1d",
+    "expiresAt": "2026-02-28T00:00:00.000Z",
+    "usedAt": null,
+    "createdAt": "2025-02-01T00:00:00.000Z",
+    "createdBy": "admin"
+  }
+]

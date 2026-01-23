@@ -60,6 +60,42 @@
    curl -X DELETE http://localhost:3000/events/<id>
    ```
 
+## Aktivierungscodes (Admin)
+Admin-Aktivierungscodes werden tenant-spezifisch erzeugt und nur einmal im Response angezeigt.
+
+**Codes erzeugen**
+```powershell
+curl -X POST http://localhost:3000/api/admin/activation-codes ^
+  -H "Content-Type: application/json" ^
+  -H "X-Tenant: hilders" ^
+  -H "X-SITE-KEY: <site-key>" ^
+  -H "X-ADMIN-KEY: <admin-key>" ^
+  -d "{\"count\":2,\"expiresInDays\":30}"
+```
+
+**Beispiel-Response (Codes nur einmal sichtbar)**
+```json
+{
+  "tenant": "hilders",
+  "codes": [
+    {
+      "code": "HILD-3AN3-TQJ5",
+      "expiresAt": "2026-02-28T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Beispiel Aktivierung**
+```powershell
+curl -X POST http://localhost:3000/api/auth/activate ^
+  -H "Content-Type: application/json" ^
+  -H "X-Tenant: hilders" ^
+  -H "X-SITE-KEY: <site-key>" ^
+  -d "{\"activationCode\":\"HILD-3AN3-TQJ5\",\"email\":\"user@example.com\",\"password\":\"Passwort123!\",\"postalCode\":\"12345\",\"houseNumber\":\"1A\"}"
+```
+Hinweis: Die postalCode/houseNumber-Werte müssen zu einem bekannten Bewohner des Tenants passen.
+
 ## Ports
 - API: `3000`
 - PostgreSQL: `5432`
