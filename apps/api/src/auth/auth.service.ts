@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID } from 'crypto';
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
 import { ActivateDto } from './dto/activate.dto';
@@ -158,7 +158,7 @@ export class AuthService {
       tenantId,
       residentId: resident.id,
       email,
-      passwordHash: await bcrypt.hash(password, 10),
+      passwordHash: await this.hashPassword(password),
       createdAt: now,
       updatedAt: now,
     };
@@ -191,7 +191,7 @@ export class AuthService {
       throw new UnauthorizedException('Login fehlgeschlagen');
     }
 
-    const matches = await bcrypt.compare(password, user.passwordHash);
+    const matches = await this.verifyPassword(password, user.passwordHash);
     if (!matches) {
       throw new UnauthorizedException('Login fehlgeschlagen');
     }
@@ -425,5 +425,13 @@ export class AuthService {
 
   private jwtSecret() {
     return process.env.JWT_SECRET || 'dev-secret-change-me';
+  }
+
+  private async hashPassword(password: string) {
+    return bcrypt.hash(password, 10);
+  }
+
+  private async verifyPassword(password: string, hash: string) {
+    return bcrypt.compare(password, hash);
   }
 }
