@@ -64,6 +64,20 @@ class ApiClient {
 
   String resolveTenantId() => _tenantStore.resolveTenantId();
 
+  Map<String, bool> debugHeaderPresence({
+    bool includeAdminKey = false,
+    String? adminKeyOverride,
+  }) {
+    final headers = _buildHeaders(
+      includeAdminKey: includeAdminKey,
+      adminKeyOverride: adminKeyOverride,
+    );
+    return {
+      'X-TENANT': headers.containsKey('X-TENANT'),
+      'X-SITE-KEY': headers.containsKey('X-SITE-KEY'),
+    };
+  }
+
   Future<Map<String, dynamic>> getJson(
     String path, {
     bool includeAdminKey = false,

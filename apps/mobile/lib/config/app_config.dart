@@ -1,6 +1,6 @@
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 
 class AppConfig {
   static const String tenantId = 'default';
@@ -14,7 +14,7 @@ class AppConfig {
     if (kIsWeb) {
       return 'http://localhost:3000';
     }
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && kDebugMode) {
       return 'http://10.0.2.2:3000';
     }
     if (Platform.isIOS) {

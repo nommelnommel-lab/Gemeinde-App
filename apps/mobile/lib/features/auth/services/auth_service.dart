@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../api/api_client.dart';
+import '../../../shared/auth/activation_code_normalizer.dart';
 import '../models/auth_models.dart';
 
 class AuthService {
@@ -15,16 +16,27 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    final normalizedActivationCode = normalizeActivationCode(activationCode);
     if (kDebugMode) {
       final tenantId = _apiClient.resolveTenantId();
+      final containsNonAscii = activationCode.runes.any((rune) => rune > 127);
+      final headerPresence = _apiClient.debugHeaderPresence();
       debugPrint(
-        'activate tenant=$tenantId activationCodeLength=${activationCode.length}',
+        'activate tenant=$tenantId '
+        'activationCodeLength=${normalizedActivationCode.length} '
+        'activationCodeContainsNonAscii=$containsNonAscii',
+      );
+      debugPrint(
+        'activate POST ${_apiClient.baseUrl}/api/auth/activate '
+        'headers: tenant=${headerPresence['X-TENANT']} '
+        'siteKey=${headerPresence['X-SITE-KEY']} '
+        'codeNormLen=${normalizedActivationCode.length}',
       );
     }
     final response = await _apiClient.postJson(
       '/api/auth/activate',
       {
-        'activationCode': activationCode,
+        'activationCode': normalizedActivationCode,
         'postalCode': postalCode,
         'houseNumber': houseNumber,
         'email': email,
