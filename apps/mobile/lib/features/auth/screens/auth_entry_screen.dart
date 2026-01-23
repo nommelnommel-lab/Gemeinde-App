@@ -31,14 +31,14 @@ class AuthEntryScreen extends StatelessWidget {
               onPressed: () {
                 AppRouterScope.of(context).push(const LoginScreen());
               },
-              child: const Text('Login'),
+              child: const Text('Ich habe bereits ein Konto'),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: () {
                 AppRouterScope.of(context).push(const ActivationScreen());
               },
-              child: const Text('Aktivierungscode eingeben'),
+              child: const Text('Ich habe einen Aktivierungscode'),
             ),
             const Spacer(),
           ],

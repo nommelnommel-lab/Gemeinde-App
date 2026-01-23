@@ -10,6 +10,7 @@ import 'features/news/services/news_service.dart';
 import 'features/navigation/screens/main_navigation_screen.dart';
 import 'features/posts/services/posts_service.dart';
 import 'features/start/services/feed_service.dart';
+import 'features/auth/services/auth_service.dart';
 import 'features/verwaltung/services/tenant_config_service.dart';
 import 'features/warnings/services/warnings_service.dart';
 import 'shared/auth/admin_key_store.dart';
@@ -61,6 +62,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
   late final AppRouter _router;
   late final ApiClient _apiClient;
   late final AppServices _services;
+  late final AuthStore _authStore;
   late final TenantSettingsStore _tenantSettingsStore;
   AppPermissions _permissions = const AppPermissions(canManageContent: false);
 
@@ -68,14 +70,16 @@ class _GemeindeAppState extends State<GemeindeApp> {
   void initState() {
     super.initState();
     _router = AppRouter(GlobalKey<NavigatorState>());
-    _authStore = AuthStore(secureStorage: const FlutterSecureStorage());
     _apiClient = ApiClient(
       baseUrl: AppConfig.apiBaseUrl,
       tenantStore: widget.tenantStore,
       adminKeyStore: widget.adminKeyStore,
       accessTokenProvider: () => _authStore.accessToken,
     );
-    _authStore.attachApiClient(_apiClient);
+    _authStore = AuthStore(
+      secureStorage: const FlutterSecureStorage(),
+      authService: AuthService(_apiClient),
+    );
     _services = AppServices(
       eventsService: EventsService(_apiClient),
       feedService: FeedService(_apiClient),
@@ -108,16 +112,21 @@ class _GemeindeAppState extends State<GemeindeApp> {
       router: _router,
       child: AppServicesScope(
         services: _services,
-        child: TenantSettingsScope(
-          store: _tenantSettingsStore,
-          child: AppPermissionsScope(
-            permissions: _permissions,
-            child: MaterialApp(
-              title: 'Gemeinde App',
-              theme: AppTheme.light(),
-              navigatorKey: _router.navigatorKey,
-              home: const TenantSettingsBootstrap(
-                child: MainNavigationScreen(),
+        child: AuthScope(
+          store: _authStore,
+          child: TenantSettingsScope(
+            store: _tenantSettingsStore,
+            child: AppPermissionsScope(
+              permissions: _permissions,
+              child: MaterialApp(
+                title: 'Gemeinde App',
+                theme: AppTheme.light(),
+                navigatorKey: _router.navigatorKey,
+                home: const TenantSettingsBootstrap(
+                  child: AuthBootstrap(
+                    child: MainNavigationScreen(),
+                  ),
+                ),
               ),
             ),
           ),

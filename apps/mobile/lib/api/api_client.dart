@@ -316,8 +316,9 @@ class ApiClient {
       headers['x-admin-key'] = adminKey;
     }
     final accessToken = _accessTokenProvider?.call();
-    if (accessToken != null && accessToken.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $accessToken';
+    final trimmedToken = accessToken?.trim();
+    if (trimmedToken != null && trimmedToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $trimmedToken';
     }
     return headers;
   }
