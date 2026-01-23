@@ -15,6 +15,7 @@ import { ActivateDto } from './dto/activate.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { AuthResponse, AuthUserView, JwtAccessPayload } from './auth.types';
+import { normalizeActivationCode } from './auth.normalize';
 
 type ResidentRecord = {
   id: string;
@@ -114,10 +115,18 @@ export class AuthService {
     payload: ActivateDto,
     clientKey: string,
   ): Promise<AuthResponse> {
-    const activationCode = this.requireString(
+    const rawActivationCode = this.requireString(
       payload.activationCode,
       'activationCode',
     );
+    const activationCode = normalizeActivationCode(rawActivationCode);
+    if (
+      !activationCode ||
+      activationCode.length < 8 ||
+      !/^[A-Z0-9-]+$/.test(activationCode)
+    ) {
+      throw new BadRequestException('Aktivierungscode Format ungültig');
+    }
     const email = this.normalizeEmail(payload.email);
     const password = this.requireString(payload.password, 'password');
     const postalCode = this.requireString(payload.postalCode, 'postalCode');
@@ -215,7 +224,7 @@ export class AuthService {
           );
         }
         code = this.generateActivationCode(tenantId);
-        codeHash = this.hashToken(code);
+        codeHash = this.hashToken(normalizeActivationCode(code));
         attempts += 1;
       } while (existingHashes.has(codeHash));
 
@@ -267,7 +276,7 @@ export class AuthService {
         );
       }
       code = this.generateActivationCode(tenantId);
-      codeHash = this.hashToken(code);
+      codeHash = this.hashToken(normalizeActivationCode(code));
       attempts += 1;
     } while (existingHashes.has(codeHash));
 

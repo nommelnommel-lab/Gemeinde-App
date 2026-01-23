@@ -32,7 +32,7 @@ export const resolveTenantId = (
   const tenantId = rawValue?.trim() || fallback;
 
   if (!tenantId) {
-    throw new BadRequestException('x-tenant Header ist erforderlich');
+    throw new BadRequestException('X-TENANT fehlt');
   }
 
   const normalized = tenantId.toLowerCase();

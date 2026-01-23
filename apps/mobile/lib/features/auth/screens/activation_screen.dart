@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/auth/auth_store.dart';
@@ -19,6 +20,25 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
   bool _submitting = false;
   String? _error;
+
+  static final _activationCodeFormatter = TextInputFormatter.withFunction(
+    (oldValue, newValue) {
+      final normalized = _normalizeActivationCode(newValue.text);
+      return TextEditingValue(
+        text: normalized,
+        selection: TextSelection.collapsed(offset: normalized.length),
+      );
+    },
+  );
+
+  static String _normalizeActivationCode(String input) {
+    return input
+        .trim()
+        .toUpperCase()
+        .replaceAll(RegExp(r'[\u2013\u2014\u2212]'), '-')
+        .replaceAll(RegExp(r'\s+'), '')
+        .replaceAll(RegExp(r'-+'), '-');
+  }
 
   @override
   void dispose() {
@@ -46,6 +66,10 @@ class _ActivationScreenState extends State<ActivationScreen> {
           const SizedBox(height: 16),
           TextField(
             controller: _activationCodeController,
+            autocorrect: false,
+            enableSuggestions: false,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [_activationCodeFormatter],
             decoration: const InputDecoration(
               labelText: 'Aktivierungscode',
             ),
@@ -107,6 +131,20 @@ class _ActivationScreenState extends State<ActivationScreen> {
   }
 
   Future<void> _submit(AuthStore authStore) async {
+    final normalizedActivationCode =
+        _normalizeActivationCode(_activationCodeController.text);
+    if (normalizedActivationCode.isEmpty ||
+        normalizedActivationCode.length < 8) {
+      setState(() {
+        _error = 'Bitte gib einen gültigen Aktivierungscode ein.';
+      });
+      return;
+    }
+
+    _activationCodeController.value = TextEditingValue(
+      text: normalizedActivationCode,
+      selection: TextSelection.collapsed(offset: normalizedActivationCode.length),
+    );
     setState(() {
       _submitting = true;
       _error = null;
@@ -114,7 +152,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
     try {
       await authStore.activate(
-        activationCode: _activationCodeController.text.trim(),
+        activationCode: normalizedActivationCode,
         postalCode: _postalCodeController.text.trim(),
         houseNumber: _houseNumberController.text.trim(),
         email: _emailController.text.trim(),

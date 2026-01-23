@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes, randomUUID, createHmac } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
 import { ActivationCode } from './activation-codes.model';
+import { normalizeActivationCode } from './auth.normalize';
 
 @Injectable()
 export class ActivationCodesService {
@@ -109,7 +110,8 @@ export class ActivationCodesService {
     if (!secret) {
       throw new Error('JWT_SECRET fehlt');
     }
-    return createHmac('sha256', secret).update(code).digest('hex');
+    const normalized = normalizeActivationCode(code);
+    return createHmac('sha256', secret).update(normalized).digest('hex');
   }
 
   private generateCode() {
