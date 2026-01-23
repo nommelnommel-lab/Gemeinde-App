@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
-import { RefreshToken } from './auth.types';
+import { RefreshToken } from './refresh-tokens.model';
 
 @Injectable()
 export class RefreshTokensService {

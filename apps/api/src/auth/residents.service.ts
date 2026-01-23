@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
-import { Resident, ResidentStatus } from './auth.types';
+import { Resident, ResidentStatus } from './residents.model';
 
 @Injectable()
 export class ResidentsService {
