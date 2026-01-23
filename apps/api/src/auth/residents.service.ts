@@ -117,7 +117,101 @@ export class ResidentsService {
     );
   }
 
+  async upsertResident(
+    tenantId: string,
+    payload: {
+      firstName: string;
+      lastName: string;
+      postalCode: string;
+      houseNumber: string;
+    },
+  ): Promise<string> {
+    const existing = await this.findByAddress(
+      tenantId,
+      payload.postalCode,
+      payload.houseNumber,
+    );
+    const resident = existing
+      ? await this.update(tenantId, existing.id, payload)
+      : await this.create(tenantId, payload);
+    return resident.id;
+  }
+
+  async bulkUpsert(
+    tenantId: string,
+    payload: Array<{
+      firstName: string;
+      lastName: string;
+      postalCode: string;
+      houseNumber: string;
+    }>,
+  ): Promise<{
+    created: Array<{ residentId: string; displayName: string }>;
+    updated: Array<{ residentId: string; displayName: string }>;
+    errors: Array<{ index: number; message: string }>;
+  }> {
+    const created: Array<{ residentId: string; displayName: string }> = [];
+    const updated: Array<{ residentId: string; displayName: string }> = [];
+    const errors: Array<{ index: number; message: string }> = [];
+
+    for (let index = 0; index < payload.length; index += 1) {
+      try {
+        const entry = this.normalizeResident(payload[index]);
+        const existing = await this.findByAddress(
+          tenantId,
+          entry.postalCode,
+          entry.houseNumber,
+        );
+        const resident = existing
+          ? await this.update(tenantId, existing.id, entry)
+          : await this.create(tenantId, entry);
+        const summary = {
+          residentId: resident.id,
+          displayName: this.displayName(resident.firstName, resident.lastName),
+        };
+        if (existing) {
+          updated.push(summary);
+        } else {
+          created.push(summary);
+        }
+      } catch (error) {
+        errors.push({
+          index,
+          message: error instanceof Error ? error.message : 'Unbekannter Fehler',
+        });
+      }
+    }
+
+    return { created, updated, errors };
+  }
+
   private normalize(value: string) {
     return value.trim().toUpperCase();
+  }
+
+  private normalizeResident(payload: {
+    firstName: string;
+    lastName: string;
+    postalCode: string;
+    houseNumber: string;
+  }) {
+    return {
+      firstName: this.requireString(payload.firstName, 'firstName'),
+      lastName: this.requireString(payload.lastName, 'lastName'),
+      postalCode: this.requireString(payload.postalCode, 'postalCode'),
+      houseNumber: this.requireString(payload.houseNumber, 'houseNumber'),
+    };
+  }
+
+  private requireString(value: string | undefined, field: string) {
+    if (!value || value.trim().length === 0) {
+      throw new Error(`${field} ist erforderlich`);
+    }
+    return value.trim();
+  }
+
+  private displayName(firstName: string, lastName: string) {
+    const initial = lastName.trim().charAt(0);
+    return `${firstName.trim()} ${initial}.`;
   }
 }
