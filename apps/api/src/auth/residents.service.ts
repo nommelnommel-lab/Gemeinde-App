@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { promises as fs } from 'fs';
+import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
 import { Resident, ResidentStatus } from './residents.model';
@@ -6,6 +12,7 @@ import { Resident, ResidentStatus } from './residents.model';
 @Injectable()
 export class ResidentsService {
   private readonly repository = new TenantFileRepository<Resident>('residents');
+  private readonly tenantsPath = join(process.cwd(), 'data', 'tenants');
 
   async createResident(
     tenantId: string,
@@ -176,6 +183,33 @@ export class ResidentsService {
       throw new NotFoundException('Bewohner nicht gefunden');
     }
     return resident;
+  }
+
+  async findTenantForResidentId(residentId: string): Promise<string | undefined> {
+    let entries: Array<{ name: string; isDirectory: () => boolean }> = [];
+    try {
+      entries = await fs.readdir(this.tenantsPath, { withFileTypes: true });
+    } catch {
+      return undefined;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const tenantId = entry.name;
+      const residentsPath = join(this.tenantsPath, tenantId, 'residents.json');
+      try {
+        const file = await fs.readFile(residentsPath, 'utf8');
+        const residents = JSON.parse(file) as Resident[];
+        if (residents.some((resident) => resident.id === residentId)) {
+          return tenantId;
+        }
+      } catch {
+        continue;
+      }
+    }
+    return undefined;
   }
 
   async findByIdentity(

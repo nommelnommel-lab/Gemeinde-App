@@ -62,6 +62,8 @@ Invoke-RestMethod -Method Get -Uri "http://localhost:3000/api/admin/residents?q=
 ```
 
 ### Create an activation code (PowerShell)
+Activation codes are always tied to a resident ID. During `/api/auth/activate`, the client still must supply matching `postalCode` + `houseNumber` for that resident.
+
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/activation-codes" `
   -Headers @{
@@ -72,3 +74,22 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/activation-
   } `
   -Body '{"residentId":"<residentId>","expiresInDays":14}'
 ```
+
+### Create activation codes (bulk, PowerShell)
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/activation-codes/bulk" `
+  -Headers @{
+    "Content-Type" = "application/json"
+    "X-TENANT" = "hilders"
+    "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
+    "X-ADMIN-KEY" = "ADMIN-KEY-1"
+  } `
+  -Body '{"items":[{"residentId":"<residentId-1>","expiresInDays":14},{"residentId":"<residentId-2>"}]}'
+```
+
+### Quick manual test steps
+1. Create resident -> get `residentId`.
+2. Create activation code with `residentId` -> receive `code`.
+3. Call `/api/admin/activation-codes` without `residentId` -> 400.
+4. Call `/api/admin/activation-codes` with placeholder UUID -> 404.
+5. Call `/api/auth/activate` with the code + matching `postalCode`/`houseNumber` -> success.
