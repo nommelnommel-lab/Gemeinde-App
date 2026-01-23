@@ -237,12 +237,64 @@ export class AuthService {
       ...newRecords,
     ]);
 
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('[activation-codes]', tenantId, generated);
+    return generated;
+  }
+
+  async createActivationCodeForResident(params: {
+    tenantId: string;
+    residentId: string;
+    expiresAt: Date;
+    createdBy: string;
+  }): Promise<{ code: string; expiresAt: string }> {
+    const { tenantId, residentId, expiresAt, createdBy } = params;
+    const expiresAtIso = expiresAt.toISOString();
+    if (Number.isNaN(Date.parse(expiresAtIso)) || Date.parse(expiresAtIso) <= Date.now()) {
+      throw new BadRequestException('expiresAt ist ungültig');
     }
 
-    return generated;
+    const existingCodes = await this.activationCodes.getAll(tenantId);
+    const existingHashes = new Set(existingCodes.map((code) => code.codeHash));
+    const nowIso = new Date().toISOString();
+
+    let code = '';
+    let codeHash = '';
+    let attempts = 0;
+    do {
+      if (attempts > 20) {
+        throw new HttpException(
+          'Aktivierungscode konnte nicht generiert werden',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+      code = this.generateActivationCode(tenantId);
+      codeHash = this.hashToken(code);
+      attempts += 1;
+    } while (existingHashes.has(codeHash));
+
+    const record: ActivationCodeRecord = {
+      id: randomUUID(),
+      tenantId,
+      residentId,
+      codeHash,
+      expiresAt: expiresAtIso,
+      usedAt: null,
+      createdAt: nowIso,
+      createdBy,
+    };
+
+    await this.activationCodes.setAll(tenantId, [...existingCodes, record]);
+
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.info('[activation_code_issued]', {
+        tenantId,
+        residentId,
+        expiresAt: expiresAtIso,
+        createdBy,
+      });
+    }
+
+    return { code, expiresAt: expiresAtIso };
   }
 
   async login(
