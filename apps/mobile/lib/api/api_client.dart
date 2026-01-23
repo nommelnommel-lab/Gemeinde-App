@@ -35,26 +35,31 @@ class ApiClient {
     required TenantStore tenantStore,
     http.Client? httpClient,
     AdminKeyStore? adminKeyStore,
+    String? Function()? accessTokenProvider,
   })  : _http = httpClient ?? http.Client(),
         _adminKeyStore = adminKeyStore,
+        _accessTokenProvider = accessTokenProvider,
         _tenantStore = tenantStore;
 
   factory ApiClient.platform({
     required TenantStore tenantStore,
     http.Client? httpClient,
     AdminKeyStore? adminKeyStore,
+    String? Function()? accessTokenProvider,
   }) {
     return ApiClient(
       baseUrl: AppConfig.apiBaseUrl,
       tenantStore: tenantStore,
       httpClient: httpClient,
       adminKeyStore: adminKeyStore,
+      accessTokenProvider: accessTokenProvider,
     );
   }
 
   final String baseUrl;
   final http.Client _http;
   final AdminKeyStore? _adminKeyStore;
+  final String? Function()? _accessTokenProvider;
   final TenantStore _tenantStore;
 
   Future<Map<String, dynamic>> getJson(
@@ -309,6 +314,10 @@ class ApiClient {
         _adminKeyStore?.getAdminKey(adminKeyOverride ?? tenantId);
     if (adminKey != null && adminKey.isNotEmpty) {
       headers['x-admin-key'] = adminKey;
+    }
+    final accessToken = _accessTokenProvider?.call();
+    if (accessToken != null && accessToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $accessToken';
     }
     return headers;
   }

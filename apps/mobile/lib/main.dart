@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api/api_client.dart';
 import 'api/health_service.dart';
@@ -12,6 +13,9 @@ import 'features/start/services/feed_service.dart';
 import 'features/verwaltung/services/tenant_config_service.dart';
 import 'features/warnings/services/warnings_service.dart';
 import 'shared/auth/admin_key_store.dart';
+import 'shared/auth/auth_bootstrap.dart';
+import 'shared/auth/auth_scope.dart';
+import 'shared/auth/auth_store.dart';
 import 'shared/auth/app_permissions.dart';
 import 'shared/auth/permissions_service.dart';
 import 'shared/di/app_services_scope.dart';
@@ -64,11 +68,14 @@ class _GemeindeAppState extends State<GemeindeApp> {
   void initState() {
     super.initState();
     _router = AppRouter(GlobalKey<NavigatorState>());
+    _authStore = AuthStore(secureStorage: const FlutterSecureStorage());
     _apiClient = ApiClient(
       baseUrl: AppConfig.apiBaseUrl,
       tenantStore: widget.tenantStore,
       adminKeyStore: widget.adminKeyStore,
+      accessTokenProvider: () => _authStore.accessToken,
     );
+    _authStore.attachApiClient(_apiClient);
     _services = AppServices(
       eventsService: EventsService(_apiClient),
       feedService: FeedService(_apiClient),

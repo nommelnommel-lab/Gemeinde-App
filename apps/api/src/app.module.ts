@@ -21,6 +21,7 @@ import { AuthModule } from './auth/auth.module';
     PostsModule,
     TenantModule,
     WarningsModule,
+    AuthModule,
     MunicipalityModule,
   ],
 })
