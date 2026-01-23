@@ -67,7 +67,8 @@ export class ActivationCodesService {
     codeHash: string,
   ): Promise<ActivationCode | undefined> {
     const codes = await this.repository.getAll(tenantId);
-    return codes.find((entry) => entry.codeHash === codeHash);
+    const match = codes.find((entry) => entry.codeHash === codeHash);
+    return match ? this.normalizeActivationCode(match) : undefined;
   }
 
   async findActiveByResident(
@@ -76,7 +77,8 @@ export class ActivationCodesService {
     now: Date = new Date(),
   ): Promise<ActivationCode | undefined> {
     const codes = await this.repository.getAll(tenantId);
-    return codes
+    const match = codes
+      .map((entry) => this.normalizeActivationCode(entry))
       .filter((entry) => entry.residentId === residentId)
       .find((entry) => {
         if (entry.usedAt || entry.revokedAt) {
@@ -84,6 +86,7 @@ export class ActivationCodesService {
         }
         return Date.parse(entry.expiresAt) > now.getTime();
       });
+    return match;
   }
 
   async update(
@@ -96,8 +99,9 @@ export class ActivationCodesService {
     if (index === -1) {
       throw new NotFoundException('Aktivierungscode nicht gefunden');
     }
+    const normalized = this.normalizeActivationCode(codes[index]);
     const updated: ActivationCode = {
-      ...codes[index],
+      ...normalized,
       ...patch,
     };
     codes[index] = updated;
@@ -116,5 +120,16 @@ export class ActivationCodesService {
 
   private generateCode() {
     return randomBytes(4).toString('hex').toUpperCase();
+  }
+
+  private normalizeActivationCode(entry: ActivationCode): ActivationCode {
+    const raw = entry as ActivationCode & {
+      resident_id?: string;
+      residentID?: string;
+    };
+    return {
+      ...entry,
+      residentId: entry.residentId ?? raw.resident_id ?? raw.residentID,
+    };
   }
 }
