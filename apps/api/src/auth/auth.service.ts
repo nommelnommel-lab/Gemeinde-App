@@ -1,308 +1,575 @@
 import {
   BadRequestException,
-  ForbiddenException,
+  ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
-  TooManyRequestsException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { randomBytes, createHash } from 'crypto';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { ActivationCodesService } from './activation-codes.service';
-import { ResidentsService } from './residents.service';
-import { RefreshTokensService } from './refresh-tokens.service';
-import { UsersService } from './users.service';
-import { AuthUser, Resident } from './auth.types';
+import { createHash, randomBytes, randomUUID } from 'crypto';
+import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
+import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
+import { ActivateDto } from './dto/activate.dto';
+import { LoginDto } from './dto/login.dto';
+import { RefreshDto } from './dto/refresh.dto';
+import { AuthResponse, AuthUserView, JwtAccessPayload } from './auth.types';
 
-const ACCESS_TOKEN_TTL_MINUTES = 15;
+type ResidentRecord = {
+  id: string;
+  tenantId: string;
+  firstName: string;
+  lastName: string;
+  postalCode: string;
+  houseNumber: string;
+};
+
+type ActivationCodeRecord = {
+  id: string;
+  tenantId: string;
+  residentId?: string;
+  codeHash: string;
+  expiresAt: string;
+  usedAt?: string | null;
+  revokedAt?: string | null;
+  createdAt?: string;
+  createdBy?: string;
+};
+
+type UserRecord = {
+  id: string;
+  tenantId: string;
+  residentId: string;
+  email: string;
+  passwordHash: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type RefreshTokenRecord = {
+  id: string;
+  tenantId: string;
+  userId: string;
+  tokenHash: string;
+  createdAt: string;
+  expiresAt: string;
+  revokedAt?: string | null;
+};
+
+const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 const REFRESH_TOKEN_TTL_DAYS = 30;
-const MAX_ATTEMPTS = 5;
-const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX_ATTEMPTS = 5;
 
-@Injectable()
-export class AuthService {
-  private readonly ipAttempts = new Map<
+class InMemoryRateLimiter {
+  private readonly attempts = new Map<
     string,
     { count: number; resetAt: number }
   >();
 
-  constructor(
-    private readonly activationCodesService: ActivationCodesService,
-    private readonly residentsService: ResidentsService,
-    private readonly usersService: UsersService,
-    private readonly refreshTokensService: RefreshTokensService,
-  ) {}
+  constructor(private readonly max: number, private readonly windowMs: number) {}
+
+  check(key: string) {
+    const now = Date.now();
+    const current = this.attempts.get(key);
+
+    if (!current || current.resetAt <= now) {
+      this.attempts.set(key, { count: 1, resetAt: now + this.windowMs });
+      return;
+    }
+
+    if (current.count >= this.max) {
+      throw new HttpException(
+        'Zu viele Versuche, bitte später erneut versuchen',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    current.count += 1;
+  }
+}
+
+@Injectable()
+export class AuthService {
+  private readonly activationCodes = new TenantFileRepository<ActivationCodeRecord>(
+    'activation-codes',
+  );
+  private readonly residents = new TenantFileRepository<ResidentRecord>('residents');
+  private readonly users = new TenantFileRepository<UserRecord>('users');
+  private readonly refreshTokens = new TenantFileRepository<RefreshTokenRecord>(
+    'refresh-tokens',
+  );
+  private readonly activationLimiter = new InMemoryRateLimiter(
+    RATE_LIMIT_MAX_ATTEMPTS,
+    RATE_LIMIT_WINDOW_MS,
+  );
+  private readonly loginLimiter = new InMemoryRateLimiter(
+    RATE_LIMIT_MAX_ATTEMPTS,
+    RATE_LIMIT_WINDOW_MS,
+  );
 
   async activate(
     tenantId: string,
-    payload: {
-      activationCode: string;
-      email: string;
-      password: string;
-      postalCode: string;
-      houseNumber: string;
-    },
-    ipAddress: string,
-  ) {
-    this.enforceIpLimit(ipAddress);
-
-    const codeHash = this.activationCodesService.hashCode(
-      payload.activationCode.trim(),
+    payload: ActivateDto,
+    clientKey: string,
+  ): Promise<AuthResponse> {
+    const activationCode = this.requireString(
+      payload.activationCode,
+      'activationCode',
     );
-    const activation = await this.activationCodesService.findByHash(
+    const email = this.normalizeEmail(payload.email);
+    const password = this.requireString(payload.password, 'password');
+    const postalCode = this.requireString(payload.postalCode, 'postalCode');
+    const houseNumber = this.requireString(payload.houseNumber, 'houseNumber');
+
+    this.activationLimiter.check(this.rateLimitKey(tenantId, email, clientKey));
+
+    const codeHash = this.hashToken(activationCode);
+    const codes = await this.activationCodes.getAll(tenantId);
+    const activationEntry = codes.find((code) => code.codeHash === codeHash);
+
+    if (!activationEntry) {
+      throw new UnauthorizedException('Aktivierungscode ungültig');
+    }
+
+    this.ensureActivationCodeValid(activationEntry);
+
+    const resident = await this.resolveActivationResident(
       tenantId,
-      codeHash,
+      activationEntry,
+      postalCode,
+      houseNumber,
     );
-    if (!activation) {
-      this.registerIpAttempt(ipAddress);
-      throw new UnauthorizedException('Aktivierungscode ist ungültig');
+
+    const existingUsers = await this.users.getAll(tenantId);
+    if (existingUsers.some((user) => user.email === email)) {
+      throw new ConflictException('E-Mail ist bereits registriert');
+    }
+    if (existingUsers.some((user) => user.residentId === resident.id)) {
+      throw new ConflictException('Bewohner ist bereits aktiviert');
     }
 
-    const now = new Date();
-    const nextAttemptCount = this.registerCodeAttempt(activation);
-    await this.activationCodesService.update(tenantId, activation.id, {
-      attemptCount: nextAttemptCount,
-      lastAttemptAt: now.toISOString(),
-    });
-
-    const resident = await this.residentsService.getById(
+    const now = new Date().toISOString();
+    const user: UserRecord = {
+      id: randomUUID(),
       tenantId,
-      activation.residentId,
-    );
-    this.verifyResidentAddress(resident, payload.postalCode, payload.houseNumber);
-
-    if (activation.revokedAt) {
-      throw new ForbiddenException('Aktivierungscode wurde widerrufen');
-    }
-    if (activation.usedAt) {
-      throw new ForbiddenException('Aktivierungscode wurde bereits genutzt');
-    }
-    if (Date.parse(activation.expiresAt) <= now.getTime()) {
-      throw new ForbiddenException('Aktivierungscode ist abgelaufen');
-    }
-
-    const normalizedEmail = this.normalizeEmail(payload.email);
-    const existingUser = await this.usersService.findByEmail(
-      tenantId,
-      normalizedEmail,
-    );
-    if (existingUser) {
-      throw new BadRequestException('Email ist bereits registriert');
-    }
-
-    const existingByResident = await this.usersService.findByResidentId(
-      tenantId,
-      resident.id,
-    );
-    if (existingByResident) {
-      throw new BadRequestException('Bewohner ist bereits aktiviert');
-    }
-
-    const passwordHash = await bcrypt.hash(payload.password, 10);
-    const user = await this.usersService.create(tenantId, {
       residentId: resident.id,
-      email: normalizedEmail,
-      passwordHash,
-      emailVerifiedAt: now.toISOString(),
-    });
+      email,
+      passwordHash: await this.hashPassword(password),
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    await this.activationCodesService.update(tenantId, activation.id, {
-      usedAt: now.toISOString(),
-      attemptCount: nextAttemptCount,
-      lastAttemptAt: now.toISOString(),
-    });
+    existingUsers.push(user);
+    await this.users.setAll(tenantId, existingUsers);
 
-    this.registerIpAttempt(ipAddress);
+    const updatedCodes = codes.map((code) =>
+      code.id === activationEntry.id ? { ...code, usedAt: now } : code,
+    );
+    await this.activationCodes.setAll(tenantId, updatedCodes);
 
-    return this.buildAuthResponse(tenantId, user, resident);
+    return this.issueAuthResponse(tenantId, user, resident);
+  }
+
+  async createActivationCodes(params: {
+    tenantId: string;
+    count: number;
+    expiresInDays: number;
+    createdBy: string;
+  }) {
+    const { tenantId, count, expiresInDays, createdBy } = params;
+    if (!Number.isInteger(count) || count < 1 || count > 100) {
+      throw new BadRequestException('count muss zwischen 1 und 100 liegen');
+    }
+    if (
+      !Number.isInteger(expiresInDays) ||
+      expiresInDays < 1 ||
+      expiresInDays > 3650
+    ) {
+      throw new BadRequestException(
+        'expiresInDays muss zwischen 1 und 3650 liegen',
+      );
+    }
+
+    const existingCodes = await this.activationCodes.getAll(tenantId);
+    const existingHashes = new Set(existingCodes.map((code) => code.codeHash));
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const expiresAt = new Date(
+      now.getTime() + expiresInDays * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    const generated: { code: string; expiresAt: string }[] = [];
+    const newRecords: ActivationCodeRecord[] = [];
+
+    for (let i = 0; i < count; i += 1) {
+      let code = '';
+      let codeHash = '';
+      let attempts = 0;
+      do {
+        if (attempts > 20) {
+          throw new HttpException(
+            'Aktivierungscode konnte nicht generiert werden',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          );
+        }
+        code = this.generateActivationCode(tenantId);
+        codeHash = this.hashToken(code);
+        attempts += 1;
+      } while (existingHashes.has(codeHash));
+
+      existingHashes.add(codeHash);
+      generated.push({ code, expiresAt });
+      newRecords.push({
+        id: randomUUID(),
+        tenantId,
+        codeHash,
+        expiresAt,
+        usedAt: null,
+        createdAt: nowIso,
+        createdBy,
+      });
+    }
+
+    await this.activationCodes.setAll(tenantId, [
+      ...existingCodes,
+      ...newRecords,
+    ]);
+
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('[activation-codes]', tenantId, generated);
+    }
+
+    return generated;
   }
 
   async login(
     tenantId: string,
-    payload: { email: string; password: string },
-    ipAddress: string,
-  ) {
-    this.enforceIpLimit(ipAddress);
+    payload: LoginDto,
+    clientKey: string,
+  ): Promise<AuthResponse> {
+    const email = this.normalizeEmail(payload.email);
+    const password = this.requireString(payload.password, 'password');
 
-    const normalizedEmail = this.normalizeEmail(payload.email);
-    const user = await this.usersService.findByEmail(tenantId, normalizedEmail);
+    this.loginLimiter.check(this.rateLimitKey(tenantId, email, clientKey));
+
+    const users = await this.users.getAll(tenantId);
+    const user = users.find((entry) => entry.email === email);
+
     if (!user) {
-      this.registerIpAttempt(ipAddress);
       throw new UnauthorizedException('Login fehlgeschlagen');
     }
 
-    const ok = await bcrypt.compare(payload.password, user.passwordHash);
-    if (!ok) {
-      this.registerIpAttempt(ipAddress);
+    const matches = await this.verifyPassword(password, user.passwordHash);
+    if (!matches) {
       throw new UnauthorizedException('Login fehlgeschlagen');
     }
 
-    const resident = await this.residentsService.getById(tenantId, user.residentId);
-    return this.buildAuthResponse(tenantId, user, resident);
+    await this.revokeUserRefreshTokens(tenantId, user.id);
+
+    const resident = await this.findResident(tenantId, user.residentId);
+    if (!resident) {
+      throw new NotFoundException('Bewohner nicht gefunden');
+    }
+
+    return this.issueAuthResponse(tenantId, user, resident);
   }
 
-  async refresh(tenantId: string, refreshToken: string) {
+  async refresh(
+    tenantId: string,
+    payload: RefreshDto,
+  ): Promise<AuthResponse> {
+    const refreshToken = this.requireString(payload.refreshToken, 'refreshToken');
     const tokenHash = this.hashToken(refreshToken);
-    const token = await this.refreshTokensService.findByHash(tenantId, tokenHash);
-    if (!token || token.revokedAt) {
+
+    const tokens = await this.refreshTokens.getAll(tenantId);
+    const existing = tokens.find((entry) => entry.tokenHash === tokenHash);
+
+    if (!existing) {
       throw new UnauthorizedException('Refresh token ungültig');
     }
-    const now = new Date();
-    if (Date.parse(token.expiresAt) <= now.getTime()) {
-      throw new UnauthorizedException('Refresh token abgelaufen');
+
+    this.ensureRefreshTokenValid(existing);
+
+    const users = await this.users.getAll(tenantId);
+    const user = users.find((entry) => entry.id === existing.userId);
+    if (!user) {
+      throw new UnauthorizedException('Refresh token ungültig');
     }
 
-    const user = await this.usersService.getById(tenantId, token.userId);
-    const resident = await this.residentsService.getById(tenantId, user.residentId);
+    const resident = await this.findResident(tenantId, user.residentId);
+    if (!resident) {
+      throw new NotFoundException('Bewohner nicht gefunden');
+    }
 
-    await this.refreshTokensService.revoke(tenantId, token.id);
-    const nextRefresh = await this.issueRefreshToken(tenantId, user.id, now);
-    const accessToken = this.issueAccessToken(user, now);
+    const now = new Date().toISOString();
+    const updatedTokens = tokens.map((entry) =>
+      entry.id === existing.id ? { ...entry, revokedAt: now } : entry,
+    );
+    await this.refreshTokens.setAll(tenantId, updatedTokens);
 
-    return {
-      accessToken,
-      refreshToken: nextRefresh.plaintext,
-    };
+    return this.issueAuthResponse(tenantId, user, resident);
   }
 
-  async logout(tenantId: string, refreshToken: string) {
+  async logout(tenantId: string, payload: RefreshDto) {
+    const refreshToken = this.requireString(payload.refreshToken, 'refreshToken');
     const tokenHash = this.hashToken(refreshToken);
-    const token = await this.refreshTokensService.findByHash(tenantId, tokenHash);
-    if (token && !token.revokedAt) {
-      await this.refreshTokensService.revoke(tenantId, token.id);
+
+    const tokens = await this.refreshTokens.getAll(tenantId);
+    const existing = tokens.find((entry) => entry.tokenHash === tokenHash);
+
+    if (!existing) {
+      return { ok: true };
     }
+
+    if (existing.revokedAt) {
+      return { ok: true };
+    }
+
+    const now = new Date().toISOString();
+    const updatedTokens = tokens.map((entry) =>
+      entry.id === existing.id ? { ...entry, revokedAt: now } : entry,
+    );
+    await this.refreshTokens.setAll(tenantId, updatedTokens);
+
     return { ok: true };
   }
 
-  private async buildAuthResponse(
+  private async issueAuthResponse(
     tenantId: string,
-    user: AuthUser,
-    resident: Resident,
-  ) {
-    const now = new Date();
-    const accessToken = this.issueAccessToken(user, now);
-    const refreshToken = await this.issueRefreshToken(tenantId, user.id, now);
+    user: UserRecord,
+    resident: ResidentRecord,
+  ): Promise<AuthResponse> {
+    const displayName = this.createDisplayName(resident);
+    const accessToken = this.createAccessToken({
+      sub: user.id,
+      tenantId,
+      residentId: user.residentId,
+      email: user.email,
+    });
+
+    const refreshToken = await this.createRefreshToken(tenantId, user.id);
+
     return {
       accessToken,
-      refreshToken: refreshToken.plaintext,
-      user: {
-        id: user.id,
-        tenantId: user.tenantId,
-        residentId: user.residentId,
-        displayName: this.buildDisplayName(resident),
-        email: user.email,
-      },
+      refreshToken,
+      user: this.toAuthUserView(user, displayName),
     };
   }
 
-  private buildDisplayName(resident: Resident) {
-    const lastInitial = resident.lastName.trim().charAt(0).toUpperCase();
-    return `${resident.firstName.trim()} ${lastInitial}.`;
+  private createAccessToken(payload: JwtAccessPayload) {
+    return jwt.sign(payload, this.jwtSecret(), {
+      expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+    });
   }
 
-  private issueAccessToken(user: AuthUser, now: Date) {
-    const secret = this.getJwtSecret();
-    return jwt.sign(
-      {
-        sub: user.id,
-        tenantId: user.tenantId,
-        residentId: user.residentId,
-        email: user.email,
-      },
-      secret,
-      { expiresIn: `${ACCESS_TOKEN_TTL_MINUTES}m`, issuer: 'gemeinde-api' },
+  private async createRefreshToken(tenantId: string, userId: string) {
+    const rawToken = randomBytes(48).toString('base64url');
+    const tokenHash = this.hashToken(rawToken);
+    const now = new Date();
+    const expiresAt = new Date(
+      now.getTime() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
     );
-  }
 
-  private async issueRefreshToken(tenantId: string, userId: string, now: Date) {
-    const plaintext = randomBytes(32).toString('base64url');
-    const expires = new Date(now);
-    expires.setDate(expires.getDate() + REFRESH_TOKEN_TTL_DAYS);
-    const tokenHash = this.hashToken(plaintext);
-    await this.refreshTokensService.create(tenantId, {
+    const record: RefreshTokenRecord = {
+      id: randomUUID(),
+      tenantId,
       userId,
       tokenHash,
-      expiresAt: expires.toISOString(),
-    });
-    return { plaintext };
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      revokedAt: null,
+    };
+
+    const tokens = await this.refreshTokens.getAll(tenantId);
+    tokens.push(record);
+    await this.refreshTokens.setAll(tenantId, tokens);
+
+    return rawToken;
   }
 
-  private normalizeEmail(email: string) {
-    return email.trim().toLowerCase();
+  private async revokeUserRefreshTokens(tenantId: string, userId: string) {
+    const tokens = await this.refreshTokens.getAll(tenantId);
+    const now = new Date().toISOString();
+    const updated = tokens.map((entry) =>
+      entry.userId === userId && !entry.revokedAt
+        ? { ...entry, revokedAt: now }
+        : entry,
+    );
+    await this.refreshTokens.setAll(tenantId, updated);
   }
 
-  private verifyResidentAddress(
-    resident: Resident,
-    postalCode: string,
-    houseNumber: string,
-  ) {
-    if (
-      this.normalizeAddress(resident.postalCode) !==
-        this.normalizeAddress(postalCode) ||
-      this.normalizeAddress(resident.houseNumber) !==
-        this.normalizeAddress(houseNumber)
-    ) {
-      throw new ForbiddenException('Adresse stimmt nicht überein');
+  private ensureActivationCodeValid(code: ActivationCodeRecord) {
+    if (code.revokedAt) {
+      throw new UnauthorizedException('Aktivierungscode ungültig');
+    }
+
+    if (code.usedAt) {
+      throw new UnauthorizedException('Aktivierungscode ungültig');
+    }
+
+    const expiresAt = Date.parse(code.expiresAt);
+    if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+      throw new UnauthorizedException('Aktivierungscode ungültig');
     }
   }
 
-  private normalizeAddress(value: string) {
-    return value.trim().toUpperCase();
+  private ensureRefreshTokenValid(token: RefreshTokenRecord) {
+    if (token.revokedAt) {
+      throw new UnauthorizedException('Refresh token ungültig');
+    }
+
+    const expiresAt = Date.parse(token.expiresAt);
+    if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+      throw new UnauthorizedException('Refresh token ungültig');
+    }
+  }
+
+  private async findResident(tenantId: string, residentId: string) {
+    const residents = await this.residents.getAll(tenantId);
+    return residents.find((resident) => resident.id === residentId);
+  }
+
+  private async resolveActivationResident(
+    tenantId: string,
+    activationEntry: ActivationCodeRecord,
+    postalCode: string,
+    houseNumber: string,
+  ) {
+    if (activationEntry.residentId) {
+      const resident = await this.findResident(
+        tenantId,
+        activationEntry.residentId,
+      );
+
+      if (!resident) {
+        throw new NotFoundException('Bewohner nicht gefunden');
+      }
+
+      if (!this.matchesResident(resident, postalCode, houseNumber)) {
+        throw new UnauthorizedException(
+          'Aktivierungsdaten stimmen nicht überein',
+        );
+      }
+
+      return resident;
+    }
+
+    const residents = await this.residents.getAll(tenantId);
+    const matches = residents.filter((resident) =>
+      this.matchesResident(resident, postalCode, houseNumber),
+    );
+
+    if (matches.length === 0) {
+      throw new UnauthorizedException('Aktivierungsdaten stimmen nicht überein');
+    }
+
+    if (matches.length > 1) {
+      throw new ConflictException('Mehrere Bewohner gefunden');
+    }
+
+    return matches[0];
+  }
+
+  private toAuthUserView(user: UserRecord, displayName: string): AuthUserView {
+    return {
+      id: user.id,
+      tenantId: user.tenantId,
+      residentId: user.residentId,
+      displayName,
+      email: user.email,
+    };
+  }
+
+  private createDisplayName(resident: ResidentRecord) {
+    const firstName = this.requireString(resident.firstName, 'firstName');
+    const lastName = this.requireString(resident.lastName, 'lastName');
+    return `${firstName} ${lastName.charAt(0)}.`;
+  }
+
+  private matchesResident(
+    resident: ResidentRecord,
+    postalCode: string,
+    houseNumber: string,
+  ) {
+    return (
+      this.normalizeComparable(resident.postalCode) ===
+        this.normalizeComparable(postalCode) &&
+      this.normalizeComparable(resident.houseNumber) ===
+        this.normalizeComparable(houseNumber)
+    );
+  }
+
+  private normalizeComparable(value: string) {
+    return value.trim().toLowerCase();
+  }
+
+  private normalizeEmail(value: string) {
+    const trimmed = this.requireString(value, 'email');
+    return trimmed.toLowerCase();
+  }
+
+  private requireString(value: string | undefined | null, field: string) {
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${field} ist erforderlich`);
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      throw new BadRequestException(`${field} ist erforderlich`);
+    }
+
+    return trimmed;
   }
 
   private hashToken(value: string) {
     return createHash('sha256').update(value).digest('hex');
   }
 
-  private getJwtSecret() {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error('JWT_SECRET fehlt');
+  private generateActivationCode(tenantId: string) {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const prefix = tenantId
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 4);
+    const usePrefix = prefix.length >= 2;
+    const segments = [];
+    const segmentCount = usePrefix ? 2 : 3;
+
+    for (let i = 0; i < segmentCount; i += 1) {
+      let segment = '';
+      for (let j = 0; j < 4; j += 1) {
+        const index = randomBytes(1)[0] % alphabet.length;
+        segment += alphabet[index];
+      }
+      segments.push(segment);
     }
-    return secret;
+
+    if (usePrefix) {
+      return `${prefix}-${segments.join('-')}`;
+    }
+
+    return segments.join('-');
   }
 
-  private enforceIpLimit(ip: string) {
-    const entry = this.ipAttempts.get(ip);
-    if (!entry) {
-      return;
+  private rateLimitKey(tenantId: string, email: string, clientKey: string) {
+    if (!clientKey) {
+      return `${tenantId}:${email}`;
     }
-    if (Date.now() > entry.resetAt) {
-      this.ipAttempts.delete(ip);
-      return;
-    }
-    if (entry.count >= MAX_ATTEMPTS) {
-      throw new TooManyRequestsException('Zu viele Versuche. Bitte warten.');
-    }
+    return `${tenantId}:${email}:${clientKey}`;
   }
 
-  private registerIpAttempt(ip: string) {
-    const now = Date.now();
-    const entry = this.ipAttempts.get(ip);
-    if (!entry || now > entry.resetAt) {
-      this.ipAttempts.set(ip, { count: 1, resetAt: now + ATTEMPT_WINDOW_MS });
-      return;
-    }
-    entry.count += 1;
+  private jwtSecret() {
+    return process.env.JWT_SECRET || 'dev-secret-change-me';
   }
 
-  private registerCodeAttempt(activation: {
-    attemptCount: number;
-    lastAttemptAt?: string;
-  }) {
-    if (!activation.lastAttemptAt) {
-      return 1;
-    }
-    const lastAttempt = Date.parse(activation.lastAttemptAt);
-    if (Number.isNaN(lastAttempt)) {
-      return 1;
-    }
-    if (Date.now() - lastAttempt > ATTEMPT_WINDOW_MS) {
-      return 1;
-    }
-    if (activation.attemptCount >= MAX_ATTEMPTS) {
-      throw new TooManyRequestsException('Zu viele Versuche. Bitte warten.');
-    }
-    return activation.attemptCount + 1;
+  private async hashPassword(password: string) {
+    return bcrypt.hash(password, 10);
+  }
+
+  private async verifyPassword(password: string, hash: string) {
+    return bcrypt.compare(password, hash);
   }
 }

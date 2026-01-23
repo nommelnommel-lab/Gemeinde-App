@@ -1,65 +1,91 @@
-import { Body, Controller, Headers, Post, Req } from '@nestjs/common';
-import { Request } from 'express';
+import {
+  Body,
+  Controller,
+  Headers,
+  Post,
+  Req,
+} from '@nestjs/common';
 import { requireTenant } from '../tenant/tenant-auth';
 import { AuthService } from './auth.service';
+import { ActivateDto } from './dto/activate.dto';
+import { LoginDto } from './dto/login.dto';
+import { RefreshDto } from './dto/refresh.dto';
+import { AuthResponse } from './auth.types';
 
-@Controller('api/auth')
+@Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('activate')
+  @Post('api/auth/activate')
   async activate(
     @Headers() headers: Record<string, string | string[] | undefined>,
-    @Body()
-    payload: {
-      activationCode: string;
-      email: string;
-      password: string;
-      postalCode: string;
-      houseNumber: string;
-    },
-    @Req() request: Request,
-  ) {
+    @Body() payload: ActivateDto,
+    @Req()
+    request: { ip?: string; socket?: { remoteAddress?: string } },
+  ): Promise<AuthResponse> {
     const tenantId = requireTenant(headers);
-    return this.authService.activate(tenantId, payload, this.getIp(request));
+    const clientKey = this.getClientKey(request, headers);
+    return this.authService.activate(tenantId, payload, clientKey);
   }
 
-  @Post('login')
+  @Post('api/auth/login')
   async login(
     @Headers() headers: Record<string, string | string[] | undefined>,
-    @Body() payload: { email: string; password: string },
-    @Req() request: Request,
-  ) {
+    @Body() payload: LoginDto,
+    @Req()
+    request: { ip?: string; socket?: { remoteAddress?: string } },
+  ): Promise<AuthResponse> {
     const tenantId = requireTenant(headers);
-    return this.authService.login(tenantId, payload, this.getIp(request));
+    const clientKey = this.getClientKey(request, headers);
+    return this.authService.login(tenantId, payload, clientKey);
   }
 
-  @Post('refresh')
+  @Post('api/auth/refresh')
   async refresh(
     @Headers() headers: Record<string, string | string[] | undefined>,
-    @Body() payload: { refreshToken: string },
-  ) {
+    @Body() payload: RefreshDto,
+  ): Promise<AuthResponse> {
     const tenantId = requireTenant(headers);
-    return this.authService.refresh(tenantId, payload.refreshToken);
+    return this.authService.refresh(tenantId, payload);
   }
 
-  @Post('logout')
+  @Post('api/auth/logout')
   async logout(
     @Headers() headers: Record<string, string | string[] | undefined>,
-    @Body() payload: { refreshToken: string },
+    @Body() payload: RefreshDto,
   ) {
     const tenantId = requireTenant(headers);
-    return this.authService.logout(tenantId, payload.refreshToken);
+    return this.authService.logout(tenantId, payload);
   }
 
-  private getIp(request: Request) {
-    const forwarded = request.headers['x-forwarded-for'];
-    if (Array.isArray(forwarded)) {
-      return forwarded[0];
+  private getClientKey(
+    request: { ip?: string; socket?: { remoteAddress?: string } },
+    headers: Record<string, string | string[] | undefined>,
+  ) {
+    const forwarded = this.getHeaderValue(headers, 'x-forwarded-for');
+    if (forwarded) {
+      return forwarded.split(',')[0]?.trim();
     }
-    if (typeof forwarded === 'string') {
-      return forwarded.split(',')[0].trim();
+
+    const ip = request.ip || request.socket?.remoteAddress;
+    return ip || 'unknown';
+  }
+
+  private getHeaderValue(
+    headers: Record<string, string | string[] | undefined>,
+    headerName: string,
+  ) {
+    const direct = headers[headerName];
+    const resolved =
+      direct ??
+      Object.entries(headers).find(
+        ([key]) => key.toLowerCase() === headerName.toLowerCase(),
+      )?.[1];
+
+    if (Array.isArray(resolved)) {
+      return resolved[0];
     }
-    return request.ip ?? 'unknown';
+
+    return resolved;
   }
 }

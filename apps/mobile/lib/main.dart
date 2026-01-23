@@ -62,7 +62,6 @@ class _GemeindeAppState extends State<GemeindeApp> {
   late final ApiClient _apiClient;
   late final AppServices _services;
   late final TenantSettingsStore _tenantSettingsStore;
-  late final AuthStore _authStore;
   AppPermissions _permissions = const AppPermissions(canManageContent: false);
 
   @override
@@ -111,19 +110,14 @@ class _GemeindeAppState extends State<GemeindeApp> {
         services: _services,
         child: TenantSettingsScope(
           store: _tenantSettingsStore,
-          child: AuthScope(
-            store: _authStore,
-            child: AppPermissionsScope(
-              permissions: _permissions,
-              child: MaterialApp(
-                title: 'Gemeinde App',
-                theme: AppTheme.light(),
-                navigatorKey: _router.navigatorKey,
-                home: const TenantSettingsBootstrap(
-                  child: AuthBootstrap(
-                    child: MainNavigationScreen(),
-                  ),
-                ),
+          child: AppPermissionsScope(
+            permissions: _permissions,
+            child: MaterialApp(
+              title: 'Gemeinde App',
+              theme: AppTheme.light(),
+              navigatorKey: _router.navigatorKey,
+              home: const TenantSettingsBootstrap(
+                child: MainNavigationScreen(),
               ),
             ),
           ),
@@ -134,7 +128,6 @@ class _GemeindeAppState extends State<GemeindeApp> {
 
   @override
   void dispose() {
-    _authStore.dispose();
     _tenantSettingsStore.dispose();
     super.dispose();
   }

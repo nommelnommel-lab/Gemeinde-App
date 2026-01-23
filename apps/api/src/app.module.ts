@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 @Module({
   controllers: [AppController],
   imports: [
+    AuthModule,
     EventsModule,
     HealthModule,
     NewsModule,
