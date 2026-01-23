@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../api/api_client.dart';
 import '../models/auth_models.dart';
 
@@ -13,6 +15,12 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    if (kDebugMode) {
+      final tenantId = _apiClient.resolveTenantId();
+      debugPrint(
+        'activate tenant=$tenantId activationCodeLength=${activationCode.length}',
+      );
+    }
     final response = await _apiClient.postJson(
       '/api/auth/activate',
       {

@@ -62,6 +62,8 @@ class ApiClient {
   final String? Function()? _accessTokenProvider;
   final TenantStore _tenantStore;
 
+  String resolveTenantId() => _tenantStore.resolveTenantId();
+
   Future<Map<String, dynamic>> getJson(
     String path, {
     bool includeAdminKey = false,
@@ -307,9 +309,9 @@ class ApiClient {
     if (includeJson) {
       headers['Content-Type'] = 'application/json';
     }
-    headers['X-TENANT'] = _tenantStore.tenantIdNotifier.value;
+    final tenantId = _tenantStore.resolveTenantId();
+    headers['X-TENANT'] = tenantId;
     headers['X-SITE-KEY'] = AppConfig.siteKey;
-    final tenantId = _tenantStore.tenantIdNotifier.value;
     final adminKey =
         _adminKeyStore?.getAdminKey(adminKeyOverride ?? tenantId);
     if (adminKey != null && adminKey.isNotEmpty) {
