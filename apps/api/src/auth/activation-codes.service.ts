@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes, randomUUID, createHmac } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
-import { ActivationCode } from './auth.types';
+import { ActivationCode } from './activation-codes.model';
 
 @Injectable()
 export class ActivationCodesService {

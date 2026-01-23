@@ -19,9 +19,9 @@ export class AdminActivationCodesController {
     @Body() payload: ActivationCodeRequest,
   ) {
     const tenantId = requireTenant(headers);
-    const count = Number.isInteger(payload?.count) ? payload.count : 1;
+    const count = Number.isInteger(payload?.count) ? payload.count ?? 1 : 1;
     const expiresInDays = Number.isInteger(payload?.expiresInDays)
-      ? payload.expiresInDays
+      ? payload.expiresInDays ?? 30
       : 30;
 
     const codes = await this.authService.createActivationCodes({

@@ -11,7 +11,7 @@ import { AdminGuard } from '../admin/admin.guard';
 import { requireTenant } from '../tenant/tenant-auth';
 import { ActivationCodesService } from './activation-codes.service';
 import { ResidentsService } from './residents.service';
-import { Resident } from './auth.types';
+import { Resident } from './residents.model';
 
 @Controller('api/admin')
 @UseGuards(AdminGuard)
