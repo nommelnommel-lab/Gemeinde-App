@@ -135,21 +135,29 @@ export class AuthService {
     this.activationLimiter.check(this.rateLimitKey(tenantId, email, clientKey));
 
     const codeHash = this.hashToken(activationCode);
-    const codes = await this.activationCodes.getAll(tenantId);
-    const activationEntry = codes.find((code) => code.codeHash === codeHash);
+    const { activationEntry, resident } =
+      await this.findActivationWithResident(tenantId, codeHash);
 
-    if (!activationEntry) {
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.info('[activate_lookup]', {
+        tenantId,
+        activationCodeLength: activationCode.length,
+        activationFound: Boolean(activationEntry),
+        residentIdPresent: Boolean(activationEntry?.residentId),
+        residentFound: Boolean(resident),
+      });
+    }
+
+    if (!activationEntry || !resident) {
       throw new UnauthorizedException('Aktivierungscode ungültig');
     }
 
     this.ensureActivationCodeValid(activationEntry);
 
-    const resident = await this.resolveActivationResident(
-      tenantId,
-      activationEntry,
-      postalCode,
-      houseNumber,
-    );
+    if (!this.matchesResident(resident, postalCode, houseNumber)) {
+      throw new UnauthorizedException('PLZ/Hausnummer stimmt nicht');
+    }
 
     const existingUsers = await this.users.getAll(tenantId);
     if (existingUsers.some((user) => user.email === email)) {
@@ -173,9 +181,13 @@ export class AuthService {
     existingUsers.push(user);
     await this.users.setAll(tenantId, existingUsers);
 
-    const updatedCodes = codes.map((code) =>
-      code.id === activationEntry.id ? { ...code, usedAt: now } : code,
-    );
+    const codes = await this.activationCodes.getAll(tenantId);
+    const updatedCodes = codes.map((code) => {
+      const normalized = this.normalizeActivationCode(code);
+      return normalized.id === activationEntry.id
+        ? { ...normalized, usedAt: now }
+        : normalized;
+    });
     await this.activationCodes.setAll(tenantId, updatedCodes);
 
     return this.issueAuthResponse(tenantId, user, resident);
@@ -201,7 +213,9 @@ export class AuthService {
       );
     }
 
-    const existingCodes = await this.activationCodes.getAll(tenantId);
+    const existingCodes = (await this.activationCodes.getAll(tenantId)).map(
+      (code) => this.normalizeActivationCode(code),
+    );
     const existingHashes = new Set(existingCodes.map((code) => code.codeHash));
     const now = new Date();
     const nowIso = now.toISOString();
@@ -261,7 +275,9 @@ export class AuthService {
       throw new BadRequestException('expiresAt ist ungültig');
     }
 
-    const existingCodes = await this.activationCodes.getAll(tenantId);
+    const existingCodes = (await this.activationCodes.getAll(tenantId)).map(
+      (code) => this.normalizeActivationCode(code),
+    );
     const existingHashes = new Set(existingCodes.map((code) => code.codeHash));
     const nowIso = new Date().toISOString();
 
@@ -477,6 +493,17 @@ export class AuthService {
     }
   }
 
+  private normalizeActivationCode(entry: ActivationCodeRecord) {
+    const raw = entry as ActivationCodeRecord & {
+      resident_id?: string;
+      residentID?: string;
+    };
+    return {
+      ...entry,
+      residentId: entry.residentId ?? raw.resident_id ?? raw.residentID,
+    };
+  }
+
   private ensureRefreshTokenValid(token: RefreshTokenRecord) {
     if (token.revokedAt) {
       throw new UnauthorizedException('Refresh token ungültig');
@@ -493,45 +520,21 @@ export class AuthService {
     return residents.find((resident) => resident.id === residentId);
   }
 
-  private async resolveActivationResident(
-    tenantId: string,
-    activationEntry: ActivationCodeRecord,
-    postalCode: string,
-    houseNumber: string,
-  ) {
-    if (activationEntry.residentId) {
-      const resident = await this.findResident(
-        tenantId,
-        activationEntry.residentId,
-      );
-
-      if (!resident) {
-        throw new NotFoundException('Bewohner nicht gefunden');
-      }
-
-      if (!this.matchesResident(resident, postalCode, houseNumber)) {
-        throw new UnauthorizedException(
-          'Aktivierungsdaten stimmen nicht überein',
-        );
-      }
-
-      return resident;
+  private async findActivationWithResident(tenantId: string, codeHash: string) {
+    const [codes, residents] = await Promise.all([
+      this.activationCodes.getAll(tenantId),
+      this.residents.getAll(tenantId),
+    ]);
+    const activationEntry = codes
+      .map((code) => this.normalizeActivationCode(code))
+      .find((code) => code.codeHash === codeHash);
+    if (!activationEntry?.residentId) {
+      return { activationEntry, resident: undefined };
     }
-
-    const residents = await this.residents.getAll(tenantId);
-    const matches = residents.filter((resident) =>
-      this.matchesResident(resident, postalCode, houseNumber),
+    const resident = residents.find(
+      (entry) => entry.id === activationEntry.residentId,
     );
-
-    if (matches.length === 0) {
-      throw new UnauthorizedException('Aktivierungsdaten stimmen nicht überein');
-    }
-
-    if (matches.length > 1) {
-      throw new ConflictException('Mehrere Bewohner gefunden');
-    }
-
-    return matches[0];
+    return { activationEntry, resident };
   }
 
   private toAuthUserView(user: UserRecord, displayName: string): AuthUserView {
