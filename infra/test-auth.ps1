@@ -33,6 +33,7 @@ function Invoke-Json {
     $BodyObj
   )
 
+  $jsonBody = $null
   try {
     if ($null -ne $BodyObj) {
       $jsonBody = $BodyObj | ConvertTo-Json -Depth 10
@@ -42,11 +43,24 @@ function Invoke-Json {
     return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers
   } catch {
     $response = $_.Exception.Response
-    if ($response -and $response.GetResponseStream()) {
+    Write-Host "Request failed: $Method $Uri"
+    if ($null -ne $jsonBody) {
+      Write-Host "Request body: $jsonBody"
+    }
+
+    if ($response -is [System.Net.Http.HttpResponseMessage]) {
+      $status = [int]$response.StatusCode
+      $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+      Write-Host "Request failed ($status): $body"
+    } elseif ($response -and $response.GetResponseStream()) {
       $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
       $body = $reader.ReadToEnd()
-      $status = [int]$response.StatusCode
-      Write-Host "Request failed ($status): $body"
+      $status = if ($null -ne $response.StatusCode) { [int]$response.StatusCode } else { $null }
+      if ($null -ne $status) {
+        Write-Host "Request failed ($status): $body"
+      } else {
+        Write-Host "Request failed: $body"
+      }
     }
     throw
   }
