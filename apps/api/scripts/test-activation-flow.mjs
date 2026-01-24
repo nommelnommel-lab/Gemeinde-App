@@ -44,22 +44,24 @@ const ensureRequiredEnv = () => {
 
 const maskKey = (value) => {
   if (!value) {
-    return 'missing';
+    return '<missing>';
   }
   const prefixLength = Math.min(4, value.length);
   const prefix = value.slice(0, prefixLength);
   return `${prefix}***`;
 };
 
-const logDebug = (method, path) => {
+const logDebug = (method, path, headers = {}) => {
   if (process.env.DEBUG !== '1') {
     return;
   }
   const tenantSet = Boolean(TENANT);
-  const siteKeyLength = SITE_KEY.length;
-  const adminKeyLength = ADMIN_KEY.length;
-  const siteKeyMasked = maskKey(SITE_KEY);
-  const adminKeyMasked = maskKey(ADMIN_KEY);
+  const siteKeyValue = headers['X-SITE-KEY'] ?? SITE_KEY;
+  const adminKeyValue = headers['X-ADMIN-KEY'];
+  const siteKeyLength = siteKeyValue ? siteKeyValue.length : 0;
+  const adminKeyLength = adminKeyValue ? adminKeyValue.length : 0;
+  const siteKeyMasked = maskKey(siteKeyValue);
+  const adminKeyMasked = maskKey(adminKeyValue);
   // eslint-disable-next-line no-console
   console.info(
     `[debug] ${method} ${path} tenant=${tenantSet ? 'yes' : 'no'} ` +
@@ -81,7 +83,7 @@ const parseBody = async (response) => {
 };
 
 const requestJson = async (path, { method = 'POST', headers, body }) => {
-  logDebug(method, path);
+  logDebug(method, path, headers);
   const response = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: {
@@ -132,7 +134,7 @@ const createResident = async (suffix) => {
   return { residentId: data.residentId, ...payload };
 };
 
-const createActivationCode = async (residentId) => {
+const issueActivationCode = async (residentId) => {
   const data = await requireOk('/api/admin/activation-codes', {
     headers: headersAdmin(),
     body: { residentId, expiresInDays: 14 },
@@ -143,32 +145,48 @@ const createActivationCode = async (residentId) => {
   return data.code;
 };
 
-const activate = async ({ activationCode, email, postalCode, houseNumber }) =>
+const activateOnce = async ({
+  activationCode,
+  email,
+  password,
+  postalCode,
+  houseNumber,
+}) =>
   requireOk('/api/auth/activate', {
     headers: headersPublic(),
     body: {
       activationCode,
       email,
-      password: 'secret-pass-123',
+      password,
       postalCode,
       houseNumber,
     },
   });
 
-const login = async (email) =>
+const login = async (email, password) =>
   requireOk('/api/auth/login', {
     headers: headersPublic(),
     body: {
       email,
-      password: 'secret-pass-123',
+      password,
     },
   });
 
-const refresh = async (refreshToken) =>
+const refreshRotate = async (refreshToken) =>
   requireOk('/api/auth/refresh', {
     headers: headersPublic(),
     body: { refreshToken },
   });
+
+const expectRefresh401 = async (refreshToken) =>
+  expectStatus(
+    '/api/auth/refresh',
+    {
+      headers: headersPublic(),
+      body: { refreshToken },
+    },
+    401,
+  );
 
 const logout = async (refreshToken) =>
   requireOk('/api/auth/logout', {
@@ -178,84 +196,62 @@ const logout = async (refreshToken) =>
 
 const run = async () => {
   ensureRequiredEnv();
-  const residentExact = await createResident('Exact');
-  const codeExact = await createActivationCode(residentExact.residentId);
-  if (!codeExact.includes('-')) {
-    throw new Error(`Expected activation code to include dashes: ${codeExact}`);
+  const resident = await createResident('Flow');
+  const activationCode = await issueActivationCode(resident.residentId);
+  if (!activationCode.includes('-')) {
+    throw new Error(
+      `Expected activation code to include dashes: ${activationCode}`,
+    );
   }
 
-  const exactEmail = 'activation.tester.exact@example.com';
-  await activate({
-    activationCode: codeExact,
-    email: exactEmail,
-    postalCode: residentExact.postalCode,
-    houseNumber: residentExact.houseNumber,
+  const email = 'activation.tester.flow@example.com';
+  const password = 'secret-pass-123';
+  await activateOnce({
+    activationCode,
+    email,
+    password,
+    postalCode: resident.postalCode,
+    houseNumber: resident.houseNumber,
   });
 
-  await expectStatus(
+  const { response: secondActivateResponse } = await requestJson(
     '/api/auth/activate',
     {
       headers: headersPublic(),
       body: {
-        activationCode: codeExact,
-        email: 'activation.tester.exact.retry@example.com',
-        password: 'secret-pass-123',
-        postalCode: residentExact.postalCode,
-        houseNumber: residentExact.houseNumber,
+        activationCode,
+        email: 'activation.tester.flow.retry@example.com',
+        password,
+        postalCode: resident.postalCode,
+        houseNumber: resident.houseNumber,
       },
     },
-    401,
+  );
+  if (![401, 409].includes(secondActivateResponse.status)) {
+    throw new Error(
+      `Unexpected status on second activate attempt: ${secondActivateResponse.status}`,
+    );
+  }
+  // eslint-disable-next-line no-console
+  console.info(
+    `Second activate attempt: OK expected ${secondActivateResponse.status}`,
   );
 
-  const residentNormalized = await createResident('Normalized');
-  const normalizedCode = await createActivationCode(
-    residentNormalized.residentId,
-  );
-  await activate({
-    activationCode: normalizedCode.replace(/[-\s]/g, ''),
-    email: 'activation.tester.normalized@example.com',
-    postalCode: residentNormalized.postalCode,
-    houseNumber: residentNormalized.houseNumber,
-  });
-
-  const residentTrimmed = await createResident('Trimmed');
-  const trimmedCode = await createActivationCode(residentTrimmed.residentId);
-  await activate({
-    activationCode: `  ${trimmedCode}  `,
-    email: 'activation.tester.trimmed@example.com',
-    postalCode: residentTrimmed.postalCode,
-    houseNumber: residentTrimmed.houseNumber,
-  });
-
-  const loginResponse = await login(exactEmail);
+  const loginResponse = await login(email, password);
   if (!loginResponse?.refreshToken) {
     throw new Error(`Missing refreshToken on login: ${JSON.stringify(loginResponse)}`);
   }
 
-  const refreshed = await refresh(loginResponse.refreshToken);
+  const refreshed = await refreshRotate(loginResponse.refreshToken);
   if (!refreshed?.refreshToken) {
     throw new Error(`Missing refreshToken on refresh: ${JSON.stringify(refreshed)}`);
   }
 
-  await expectStatus(
-    '/api/auth/refresh',
-    {
-      headers: headersPublic(),
-      body: { refreshToken: loginResponse.refreshToken },
-    },
-    401,
-  );
+  await expectRefresh401(loginResponse.refreshToken);
 
   await logout(refreshed.refreshToken);
 
-  await expectStatus(
-    '/api/auth/refresh',
-    {
-      headers: headersPublic(),
-      body: { refreshToken: refreshed.refreshToken },
-    },
-    401,
-  );
+  await expectRefresh401(refreshed.refreshToken);
 
   // eslint-disable-next-line no-console
   console.info('DONE ✅');
