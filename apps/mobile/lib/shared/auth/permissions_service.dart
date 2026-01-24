@@ -10,7 +10,6 @@ class PermissionsService {
     try {
       final data = await _apiClient.getJsonFlexible(
         '/permissions',
-        includeAdminKey: true,
       );
       final payload = _extractPayload(data);
       final canManage = _readBool(

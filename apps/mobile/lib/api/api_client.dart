@@ -74,22 +74,20 @@ class ApiClient {
   String resolveTenantId() => _tenantStore.resolveTenantId();
 
   Map<String, bool> debugHeaderPresence({
-    bool includeAdminKey = false,
     String? adminKeyOverride,
   }) {
     final headers = _buildHeaders(
-      includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
     );
     return {
       'X-TENANT': headers.containsKey('X-TENANT'),
       'X-SITE-KEY': headers.containsKey('X-SITE-KEY'),
+      'X-ADMIN-KEY': headers.containsKey('X-ADMIN-KEY'),
     };
   }
 
   Future<Map<String, dynamic>> getJson(
     String path, {
-    bool includeAdminKey = false,
     bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
@@ -97,7 +95,7 @@ class ApiClient {
       method: 'GET',
       uri: uri,
       allowAuthRetry: allowAuthRetry,
-      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      buildHeaders: _buildHeaders,
       send: (headers) => _http
           .get(uri, headers: headers)
           .timeout(_requestTimeout),
@@ -125,7 +123,6 @@ class ApiClient {
 
   Future<List<dynamic>> getJsonList(
     String path, {
-    bool includeAdminKey = false,
     bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
@@ -133,7 +130,7 @@ class ApiClient {
       method: 'GET',
       uri: uri,
       allowAuthRetry: allowAuthRetry,
-      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      buildHeaders: _buildHeaders,
       send: (headers) => _http
           .get(uri, headers: headers)
           .timeout(_requestTimeout),
@@ -161,7 +158,6 @@ class ApiClient {
 
   Future<dynamic> getJsonFlexible(
     String path, {
-    bool includeAdminKey = false,
     bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
@@ -169,7 +165,7 @@ class ApiClient {
       method: 'GET',
       uri: uri,
       allowAuthRetry: allowAuthRetry,
-      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      buildHeaders: _buildHeaders,
       send: (headers) => _http
           .get(uri, headers: headers)
           .timeout(_requestTimeout),
@@ -195,7 +191,6 @@ class ApiClient {
 
   Future<ApiResponse<dynamic>> getJsonFlexibleWithResponse(
     String path, {
-    bool includeAdminKey = false,
     bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
@@ -203,7 +198,7 @@ class ApiClient {
       method: 'GET',
       uri: uri,
       allowAuthRetry: allowAuthRetry,
-      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      buildHeaders: _buildHeaders,
       send: (headers) => _http
           .get(uri, headers: headers)
           .timeout(_requestTimeout),
@@ -234,7 +229,6 @@ class ApiClient {
   Future<Map<String, dynamic>> postJson(
     String path,
     Map<String, dynamic> body, {
-    bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
   }) async {
@@ -242,7 +236,6 @@ class ApiClient {
       'POST',
       path,
       body,
-      includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
       allowAuthRetry: allowAuthRetry,
     );
@@ -304,7 +297,6 @@ class ApiClient {
   Future<Map<String, dynamic>> putJson(
     String path,
     Map<String, dynamic> body, {
-    bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
   }) async {
@@ -312,7 +304,6 @@ class ApiClient {
       'PUT',
       path,
       body,
-      includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
       allowAuthRetry: allowAuthRetry,
     );
@@ -320,7 +311,6 @@ class ApiClient {
 
   Future<Map<String, dynamic>> deleteJson(
     String path, {
-    bool includeAdminKey = false,
     bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
@@ -328,7 +318,7 @@ class ApiClient {
       method: 'DELETE',
       uri: uri,
       allowAuthRetry: allowAuthRetry,
-      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      buildHeaders: _buildHeaders,
       send: (headers) => _http
           .delete(uri, headers: headers)
           .timeout(_requestTimeout),
@@ -358,7 +348,6 @@ class ApiClient {
     String method,
     String path,
     Map<String, dynamic> body, {
-    bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
   }) async {
@@ -369,7 +358,6 @@ class ApiClient {
       allowAuthRetry: allowAuthRetry,
       buildHeaders: () => _buildHeaders(
         includeJson: true,
-        includeAdminKey: includeAdminKey,
         adminKeyOverride: adminKeyOverride,
       ),
       send: (headers) => _http
@@ -404,7 +392,6 @@ class ApiClient {
 
   Map<String, String> _buildHeaders({
     bool includeJson = false,
-    bool includeAdminKey = false,
     String? adminKeyOverride,
   }) {
     final headers = <String, String>{};
@@ -414,12 +401,10 @@ class ApiClient {
     final tenantId = _tenantStore.resolveTenantId();
     headers['X-TENANT'] = tenantId;
     headers['X-SITE-KEY'] = AppConfig.siteKey;
-    if (includeAdminKey) {
-      final adminKey =
-          _adminKeyStore?.getAdminKey(adminKeyOverride ?? tenantId);
-      if (adminKey != null && adminKey.isNotEmpty) {
-        headers['x-admin-key'] = adminKey;
-      }
+    final adminKey =
+        _adminKeyStore?.getAdminKey(adminKeyOverride ?? tenantId);
+    if (adminKey != null && adminKey.isNotEmpty) {
+      headers['X-ADMIN-KEY'] = adminKey;
     }
     final accessToken = _accessTokenProvider?.call();
     final trimmedToken = accessToken?.trim();

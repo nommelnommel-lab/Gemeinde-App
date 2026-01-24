@@ -39,10 +39,9 @@ class _MehrScreenState extends State<MehrScreen> {
     }
     final services = AppServicesScope.of(context);
     _permissionsService = services.permissionsService;
+    final tenantId = services.tenantStore.resolveTenantId();
     _adminKeyController.text =
-        services.adminKeyStore
-            .getAdminKey(services.tenantStore.resolveTenantId()) ??
-        '';
+        services.adminKeyStore.getAdminKey(tenantId) ?? '';
     _initialized = true;
   }
 

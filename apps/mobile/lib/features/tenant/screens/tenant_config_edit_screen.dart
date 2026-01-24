@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../../api/api_client.dart';
-import '../../../config/app_config.dart';
 import '../../../shared/auth/admin_key_store.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../models/tenant_config.dart';
@@ -30,6 +29,7 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
   bool _saving = false;
   late TenantService _tenantService;
   late AdminKeyStore _adminKeyStore;
+  late String _tenantId;
 
   late TextEditingController _nameController;
   late TextEditingController _addressController;
@@ -51,6 +51,7 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
     final services = AppServicesScope.of(context);
     _tenantService = services.tenantService;
     _adminKeyStore = services.adminKeyStore;
+    _tenantId = services.tenantStore.resolveTenantId();
     _adminKeyOverride = widget.adminKeyOverride;
 
     _nameController = TextEditingController(text: widget.initialConfig.name);
@@ -267,7 +268,7 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
       );
       if (_adminKeyOverride != null) {
         await _adminKeyStore.setAdminKey(
-          AppConfig.tenantId,
+          _tenantId,
           _adminKeyOverride!,
         );
       }
@@ -292,7 +293,7 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
 
   Future<void> _handleInvalidAdminKey() async {
     if (_adminKeyOverride == null) {
-      await _adminKeyStore.clearAdminKey(AppConfig.tenantId);
+      await _adminKeyStore.clearAdminKey(_tenantId);
     }
     final newKey = await _promptAdminKey(
       title: 'Admin-Schlüssel falsch',
