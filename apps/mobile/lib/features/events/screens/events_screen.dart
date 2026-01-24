@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shared/auth/app_permissions.dart';
+import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/event.dart';
@@ -60,9 +61,10 @@ class _EventsScreenState extends State<EventsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canEdit =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-            false;
+    final permissions =
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final isAuthenticated = AuthScope.of(context).isAuthenticated;
+    final canEdit = isAuthenticated && permissions.canCreate.officialEvents;
 
     return Scaffold(
       appBar: AppBar(
@@ -162,9 +164,10 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   Future<void> _openEventDetail(Event event) async {
-    final canEdit =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-            false;
+    final permissions =
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final isAuthenticated = AuthScope.of(context).isAuthenticated;
+    final canEdit = isAuthenticated && permissions.canCreate.officialEvents;
     final result = await AppRouterScope.of(context).push(
       EventDetailScreen(
         event: event,

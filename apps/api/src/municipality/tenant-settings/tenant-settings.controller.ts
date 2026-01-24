@@ -6,7 +6,12 @@ import {
   Header,
   Headers,
   Put,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { Roles } from '../../auth/roles.decorator';
+import { RolesGuard } from '../../auth/roles.guard';
+import { UserRole } from '../../auth/user-roles';
 import { requireTenant } from '../../tenant/tenant-auth';
 import {
   TenantSettings,
@@ -28,6 +33,8 @@ export class TenantSettingsController {
   }
 
   @Put('settings')
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async updateSettings(
     @Headers() headers: Record<string, string | string[] | undefined>,

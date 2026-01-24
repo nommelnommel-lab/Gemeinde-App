@@ -3,13 +3,16 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
-  Headers,
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from '../auth/user-roles';
 import { NewsPayloadDto } from './news.dto';
 import { NewsService } from './news.service';
 import { NewsEntity } from './news.types';
@@ -29,32 +32,32 @@ export class NewsController {
   }
 
   @Post()
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async createNews(
-    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: NewsPayloadDto,
   ): Promise<NewsEntity> {
-    this.requireAdmin(headers);
     const data = this.validatePayload(payload);
     return this.newsService.create(data);
   }
 
   @Put(':id')
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async updateNews(
     @Param('id') id: string,
-    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: NewsPayloadDto,
   ): Promise<NewsEntity> {
-    this.requireAdmin(headers);
     const data = this.validatePayload(payload);
     return this.newsService.update(id, data);
   }
 
   @Delete(':id')
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async deleteNews(
     @Param('id') id: string,
-    @Headers() headers: Record<string, string | string[] | undefined>,
   ) {
-    this.requireAdmin(headers);
     await this.newsService.remove(id);
     return { ok: true };
   }
@@ -85,21 +88,4 @@ export class NewsController {
     return trimmed;
   }
 
-  private requireAdmin(
-    headers: Record<string, string | string[] | undefined>,
-  ) {
-    const adminKey = process.env.ADMIN_KEY;
-    if (!adminKey) {
-      return;
-    }
-
-    const providedHeader = headers['x-admin-key'];
-    const provided = Array.isArray(providedHeader)
-      ? providedHeader[0]
-      : providedHeader;
-
-    if (provided !== adminKey) {
-      throw new ForbiddenException('Ungültiger Admin-Schlüssel');
-    }
-  }
 }

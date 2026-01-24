@@ -3,13 +3,16 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
-  Headers,
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from '../auth/user-roles';
 import { EventsService } from './events.service';
 import { EventEntity } from './events.types';
 
@@ -35,32 +38,32 @@ export class EventsController {
   }
 
   @Post()
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async createEvent(
-    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: EventPayload,
   ): Promise<EventEntity> {
-    this.requireAdmin(headers);
     const data = this.validatePayload(payload);
     return this.eventsService.create(data);
   }
 
   @Put(':id')
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async updateEvent(
     @Param('id') id: string,
-    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: EventPayload,
   ): Promise<EventEntity> {
-    this.requireAdmin(headers);
     const data = this.validatePayload(payload);
     return this.eventsService.update(id, data);
   }
 
   @Delete(':id')
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async deleteEvent(
     @Param('id') id: string,
-    @Headers() headers: Record<string, string | string[] | undefined>,
   ) {
-    this.requireAdmin(headers);
     await this.eventsService.remove(id);
     return { ok: true };
   }
@@ -84,21 +87,4 @@ export class EventsController {
     return value.trim();
   }
 
-  private requireAdmin(
-    headers: Record<string, string | string[] | undefined>,
-  ) {
-    const adminKey = process.env.ADMIN_KEY;
-    if (!adminKey) {
-      return;
-    }
-
-    const providedHeader = headers['x-admin-key'];
-    const provided = Array.isArray(providedHeader)
-      ? providedHeader[0]
-      : providedHeader;
-
-    if (provided !== adminKey) {
-      throw new ForbiddenException('Ungültiger Admin-Schlüssel');
-    }
-  }
 }

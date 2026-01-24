@@ -1,15 +1,12 @@
-export type PostType =
-  | 'event'
-  | 'news'
-  | 'warning'
-  | 'market'
-  | 'help'
-  | 'cafe'
-  | 'kids';
+import { Category, ContentType } from '../content/content.types';
+
+export type PostType = ContentType;
 
 export type PostEntity = {
   id: string;
   type: PostType;
+  category?: Category;
+  authorId?: string;
   title: string;
   body: string;
   location?: string;

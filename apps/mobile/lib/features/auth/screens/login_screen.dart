@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/auth/auth_store.dart';
+import '../../../shared/di/app_services_scope.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -79,6 +81,10 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+      final permissions =
+          await AppServicesScope.of(context).permissionsService.getPermissions();
+      if (!mounted) return;
+      AppPermissionsScope.controllerOf(context).setPermissions(permissions);
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (error) {

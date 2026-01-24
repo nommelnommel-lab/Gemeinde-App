@@ -8,6 +8,8 @@ type PostInput = {
   type: PostType;
   title: string;
   body: string;
+  authorId?: string;
+  category?: PostEntity['category'];
   location?: string;
   date?: string;
   severity?: 'low' | 'medium' | 'high';
@@ -56,6 +58,8 @@ export class PostsService implements OnModuleInit {
     const post: PostEntity = {
       id: randomUUID(),
       type: input.type,
+      category: input.category,
+      authorId: input.authorId,
       title: input.title,
       body: input.body,
       location: input.location,
@@ -80,6 +84,7 @@ export class PostsService implements OnModuleInit {
     const updated: PostEntity = {
       ...this.posts[index],
       type: input.type,
+      category: input.category ?? this.posts[index].category,
       title: input.title,
       body: input.body,
       location: input.location,
@@ -136,7 +141,8 @@ export class PostsService implements OnModuleInit {
     return [
       {
         id: randomUUID(),
-        type: 'event',
+        type: 'OFFICIAL_EVENT',
+        authorId: 'system',
         title: 'Ernte-Dank Gottesdienst',
         body: 'Wir feiern gemeinsam mit Musik und anschließendem Imbiss.',
         location: 'Kirche St. Markus',
@@ -146,7 +152,8 @@ export class PostsService implements OnModuleInit {
       },
       {
         id: randomUUID(),
-        type: 'news',
+        type: 'OFFICIAL_NEWS',
+        authorId: 'system',
         title: 'Neue Öffnungszeiten im Pfarrbüro',
         body: 'Das Pfarrbüro ist ab Oktober dienstags und donnerstags geöffnet.',
         validUntil: '2024-12-01T00:00:00.000Z',
@@ -155,7 +162,8 @@ export class PostsService implements OnModuleInit {
       },
       {
         id: randomUUID(),
-        type: 'warning',
+        type: 'OFFICIAL_WARNING',
+        authorId: 'system',
         title: 'Sturmböen am Wochenende',
         body: 'Bitte achtet auf lose Gegenstände im Außenbereich.',
         severity: 'medium',

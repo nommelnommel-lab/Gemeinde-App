@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
 import { AuthUser } from './users.model';
+import { UserRole } from './user-roles';
 
 @Injectable()
 export class UsersService {
@@ -14,6 +15,7 @@ export class UsersService {
       email: string;
       passwordHash: string;
       emailVerifiedAt?: string;
+      role?: UserRole;
     },
   ): Promise<AuthUser> {
     const users = await this.repository.getAll(tenantId);
@@ -24,6 +26,7 @@ export class UsersService {
       residentId: payload.residentId,
       email: payload.email,
       passwordHash: payload.passwordHash,
+      role: payload.role ?? UserRole.USER,
       emailVerifiedAt: payload.emailVerifiedAt,
       createdAt: now,
       updatedAt: now,
@@ -40,6 +43,21 @@ export class UsersService {
       throw new NotFoundException('Benutzer nicht gefunden');
     }
     return user;
+  }
+
+  async list(
+    tenantId: string,
+    query?: string,
+  ): Promise<AuthUser[]> {
+    const users = await this.repository.getAll(tenantId);
+    if (!query) {
+      return users;
+    }
+    const normalized = this.normalize(query);
+    return users.filter((entry) => {
+      const email = this.normalize(entry.email);
+      return email.includes(normalized) || entry.id.includes(query);
+    });
   }
 
   async findByEmail(tenantId: string, email: string): Promise<AuthUser | undefined> {

@@ -6,9 +6,9 @@ export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
   @Get()
-  getPermissions(@Headers() headers: Record<string, string | string[] | undefined>) {
-    return {
-      isAdmin: this.permissionsService.isAdmin(headers),
-    };
+  getPermissions(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+  ) {
+    return this.permissionsService.getPermissions(headers);
   }
 }

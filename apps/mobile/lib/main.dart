@@ -65,7 +65,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
   late final AppServices _services;
   late final AuthStore _authStore;
   late final TenantSettingsStore _tenantSettingsStore;
-  AppPermissions _permissions = const AppPermissions(canManageContent: false);
+  AppPermissions _permissions = AppPermissions.empty;
 
   @override
   void initState() {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/auth/app_permissions.dart';
+import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/warning_item.dart';
@@ -28,10 +29,11 @@ class _WarningsScreenState extends State<WarningsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final canManage =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-            false;
-    _canManageContent = canManage;
+    final permissions =
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final isAuthenticated = AuthScope.of(context).isAuthenticated;
+    _canManageContent =
+        isAuthenticated && permissions.canCreate.officialWarnings;
     if (_initialized) {
       return;
     }

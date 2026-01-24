@@ -12,7 +12,7 @@ export class ApiError extends Error {
 }
 
 const shouldIncludeAdminKey = (path: string) => {
-  return path.startsWith('/api/admin/') || path === '/permissions';
+  return path.startsWith('/api/admin/');
 };
 
 const buildUrl = (baseUrl: string, path: string) => {

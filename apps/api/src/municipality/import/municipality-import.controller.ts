@@ -7,7 +7,10 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { AdminGuard } from '../../admin/admin.guard';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { Roles } from '../../auth/roles.decorator';
+import { RolesGuard } from '../../auth/roles.guard';
+import { UserRole } from '../../auth/user-roles';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityEventsService } from '../events/municipality-events.service';
 import {
@@ -38,7 +41,8 @@ export class MunicipalityImportController {
   ) {}
 
   @Post('api/admin/import/events')
-  @UseGuards(AdminGuard)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async importEvents(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -53,7 +57,8 @@ export class MunicipalityImportController {
   }
 
   @Post('api/admin/import/posts')
-  @UseGuards(AdminGuard)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async importPosts(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -68,7 +73,8 @@ export class MunicipalityImportController {
   }
 
   @Post('api/admin/import/services')
-  @UseGuards(AdminGuard)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async importServices(
     @Headers() headers: Record<string, string | string[] | undefined>,

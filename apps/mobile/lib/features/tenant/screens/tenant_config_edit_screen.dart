@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../../api/api_client.dart';
-import '../../../shared/auth/admin_key_store.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../models/tenant_config.dart';
 import '../services/tenant_service.dart';
@@ -12,11 +11,9 @@ class TenantConfigEditScreen extends StatefulWidget {
   const TenantConfigEditScreen({
     super.key,
     required this.initialConfig,
-    this.adminKeyOverride,
   });
 
   final TenantConfig initialConfig;
-  final String? adminKeyOverride;
 
   @override
   State<TenantConfigEditScreen> createState() =>
@@ -28,8 +25,6 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
   bool _initialized = false;
   bool _saving = false;
   late TenantService _tenantService;
-  late AdminKeyStore _adminKeyStore;
-  late String _tenantId;
 
   late TextEditingController _nameController;
   late TextEditingController _addressController;
@@ -40,8 +35,6 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
   final List<_OpeningHoursEntry> _openingHoursEntries = [];
   final List<TextEditingController> _emergencyControllers = [];
 
-  String? _adminKeyOverride;
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -50,9 +43,6 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
     }
     final services = AppServicesScope.of(context);
     _tenantService = services.tenantService;
-    _adminKeyStore = services.adminKeyStore;
-    _tenantId = services.tenantStore.resolveTenantId();
-    _adminKeyOverride = widget.adminKeyOverride;
 
     _nameController = TextEditingController(text: widget.initialConfig.name);
     _addressController =
@@ -262,24 +252,11 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
     );
 
     try {
-      final updated = await _tenantService.updateTenantConfig(
-        config,
-        adminKeyOverride: _adminKeyOverride,
-      );
-      if (_adminKeyOverride != null) {
-        await _adminKeyStore.setAdminKey(
-          _tenantId,
-          _adminKeyOverride!,
-        );
-      }
+      final updated = await _tenantService.updateTenantConfig(config);
       if (!mounted) return;
       Navigator.of(context).pop(updated);
     } on ApiException catch (e) {
       if (!mounted) return;
-      if (e.statusCode == 401 || e.statusCode == 403) {
-        await _handleInvalidAdminKey();
-        return;
-      }
       _showErrorMessage(_parseApiErrorMessage(e));
     } catch (e) {
       if (!mounted) return;
@@ -289,55 +266,6 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
         setState(() => _saving = false);
       }
     }
-  }
-
-  Future<void> _handleInvalidAdminKey() async {
-    if (_adminKeyOverride == null) {
-      await _adminKeyStore.clearAdminKey(_tenantId);
-    }
-    final newKey = await _promptAdminKey(
-      title: 'Admin-Schlüssel falsch',
-      actionLabel: 'Aktualisieren',
-    );
-    if (newKey != null) {
-      setState(() => _adminKeyOverride = newKey);
-      _showErrorMessage(
-        'Admin-Schlüssel aktualisiert. Bitte erneut speichern.',
-      );
-    }
-  }
-
-  Future<String?> _promptAdminKey({
-    required String title,
-    required String actionLabel,
-  }) async {
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Admin-Schlüssel'),
-          obscureText: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = controller.text.trim();
-              if (value.isEmpty) return;
-              Navigator.of(context).pop(value);
-            },
-            child: Text(actionLabel),
-          ),
-        ],
-      ),
-    );
-    return result;
   }
 
   String _parseApiErrorMessage(ApiException exception) {

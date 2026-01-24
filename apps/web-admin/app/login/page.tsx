@@ -31,7 +31,7 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(
-        new URL('/permissions', session.apiBaseUrl).toString(),
+        new URL('/api/admin/users', session.apiBaseUrl).toString(),
         {
           method: 'GET',
           headers: {
@@ -41,9 +41,7 @@ export default function LoginPage() {
           },
         },
       );
-      const data = (await response.json()) as { isAdmin?: boolean };
-
-      if (!response.ok || !data?.isAdmin) {
+      if (!response.ok) {
         throw new Error('Admin-Berechtigung konnte nicht bestätigt werden.');
       }
 

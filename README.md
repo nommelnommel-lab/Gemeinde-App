@@ -2,6 +2,7 @@
 
 ## Zusammenfassung (Stand)
 - Mobile Startseite zeigt Nachbarschafts-Posts (Events/News); Warnungen erscheinen nicht mehr auf der Startseite, sondern im Warnungen-Tab.
+- Rollenbasiertes Berechtigungsmodell (USER/STAFF/ADMIN) steuert offizielle Inhalte, Moderation und Bewohner-Verwaltung.
 
 ## Voraussetzungen
 - Flutter SDK installiert (Windows)
@@ -43,21 +44,24 @@
    ```powershell
    curl http://localhost:3000/events/<id>
    ```
-6. Event erstellen:
+6. Event erstellen (STAFF/ADMIN, mit Auth-Token):
    ```powershell
    curl -X POST http://localhost:3000/events ^
      -H "Content-Type: application/json" ^
+     -H "Authorization: Bearer <access-token>" ^
      -d "{\"title\":\"Konzert\",\"description\":\"Abend mit Musik\",\"date\":\"2024-12-01T19:00:00.000Z\",\"location\":\"Kirche\"}"
    ```
-7. Event aktualisieren:
+7. Event aktualisieren (STAFF/ADMIN):
    ```powershell
    curl -X PUT http://localhost:3000/events/<id> ^
      -H "Content-Type: application/json" ^
+     -H "Authorization: Bearer <access-token>" ^
      -d "{\"title\":\"Konzert\",\"description\":\"Aktualisiert\",\"date\":\"2024-12-01T19:30:00.000Z\",\"location\":\"Kirche\"}"
    ```
-8. Event löschen:
+8. Event löschen (STAFF/ADMIN):
    ```powershell
-   curl -X DELETE http://localhost:3000/events/<id>
+   curl -X DELETE http://localhost:3000/events/<id> ^
+     -H "Authorization: Bearer <access-token>"
    ```
 
 ## Web Admin Panel (Bewohner & Aktivierungscodes)
@@ -85,6 +89,40 @@
    - **Bewohner**: Suchen, anlegen, Status prüfen.
    - **Import**: CSV hochladen und Import-Ergebnis prüfen.
    - **Codes**: Bewohner auswählen, Codes erzeugen, CSV exportieren oder kopieren.
+   - **Rollen**: Rollen (USER/STAFF/ADMIN) per User ID oder E-Mail setzen.
+
+## Berechtigungen & Content-Kategorien
+**Öffentliche Inhalte:** Alle Nutzer sehen News, Warnungen, Events, Services und Orte.
+
+**USER (Bürgerinnen/Bürger) dürfen Inhalte erstellen:**
+- Online-Flohmarkt (Marketplace)
+- Umzug/Entrümpelung
+- Seniorenhilfe (Hilfeanfragen & Hilfsangebote)
+- Café-Treff / Community-Meetups
+- Kinderspiele
+- Wohnungssuche
+- Fundbüro (Lost & Found)
+- Mitfahrgelegenheit
+- Lokale Jobs
+- Ehrenamt
+- Verschenken
+- Nachbarschaftshilfe / Skill-Tausch
+
+**STAFF/ADMIN dürfen zusätzlich:**
+- Offizielle News
+- Offizielle Warnungen/Alerts
+- Offizielle Events
+- Gemeindeservices/Orte/Informationen verwalten
+- Nutzerinhalte moderieren (verbergen/löschen/sperren)
+
+## Rollen verwalten (Web-Admin)
+Rollen werden über das Web-Admin-Panel im Tab **Rollen** gesetzt (Admin-Key erforderlich).
+
+## Migration (User-Rollen)
+Bestehende Nutzerinnen und Nutzer ohne Rolle können mit folgendem Script ergänzt werden:
+```powershell
+npx --prefix apps/api ts-node scripts/migrate-user-roles.ts
+```
 
 ## Aktivierungscodes (Admin)
 Admin-Aktivierungscodes werden tenant-spezifisch erzeugt und nur einmal im Response angezeigt.
@@ -123,14 +161,7 @@ curl -X POST http://localhost:3000/api/auth/activate ^
 Hinweis: Die postalCode/houseNumber-Werte müssen zu einem bekannten Bewohner des Tenants passen.
 
 ## Admin UI (Bewohner & Aktivierungscodes)
-1. App öffnen → Tab **Mehr**.
-2. **Admin Key** eintragen und **Apply** drücken. Danach muss „Admin: Ja“ erscheinen.
-3. Im Tab **Mehr** erscheint der Eintrag **Admin** (nur sichtbar bei Admin-Berechtigung).
-4. Im Admin-Bereich:
-   - Bewohnerliste durchsuchen (Suchfeld).
-   - **Bewohner anlegen** (Vorname, Nachname, PLZ, Hausnummer).
-   - **CSV importieren** (Spalten: `firstName,lastName,postalCode,houseNumber`, Case-insensitive).
-   - Bewohner auswählen → **Codes erzeugen** → CSV kopieren oder herunterladen.
+Die mobile App nutzt keinen Admin-Key im Produktivbetrieb. Bewohner- und Code-Verwaltung erfolgt über das Web-Admin-Panel.
 
 ## Test-Skript für Admin Flow
 ```powershell

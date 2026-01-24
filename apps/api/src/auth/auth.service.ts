@@ -21,6 +21,7 @@ import {
   hashActivationCode,
   normalizeActivationCode,
 } from './auth.normalize';
+import { normalizeUserRole, UserRole } from './user-roles';
 
 type ResidentRecord = {
   id: string;
@@ -49,6 +50,7 @@ type UserRecord = {
   residentId: string;
   email: string;
   passwordHash: string;
+  role?: UserRole;
   createdAt: string;
   updatedAt: string;
 };
@@ -175,6 +177,7 @@ export class AuthService {
       residentId: resident.id,
       email,
       passwordHash: await this.hashPassword(password),
+      role: UserRole.USER,
       createdAt: now,
       updatedAt: now,
     };
@@ -446,6 +449,7 @@ export class AuthService {
       tenantId,
       residentId: user.residentId,
       email: user.email,
+      role: this.resolveRole(user),
     });
 
     const refreshToken = await this.createRefreshToken(tenantId, user.id);
@@ -572,7 +576,12 @@ export class AuthService {
       residentId: user.residentId,
       displayName,
       email: user.email,
+      role: this.resolveRole(user),
     };
+  }
+
+  private resolveRole(user: UserRecord): UserRole {
+    return normalizeUserRole(user.role);
   }
 
   private createDisplayName(resident: ResidentRecord) {

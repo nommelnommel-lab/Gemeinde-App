@@ -5,12 +5,16 @@ import {
   Delete,
   ForbiddenException,
   Get,
-  Headers,
   Param,
   Patch,
   Post,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UserRole } from '../auth/user-roles';
+import { Category, ContentType } from '../content/content.types';
 import { PostsService } from './posts.service';
 import { PostEntity, PostType } from './posts.types';
 
@@ -44,39 +48,50 @@ export class PostsController {
   }
 
   @Post()
+  @UseGuards(new JwtAuthGuard())
   async createPost(
-    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: PostPayload,
+    @Req() request: { user?: { sub?: string; role?: UserRole } },
   ): Promise<PostEntity> {
     const data = this.validatePayload(payload);
-    if (this.requiresAdmin(data.type)) {
-      this.requireAdmin(headers);
+    const authorId = request.user?.sub;
+    if (!authorId) {
+      throw new ForbiddenException('Authentifizierung erforderlich');
     }
-    return this.postsService.create(data);
+    if (this.isOfficial(data.type)) {
+      this.requireStaffOrAdmin(request.user?.role);
+    }
+    return this.postsService.create({
+      ...data,
+      authorId,
+      category: this.categoryForType(data.type),
+    });
   }
 
   @Patch(':id')
+  @UseGuards(new JwtAuthGuard())
   async updatePost(
     @Param('id') id: string,
-    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: PostPayload,
+    @Req() request: { user?: { sub?: string; role?: UserRole } },
   ): Promise<PostEntity> {
     const data = this.validatePayload(payload);
-    if (this.requiresAdmin(data.type)) {
-      this.requireAdmin(headers);
-    }
-    return this.postsService.update(id, data);
+    const post = await this.postsService.getById(id);
+    this.assertCanEdit(post, request.user);
+    return this.postsService.update(id, {
+      ...data,
+      category: this.categoryForType(data.type),
+    });
   }
 
   @Delete(':id')
+  @UseGuards(new JwtAuthGuard())
   async deletePost(
     @Param('id') id: string,
-    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Req() request: { user?: { sub?: string; role?: UserRole } },
   ) {
     const post = await this.postsService.getById(id);
-    if (this.requiresAdmin(post.type)) {
-      this.requireAdmin(headers);
-    }
+    this.assertCanEdit(post, request.user);
     await this.postsService.remove(id);
     return { ok: true };
   }
@@ -89,7 +104,7 @@ export class PostsController {
     const date = payload.date?.trim();
     const validUntil = payload.validUntil?.trim();
 
-    if (type === 'event') {
+    if (type === ContentType.OFFICIAL_EVENT) {
       if (!date) {
         throw new BadRequestException('date ist erforderlich');
       }
@@ -106,7 +121,7 @@ export class PostsController {
     }
 
     const severity = payload.severity;
-    if (type === 'warning') {
+    if (type === ContentType.OFFICIAL_WARNING) {
       if (!severity) {
         throw new BadRequestException('severity ist erforderlich');
       }
@@ -141,20 +156,38 @@ export class PostsController {
   }
 
   private parseType(value: string): PostType {
-    const normalized = value.trim() as PostType;
-    const allowed: PostType[] = [
-      'event',
-      'news',
-      'warning',
-      'market',
-      'help',
-      'cafe',
-      'kids',
-    ];
-    if (!allowed.includes(normalized)) {
+    const normalized = value.trim().toUpperCase();
+    const aliases: Record<string, ContentType> = {
+      EVENT: ContentType.OFFICIAL_EVENT,
+      NEWS: ContentType.OFFICIAL_NEWS,
+      WARNING: ContentType.OFFICIAL_WARNING,
+      MARKET: ContentType.MARKETPLACE_LISTING,
+      MARKETPLACE: ContentType.MARKETPLACE_LISTING,
+      HELP: ContentType.HELP_REQUEST,
+      HELP_REQUEST: ContentType.HELP_REQUEST,
+      HELP_OFFER: ContentType.HELP_OFFER,
+      CAFE: ContentType.CAFE_MEETUP,
+      CAFE_MEETUP: ContentType.CAFE_MEETUP,
+      KIDS: ContentType.KIDS_MEETUP,
+      KIDS_MEETUP: ContentType.KIDS_MEETUP,
+      MOVING: ContentType.MOVING_CLEARANCE,
+      MOVING_CLEARANCE: ContentType.MOVING_CLEARANCE,
+      APARTMENT: ContentType.APARTMENT_SEARCH,
+      APARTMENT_SEARCH: ContentType.APARTMENT_SEARCH,
+      LOST_FOUND: ContentType.LOST_FOUND,
+      LOST: ContentType.LOST_FOUND,
+      RIDE_SHARING: ContentType.RIDE_SHARING,
+      JOBS_LOCAL: ContentType.JOBS_LOCAL,
+      VOLUNTEERING: ContentType.VOLUNTEERING,
+      GIVEAWAY: ContentType.GIVEAWAY,
+      SKILL_EXCHANGE: ContentType.SKILL_EXCHANGE,
+      USER_POST: ContentType.USER_POST,
+    };
+    const mapped = aliases[normalized];
+    if (!mapped) {
       throw new BadRequestException('type ist ungültig');
     }
-    return normalized;
+    return mapped;
   }
 
   private parseLimit(value: string): number {
@@ -171,25 +204,71 @@ export class PostsController {
     }
   }
 
-  private requiresAdmin(type: PostType) {
-    return type === 'news' || type === 'warning' || type === 'event';
+  private isOfficial(type: PostType) {
+    return (
+      type === ContentType.OFFICIAL_NEWS ||
+      type === ContentType.OFFICIAL_WARNING ||
+      type === ContentType.OFFICIAL_EVENT
+    );
   }
 
-  private requireAdmin(
-    headers: Record<string, string | string[] | undefined>,
+  private categoryForType(type: PostType): Category | undefined {
+    switch (type) {
+      case ContentType.MARKETPLACE_LISTING:
+        return Category.MARKETPLACE;
+      case ContentType.HELP_REQUEST:
+        return Category.HELP_REQUEST;
+      case ContentType.HELP_OFFER:
+        return Category.HELP_OFFER;
+      case ContentType.MOVING_CLEARANCE:
+        return Category.MOVING_CLEARANCE;
+      case ContentType.CAFE_MEETUP:
+        return Category.CAFE_MEETUP;
+      case ContentType.KIDS_MEETUP:
+        return Category.KIDS_MEETUP;
+      case ContentType.APARTMENT_SEARCH:
+        return Category.APARTMENT_SEARCH;
+      case ContentType.LOST_FOUND:
+        return Category.LOST_FOUND;
+      case ContentType.RIDE_SHARING:
+        return Category.RIDE_SHARING;
+      case ContentType.JOBS_LOCAL:
+        return Category.JOBS_LOCAL;
+      case ContentType.VOLUNTEERING:
+        return Category.VOLUNTEERING;
+      case ContentType.GIVEAWAY:
+        return Category.GIVEAWAY;
+      case ContentType.SKILL_EXCHANGE:
+        return Category.SKILL_EXCHANGE;
+      default:
+        return undefined;
+    }
+  }
+
+  private requireStaffOrAdmin(role?: UserRole) {
+    if (role === UserRole.STAFF || role === UserRole.ADMIN) {
+      return;
+    }
+    throw new ForbiddenException('Keine Berechtigung');
+  }
+
+  private assertCanEdit(
+    post: PostEntity,
+    user?: { sub?: string; role?: UserRole },
   ) {
-    const adminKey = process.env.ADMIN_KEY;
-    if (!adminKey) {
-      throw new ForbiddenException('Admin-Schlüssel ist erforderlich');
+    if (!user?.sub) {
+      throw new ForbiddenException('Authentifizierung erforderlich');
     }
-
-    const providedHeader = headers['x-admin-key'];
-    const provided = Array.isArray(providedHeader)
-      ? providedHeader[0]
-      : providedHeader;
-
-    if (provided !== adminKey) {
-      throw new ForbiddenException('Ungültiger Admin-Schlüssel');
+    if (this.isOfficial(post.type)) {
+      this.requireStaffOrAdmin(user.role);
+      return;
     }
+    if (user.role === UserRole.STAFF || user.role === UserRole.ADMIN) {
+      return;
+    }
+    if (post.authorId && post.authorId === user.sub) {
+      return;
+    }
+    throw new ForbiddenException('Keine Berechtigung');
   }
 }

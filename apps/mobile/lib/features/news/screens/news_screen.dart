@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/auth/app_permissions.dart';
+import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/news_item.dart';
@@ -33,10 +34,10 @@ class _NewsScreenState extends State<NewsScreen> {
       _initialized = true;
       _load();
     }
-    final canManage =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-            false;
-    _canManageContent = canManage;
+    final permissions =
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final isAuthenticated = AuthScope.of(context).isAuthenticated;
+    _canManageContent = isAuthenticated && permissions.canCreate.officialNews;
   }
 
   Future<void> _load() async {

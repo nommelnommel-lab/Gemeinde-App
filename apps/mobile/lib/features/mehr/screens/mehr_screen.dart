@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shared/auth/auth_scope.dart';
@@ -53,9 +54,9 @@ class _MehrScreenState extends State<MehrScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-            false;
+    final permissions =
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final isStaff = permissions.isStaff;
     final services = AppServicesScope.of(context);
     final adminKey =
         services.adminKeyStore.getAdminKey(services.tenantStore.resolveTenantId());
@@ -70,7 +71,7 @@ class _MehrScreenState extends State<MehrScreen> {
             title: Text(authStore.user?.displayName ?? 'Angemeldet'),
             subtitle: Text(authStore.user?.email ?? ''),
             trailing: TextButton(
-              onPressed: authStore.isLoading ? null : authStore.logout,
+              onPressed: authStore.isLoading ? null : _logout,
               child: const Text('Logout'),
             ),
           )
@@ -85,6 +86,15 @@ class _MehrScreenState extends State<MehrScreen> {
             },
           ),
         const Divider(height: 0),
+        if (isStaff)
+          ListTile(
+            leading: const Icon(Icons.verified_user_outlined),
+            title: Text(
+              permissions.isAdmin ? 'Staff-Modus (Admin)' : 'Staff-Modus',
+            ),
+            subtitle: Text('Rolle: ${permissions.role}'),
+          ),
+        if (isStaff) const Divider(height: 0),
         ListTile(
           leading: const Icon(Icons.monitor_heart),
           title: const Text('Systemstatus'),
@@ -136,7 +146,7 @@ class _MehrScreenState extends State<MehrScreen> {
           },
         ),
         const Divider(height: 0),
-        if (isAdmin && hasAdminKey)
+        if (kDebugMode && permissions.canManageResidents && hasAdminKey)
           ListTile(
             leading: const Icon(Icons.admin_panel_settings_outlined),
             title: const Text('Admin'),
@@ -148,56 +158,58 @@ class _MehrScreenState extends State<MehrScreen> {
               );
             },
           ),
-        if (isAdmin && hasAdminKey) const Divider(height: 0),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-          child: Text(
-            'Admin Key',
-            style: Theme.of(context).textTheme.titleMedium,
+        if (kDebugMode) const Divider(height: 0),
+        if (kDebugMode)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+            child: Text(
+              'Admin Key (Debug)',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _adminKeyController,
-                    decoration: InputDecoration(
-                      labelText: 'Admin Key',
-                      suffixIcon: _adminKeyController.text.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: 'Leeren',
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                setState(() {
-                                  _adminKeyController.clear();
-                                });
-                              },
-                            ),
+        if (kDebugMode)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _adminKeyController,
+                      decoration: InputDecoration(
+                        labelText: 'Admin Key',
+                        suffixIcon: _adminKeyController.text.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Leeren',
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setState(() {
+                                    _adminKeyController.clear();
+                                  });
+                                },
+                              ),
+                      ),
+                      onChanged: (_) => setState(() {}),
                     ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Admin: ${isAdmin ? 'Ja' : 'Nein'}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: _saving ? null : _applyAdminKey,
-                    child: Text(_saving ? 'Wird angewendet...' : 'Apply'),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Text(
+                      'Admin: ${permissions.canManageResidents ? 'Ja' : 'Nein'}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: _saving ? null : _applyAdminKey,
+                      child: Text(_saving ? 'Wird angewendet...' : 'Apply'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 24),
+        if (kDebugMode) const SizedBox(height: 24),
       ],
     );
   }
@@ -218,5 +230,13 @@ class _MehrScreenState extends State<MehrScreen> {
         setState(() => _saving = false);
       }
     }
+  }
+
+  Future<void> _logout() async {
+    final authStore = AuthScope.of(context);
+    await authStore.logout();
+    if (!mounted) return;
+    AppPermissionsScope.controllerOf(context)
+        .setPermissions(AppPermissions.empty);
   }
 }

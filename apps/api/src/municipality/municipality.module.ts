@@ -15,7 +15,6 @@ import { TenantSettingsController } from './tenant-settings/tenant-settings.cont
 import { TenantSettingsService } from './tenant-settings/tenant-settings.service';
 import { MunicipalityWastePickupsController } from './waste-pickups/municipality-waste-pickups.controller';
 import { MunicipalityWastePickupsService } from './waste-pickups/municipality-waste-pickups.service';
-import { AdminGuard } from '../admin/admin.guard';
 
 @Module({
   controllers: [
@@ -37,7 +36,6 @@ import { AdminGuard } from '../admin/admin.guard';
     MunicipalityServicesService,
     MunicipalityClubsService,
     MunicipalityWastePickupsService,
-    AdminGuard,
   ],
 })
 export class MunicipalityModule {}

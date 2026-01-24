@@ -1,67 +1,86 @@
 import { Injectable } from '@nestjs/common';
-import { resolveTenantId } from '../tenant/tenant-resolver';
+import { ContentType } from '../content/content.types';
+import { verifyAccessToken } from '../auth/jwt.utils';
+import { UserRole } from '../auth/user-roles';
 
-const ADMIN_KEY_HEADER = 'x-admin-key';
-
-const getHeaderValue = (
-  headers: Record<string, string | string[] | undefined>,
-  headerName: string,
-) => {
-  const direct = headers[headerName];
-  const resolved =
-    direct ??
-    Object.entries(headers).find(
-      ([key]) => key.toLowerCase() === headerName.toLowerCase(),
-    )?.[1];
-
-  if (Array.isArray(resolved)) {
-    return resolved[0];
-  }
-
-  return resolved;
+type PermissionsPayload = {
+  role: UserRole;
+  isAdmin: boolean;
+  canCreate: {
+    marketplace: boolean;
+    help: boolean;
+    movingClearance: boolean;
+    cafeMeetup: boolean;
+    kidsMeetup: boolean;
+    apartmentSearch: boolean;
+    lostFound: boolean;
+    rideSharing: boolean;
+    jobsLocal: boolean;
+    volunteering: boolean;
+    giveaway: boolean;
+    skillExchange: boolean;
+    officialNews: boolean;
+    officialWarnings: boolean;
+    officialEvents: boolean;
+  };
+  canModerateUserContent: boolean;
+  canManageResidents: boolean;
+  canGenerateActivationCodes: boolean;
+  canManageRoles: boolean;
 };
 
-const parseAdminKeyMap = () => {
-  const raw = process.env.ADMIN_KEYS_JSON;
-  if (!raw) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Record<string, string>;
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed
-      : {};
-  } catch {
-    return {};
-  }
+const userCreatePermissions = {
+  marketplace: true,
+  help: true,
+  movingClearance: true,
+  cafeMeetup: true,
+  kidsMeetup: true,
+  apartmentSearch: true,
+  lostFound: true,
+  rideSharing: true,
+  jobsLocal: true,
+  volunteering: true,
+  giveaway: true,
+  skillExchange: true,
 };
 
 @Injectable()
 export class PermissionsService {
-  isAdmin(
+  getPermissions(
     headers: Record<string, string | string[] | undefined>,
-  ): boolean {
-    const adminKey = getHeaderValue(headers, ADMIN_KEY_HEADER)?.trim();
-    if (!adminKey) {
-      return false;
-    }
+  ): PermissionsPayload {
+    const payload = verifyAccessToken(headers);
+    const role = payload?.role ?? UserRole.USER;
 
-    const adminKeyMap = parseAdminKeyMap();
-    if (Object.keys(adminKeyMap).length === 0) {
-      return false;
-    }
+    const canCreateOfficial = role === UserRole.STAFF || role === UserRole.ADMIN;
+    const canModerateUserContent = role !== UserRole.USER;
+    const isAdmin = role === UserRole.ADMIN;
 
-    const mappedTenant = adminKeyMap[adminKey];
-    if (!mappedTenant) {
-      return false;
-    }
+    return {
+      role,
+      isAdmin,
+      canCreate: {
+        ...userCreatePermissions,
+        officialNews: canCreateOfficial,
+        officialWarnings: canCreateOfficial,
+        officialEvents: canCreateOfficial,
+      },
+      canModerateUserContent,
+      canManageResidents: isAdmin,
+      canGenerateActivationCodes: isAdmin,
+      canManageRoles: isAdmin,
+    };
+  }
 
-    try {
-      const tenantId = resolveTenantId(headers, { required: true });
-      return tenantId === mappedTenant;
-    } catch {
-      return false;
-    }
+  canCreateOfficialContent(role: UserRole) {
+    return role === UserRole.STAFF || role === UserRole.ADMIN;
+  }
+
+  isUserContent(type: ContentType) {
+    return (
+      type !== ContentType.OFFICIAL_EVENT &&
+      type !== ContentType.OFFICIAL_NEWS &&
+      type !== ContentType.OFFICIAL_WARNING
+    );
   }
 }

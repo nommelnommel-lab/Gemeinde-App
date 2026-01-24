@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/auth/app_permissions.dart';
+import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../../shared/tenant/tenant_settings_scope.dart';
@@ -329,9 +330,13 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   }
 
   Future<void> _handleTap(_FeedItem item) async {
-    final canEdit =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-            false;
+    final permissions =
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final isAuthenticated = AuthScope.of(context).isAuthenticated;
+    final canEdit = isAuthenticated &&
+        (permissions.canCreate.officialEvents ||
+            permissions.canCreate.officialNews ||
+            permissions.canCreate.officialWarnings);
     switch (item.type) {
       case _FeedItemType.event:
         if (item.event == null) return;

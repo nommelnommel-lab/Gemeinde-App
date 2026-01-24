@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import ResidentsPanel from '../../components/ResidentsPanel';
 import ImportPanel from '../../components/ImportPanel';
 import CodesPanel from '../../components/CodesPanel';
+import RolesPanel from '../../components/RolesPanel';
 import { clearSession, loadSession } from '../../lib/storage';
 
 const tabs = [
   { id: 'residents', label: 'Bewohner' },
   { id: 'import', label: 'Import' },
   { id: 'codes', label: 'Codes' },
+  { id: 'roles', label: 'Rollen' },
 ] as const;
 
 type TabId = (typeof tabs)[number]['id'];
@@ -53,6 +55,7 @@ export default function DashboardPage() {
       {activeTab === 'residents' && <ResidentsPanel />}
       {activeTab === 'import' && <ImportPanel />}
       {activeTab === 'codes' && <CodesPanel />}
+      {activeTab === 'roles' && <RolesPanel />}
     </div>
   );
 }
