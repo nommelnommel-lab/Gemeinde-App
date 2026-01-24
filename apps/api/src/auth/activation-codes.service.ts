@@ -2,7 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes, randomUUID } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
 import { ActivationCode } from './activation-codes.model';
-import { hashActivationCode, normalizeActivationCode } from './auth.normalize';
+import {
+  formatActivationCode,
+  hashActivationCode,
+  normalizeActivationCode,
+} from './auth.normalize';
 
 @Injectable()
 export class ActivationCodesService {
@@ -32,22 +36,23 @@ export class ActivationCodesService {
       return entry;
     });
     let code = '';
+    let canonicalCode = '';
     let codeHash = '';
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      code = this.generateCode();
-      const normalized = normalizeActivationCode(code);
-      codeHash = hashActivationCode(tenantId, normalized);
+      canonicalCode = normalizeActivationCode(this.generateCode());
+      codeHash = hashActivationCode(tenantId, canonicalCode);
       const exists = updatedCodes.some(
         (entry) =>
           entry.tenantId === tenantId && entry.codeHash === codeHash,
       );
       if (!exists) {
+        code = formatActivationCode(canonicalCode);
         break;
       }
     }
 
-    if (!codeHash) {
+    if (!codeHash || !code) {
       throw new Error('Aktivierungscode konnte nicht erzeugt werden');
     }
 
@@ -63,6 +68,13 @@ export class ActivationCodesService {
 
     updatedCodes.push(activation);
     await this.repository.setAll(tenantId, updatedCodes);
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.info('[activation_code_created]', {
+        tenantId,
+        activationCodeLength: canonicalCode.length,
+      });
+    }
     return { code, activation };
   }
 

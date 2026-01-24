@@ -8,15 +8,24 @@ export const normalizeActivationCode = (input: string) => {
     .toUpperCase()
     .replace(DASH_VARIANTS, '-')
     .replace(/\s+/g, '')
-    .replace(/[^A-Z0-9-]/g, '')
-    .replace(/-+/g, '-');
+    .replace(/-/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+};
+
+export const formatActivationCode = (canonical: string) => {
+  const normalized = normalizeActivationCode(canonical);
+  if (!normalized) {
+    return '';
+  }
+  const parts = normalized.match(/.{1,4}/g);
+  return parts ? parts.join('-') : normalized;
 };
 
 export const hashActivationCode = (
   tenantId: string,
-  normalizedCode: string,
+  canonicalCode: string,
 ) => {
   return createHash('sha256')
-    .update(`${tenantId}:${normalizedCode}`)
+    .update(`${tenantId}:${canonicalCode}`)
     .digest('hex');
 };

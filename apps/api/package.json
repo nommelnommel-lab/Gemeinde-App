@@ -9,7 +9,8 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "seed:tenant": "ts-node scripts/seed-tenant.ts",
-    "test:admin-guard": "ts-node scripts/test-admin-guard.ts"
+    "test:admin-guard": "ts-node scripts/test-admin-guard.ts",
+    "test:activation-flow": "ts-node scripts/test-activation-flow.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
