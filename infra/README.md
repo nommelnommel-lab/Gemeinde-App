@@ -68,3 +68,25 @@ curl http://localhost:3000/api/health
 docker compose exec api printenv ADMIN_KEYS_JSON
 docker compose exec api printenv SITE_KEYS_JSON
 ```
+
+## E2E Auth Test
+
+Run with Windows PowerShell 5.1:
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\infra\test-auth.ps1
+```
+
+Run with PowerShell 7+:
+```powershell
+pwsh -ExecutionPolicy Bypass -File .\infra\test-auth.ps1
+```
+
+If you see `not digitally signed`, either run:
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+```
+
+Or unblock the file:
+```powershell
+Unblock-File .\infra\test-auth.ps1
+```

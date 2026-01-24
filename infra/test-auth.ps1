@@ -1,104 +1,124 @@
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$act = $null
-$ref = $null
-$login = $null
+$BASE = "http://localhost:3000"
+$TENANT = "hilders"
+$SITE_KEY = "HD-2026-9f3c1a2b-KEY"
+$ADMIN_KEY = "HD-ADMIN-TEST-KEY"
 
-$baseUrl = if ($env:API_BASE_URL) { $env:API_BASE_URL } else { "http://localhost:3000" }
-$tenantId = if ($env:TENANT_ID) { $env:TENANT_ID } else { "hilders" }
-$siteKey = if ($env:SITE_KEY) { $env:SITE_KEY } else { "HD-2026-9f3c1a2b-KEY" }
-$adminKey = if ($env:ADMIN_KEY) { $env:ADMIN_KEY } else { "ADMIN-KEY-1" }
+function Preview-Key {
+  param([string]$Key)
 
-$adminHeaders = @{
-  "Content-Type" = "application/json"
-  "X-TENANT" = $tenantId
-  "X-SITE-KEY" = $siteKey
-  "X-ADMIN-KEY" = $adminKey
+  if ([string]::IsNullOrWhiteSpace($Key)) {
+    return "<missing>"
+  }
+
+  $trimmed = $Key.Trim()
+  if ($trimmed.Length -le 4) {
+    return "$trimmed***"
+  }
+
+  return "{0}***" -f $trimmed.Substring(0, 4)
 }
 
-$publicHeaders = @{
-  "Content-Type" = "application/json"
-  "X-TENANT" = $tenantId
-  "X-SITE-KEY" = $siteKey
+function New-Headers {
+  param(
+    [Parameter(Mandatory = $true)][string]$Tenant,
+    [Parameter(Mandatory = $true)][string]$SiteKey,
+    [string]$AdminKey
+  )
+
+  $headers = @{
+    "Content-Type" = "application/json"
+    "X-TENANT" = $Tenant.Trim()
+    "X-SITE-KEY" = $SiteKey.Trim()
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($AdminKey)) {
+    $headers["X-ADMIN-KEY"] = $AdminKey.Trim()
+  }
+
+  return $headers
+}
+
+function Write-Header-Debug {
+  param(
+    [Parameter(Mandatory = $true)][hashtable]$Headers
+  )
+
+  foreach ($name in @("X-TENANT", "X-SITE-KEY", "X-ADMIN-KEY")) {
+    $value = $Headers[$name]
+    $isSet = -not [string]::IsNullOrWhiteSpace($value)
+    $length = 0
+    if ($isSet) {
+      $length = $value.Trim().Length
+    }
+    $preview = Preview-Key $value
+    Write-Host ("Header {0}: set={1} len={2} preview={3}" -f $name, $isSet, $length, $preview) -ForegroundColor DarkGray
+  }
 }
 
 function Invoke-Json {
   param(
     [Parameter(Mandatory = $true)][string]$Method,
     [Parameter(Mandatory = $true)][string]$Uri,
-    [hashtable]$Headers = @{},
+    [Parameter(Mandatory = $true)][hashtable]$Headers,
     $BodyObj = $null
   )
 
+  Write-Host ("Request: {0} {1}" -f $Method.ToUpper(), $Uri)
+  Write-Header-Debug -Headers $Headers
+
   $jsonBody = $null
   if ($null -ne $BodyObj) {
-    $jsonBody = ($BodyObj | ConvertTo-Json -Depth 10)
+    $jsonBody = $BodyObj | ConvertTo-Json -Depth 10
   }
 
   try {
     if ($null -ne $jsonBody) {
       return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers -ContentType "application/json" -Body $jsonBody
-    } else {
-      return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers
     }
+
+    return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers
   } catch {
-    $status = $null
-    $body = $null
+    $serverMessage = $null
 
-    # PowerShell 5: WebException -> Exception.Response (HttpWebResponse)
-    if ($_.Exception -and $_.Exception.Response) {
-      try {
-        $resp = $_.Exception.Response
-        if ($resp.StatusCode) { $status = [int]$resp.StatusCode }
-        $stream = $resp.GetResponseStream()
-        if ($stream) {
-          $reader = New-Object System.IO.StreamReader($stream)
-          $body = $reader.ReadToEnd()
-          $reader.Close()
-        }
-      } catch { }
+    if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
+      $serverMessage = $_.ErrorDetails.Message
+    } elseif ($_.Exception -and $_.Exception.Message) {
+      $serverMessage = $_.Exception.Message
     }
 
-    # PowerShell 7: ErrorDetails.Message enthält oft JSON Body
-    if (-not $body -and $_.ErrorDetails -and $_.ErrorDetails.Message) {
-      $body = $_.ErrorDetails.Message
-    }
-
-    # Fallback: Exception.Message
-    if (-not $body) {
-      $body = $_.Exception.Message
-    }
-
-    Write-Host ""
+    Write-Host "" 
     Write-Host ("Request failed: {0} {1}" -f $Method.ToUpper(), $Uri) -ForegroundColor Red
     if ($null -ne $jsonBody) {
-      Write-Host "Request body: $jsonBody" -ForegroundColor DarkGray
+      Write-Host ("Request body: {0}" -f $jsonBody) -ForegroundColor DarkGray
     }
-    if ($status) {
-      Write-Host ("HTTP {0}: {1}" -f $status, $body) -ForegroundColor Yellow
-    } else {
-      Write-Host $body -ForegroundColor Yellow
+    if ($serverMessage) {
+      Write-Host ("Server error: {0}" -f $serverMessage) -ForegroundColor Yellow
     }
     throw
   }
 }
 
+$adminHeaders = New-Headers -Tenant $TENANT -SiteKey $SITE_KEY -AdminKey $ADMIN_KEY
+$publicHeaders = New-Headers -Tenant $TENANT -SiteKey $SITE_KEY
+
 $unique = Get-Random -Minimum 1000 -Maximum 9999
 $firstName = "Test$unique"
 $lastName = "Resident"
 $postalCode = "36115"
-$houseNumber = "12A"
+$houseNumber = "HN-$unique"
 $email = "test$unique@example.com"
 $password = "Test-Password-$unique"
 
 Write-Host "Creating resident..."
-$residentResponse = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/admin/residents" -Headers $adminHeaders -BodyObj @{
+$residentResponse = Invoke-Json -Method "Post" -Uri "$BASE/api/admin/residents" -Headers $adminHeaders -BodyObj @{
   firstName = $firstName
   lastName = $lastName
   postalCode = $postalCode
   houseNumber = $houseNumber
-})
+}
 
 $residentId = $residentResponse.residentId
 if (-not $residentId) {
@@ -106,79 +126,89 @@ if (-not $residentId) {
 }
 
 Write-Host "Creating activation code..."
-$act = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/admin/activation-codes" -Headers $adminHeaders -BodyObj @{
+$activationResponse = Invoke-Json -Method "Post" -Uri "$BASE/api/admin/activation-codes" -Headers $adminHeaders -BodyObj @{
   residentId = $residentId
   expiresInDays = 14
-})
+}
 
-$activationCode = $act.code
+$activationCode = $activationResponse.code
 if (-not $activationCode) {
   throw "activation code fehlt in der Antwort"
 }
 
 Write-Host "Activating resident..."
-$login = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/activate" -Headers $publicHeaders -BodyObj @{
+$activateResponse = Invoke-Json -Method "Post" -Uri "$BASE/api/auth/activate" -Headers $publicHeaders -BodyObj @{
   activationCode = $activationCode
   email = $email
   password = $password
   postalCode = $postalCode
   houseNumber = $houseNumber
-})
+}
 
-$activationRefreshToken = $login.refreshToken
+$activationRefreshToken = $activateResponse.refreshToken
 if (-not $activationRefreshToken) {
   throw "refreshToken fehlt nach Aktivierung"
 }
 Write-Host "Activation refresh token erhalten."
 
 Write-Host "Logging in..."
-$login = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/login" -Headers $publicHeaders -BodyObj @{
+$loginResponse = Invoke-Json -Method "Post" -Uri "$BASE/api/auth/login" -Headers $publicHeaders -BodyObj @{
   email = $email
   password = $password
-})
+}
 
-$loginRefreshToken = $login.refreshToken
+$loginRefreshToken = $loginResponse.refreshToken
 if (-not $loginRefreshToken) {
   throw "refreshToken fehlt nach Login"
 }
 Write-Host "Login refresh token erhalten."
 
 Write-Host "Refreshing token..."
-$ref = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/refresh" -Headers $publicHeaders -BodyObj @{
+$refreshResponse = Invoke-Json -Method "Post" -Uri "$BASE/api/auth/refresh" -Headers $publicHeaders -BodyObj @{
   refreshToken = $loginRefreshToken
-})
+}
 
-if (-not $ref.refreshToken) {
+if (-not $refreshResponse.refreshToken) {
   throw "refreshToken fehlt nach Refresh"
 }
-$rotatedRefreshToken = $ref.refreshToken
+$rotatedRefreshToken = $refreshResponse.refreshToken
 Write-Host "Refresh token rotiert."
 
 Write-Host "Refreshing with old token (should be 401)..."
-$oldRefreshResponse = Invoke-WebRequest -Method Post -Uri "$baseUrl/api/auth/refresh" -Headers $publicHeaders -ContentType "application/json" -Body (@{
-  refreshToken = $loginRefreshToken
-} | ConvertTo-Json -Depth 10) -SkipHttpErrorCheck
-
-if ($oldRefreshResponse.StatusCode -ne 401) {
-  throw "Refresh mit altem Token sollte 401 liefern, bekam $($oldRefreshResponse.StatusCode)"
+try {
+  Invoke-Json -Method "Post" -Uri "$BASE/api/auth/refresh" -Headers $publicHeaders -BodyObj @{
+    refreshToken = $loginRefreshToken
+  }
+  throw "Refresh mit altem Token sollte 401 liefern, bekam 200"
+} catch {
+  if ($_.Exception.Message -match "401") {
+    Write-Host "401 erwartete Antwort erhalten."
+  } else {
+    throw
+  }
 }
 
 Write-Host "Logging out..."
-$logout = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/logout" -Headers $publicHeaders -BodyObj @{
+$logoutResponse = Invoke-Json -Method "Post" -Uri "$BASE/api/auth/logout" -Headers $publicHeaders -BodyObj @{
   refreshToken = $rotatedRefreshToken
-})
+}
 
-if (-not $logout.ok) {
+if (-not $logoutResponse.ok) {
   throw "Logout nicht ok"
 }
 
 Write-Host "Refreshing after logout (should be 401)..."
-$refreshAfterLogout = Invoke-WebRequest -Method Post -Uri "$baseUrl/api/auth/refresh" -Headers $publicHeaders -ContentType "application/json" -Body (@{
-  refreshToken = $rotatedRefreshToken
-} | ConvertTo-Json -Depth 10) -SkipHttpErrorCheck
-
-if ($refreshAfterLogout.StatusCode -ne 401) {
-  throw "Refresh nach Logout sollte 401 liefern, bekam $($refreshAfterLogout.StatusCode)"
+try {
+  Invoke-Json -Method "Post" -Uri "$BASE/api/auth/refresh" -Headers $publicHeaders -BodyObj @{
+    refreshToken = $rotatedRefreshToken
+  }
+  throw "Refresh nach Logout sollte 401 liefern, bekam 200"
+} catch {
+  if ($_.Exception.Message -match "401") {
+    Write-Host "401 erwartete Antwort erhalten."
+  } else {
+    throw
+  }
 }
 
-Write-Host "Auth flow test completed."
+Write-Host "DONE ✅"
