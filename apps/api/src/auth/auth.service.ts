@@ -252,6 +252,7 @@ export class AuthService {
       if (process.env.NODE_ENV !== 'production') {
         this.logger.log('[activation_code_issued]', {
           tenantId,
+          activationCodeInputLength: code.length,
           activationCodeNormalizedLength: canonical.length,
           activationCodeHashPrefix: codeHash.slice(0, 8),
           expiresAt,
@@ -331,6 +332,7 @@ export class AuthService {
       this.logger.log('[activation_code_issued]', {
         tenantId,
         residentId,
+        activationCodeInputLength: code.length,
         activationCodeNormalizedLength: canonical.length,
         activationCodeHashPrefix: codeHash.slice(0, 8),
         expiresAt: expiresAtIso,

@@ -36,18 +36,22 @@ export class ActivationCodesService {
       return entry;
     });
     let code = '';
-    let canonicalCode = '';
+    let normalizedCode = '';
     let codeHash = '';
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      canonicalCode = normalizeActivationCode(this.generateCode());
-      codeHash = hashActivationCode(tenantId, canonicalCode);
+      const generatedCode = this.generateCode();
+      code = formatActivationCode(generatedCode);
+      normalizedCode = normalizeActivationCode(code);
+      if (!normalizedCode) {
+        continue;
+      }
+      codeHash = hashActivationCode(tenantId, normalizedCode);
       const exists = updatedCodes.some(
         (entry) =>
           entry.tenantId === tenantId && entry.codeHash === codeHash,
       );
       if (!exists) {
-        code = formatActivationCode(canonicalCode);
         break;
       }
     }
@@ -72,7 +76,8 @@ export class ActivationCodesService {
       // eslint-disable-next-line no-console
       console.info('[activation_code_issued]', {
         tenantId,
-        activationCodeNormalizedLength: canonicalCode.length,
+        activationCodeInputLength: code.length,
+        activationCodeNormalizedLength: normalizedCode.length,
         activationCodeHashPrefix: codeHash.slice(0, 8),
       });
     }
