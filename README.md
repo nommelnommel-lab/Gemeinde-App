@@ -60,6 +60,32 @@
    curl -X DELETE http://localhost:3000/events/<id>
    ```
 
+## Web Admin Panel (Bewohner & Aktivierungscodes)
+1. In den Web-Admin-Ordner wechseln:
+   ```powershell
+   cd apps\web-admin
+   ```
+2. Beispiel-Umgebungsvariablen kopieren:
+   ```powershell
+   copy .env.example .env.local
+   ```
+3. Abhängigkeiten installieren:
+   ```powershell
+   npm install
+   ```
+4. Web-App starten:
+   ```powershell
+   npm run dev
+   ```
+5. Admin Panel öffnen: `http://localhost:3001`
+6. Im Login:
+   - Tenant, Site Key, Admin Key angeben.
+   - Optional eine andere API Base URL (z. B. `http://localhost:3000`).
+7. Funktionen:
+   - **Bewohner**: Suchen, anlegen, Status prüfen.
+   - **Import**: CSV hochladen und Import-Ergebnis prüfen.
+   - **Codes**: Bewohner auswählen, Codes erzeugen, CSV exportieren oder kopieren.
+
 ## Aktivierungscodes (Admin)
 Admin-Aktivierungscodes werden tenant-spezifisch erzeugt und nur einmal im Response angezeigt.
 
