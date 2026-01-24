@@ -45,6 +45,7 @@ class AuthService {
           'email': email,
           'password': password,
         },
+        allowAuthRetry: false,
       );
       return AuthResponse.fromJson(response);
     });
@@ -61,6 +62,7 @@ class AuthService {
           'email': email,
           'password': password,
         },
+        allowAuthRetry: false,
       );
       return AuthResponse.fromJson(response);
     });
@@ -73,6 +75,7 @@ class AuthService {
       final response = await _apiClient.postJson(
         '/api/auth/refresh',
         {'refreshToken': refreshToken},
+        allowAuthRetry: false,
       );
       return AuthResponse.fromJson(response);
     });
@@ -85,6 +88,7 @@ class AuthService {
       await _apiClient.postJson(
         '/api/auth/logout',
         {'refreshToken': refreshToken},
+        allowAuthRetry: false,
       );
     });
   }

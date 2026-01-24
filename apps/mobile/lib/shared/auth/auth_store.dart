@@ -22,6 +22,7 @@ class AuthStore extends ChangeNotifier {
   AuthUser? _user;
   String? _accessToken;
   String? _refreshToken;
+  Future<bool>? _refreshSessionFuture;
   bool _isLoading = false;
   String? _lastError;
 
@@ -48,7 +49,7 @@ class AuthStore extends ChangeNotifier {
       }
     } catch (_) {}
 
-    _refreshToken = await _secureStorage.read(key: _refreshTokenKey);
+    _refreshToken = await _loadRefreshToken();
     if (_refreshToken == null || _refreshToken!.isEmpty) {
       _isLoading = false;
       notifyListeners();
@@ -60,6 +61,7 @@ class AuthStore extends ChangeNotifier {
         refreshToken: _refreshToken!,
       );
       await _applyAuthResponse(response);
+      _lastError = null;
     } catch (error) {
       await _clearSession();
       _lastError = error.toString();
@@ -100,14 +102,35 @@ class AuthStore extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    final token = _refreshToken ?? await _secureStorage.read(key: _refreshTokenKey);
-    if (token != null && token.isNotEmpty) {
-      try {
-        await _authService.logout(refreshToken: token);
-      } catch (_) {}
-    }
-    await _clearSession();
+    if (_isLoading) return;
+    _isLoading = true;
+    _lastError = null;
     notifyListeners();
+
+    try {
+      final token = _refreshToken ?? await _loadRefreshToken();
+      if (token != null && token.isNotEmpty) {
+        try {
+          await _authService.logout(refreshToken: token);
+        } catch (_) {}
+      }
+      await _clearSession();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> refreshSession() async {
+    if (_refreshSessionFuture != null) {
+      return _refreshSessionFuture!;
+    }
+    _refreshSessionFuture = _refreshSessionInternal();
+    try {
+      return await _refreshSessionFuture!;
+    } finally {
+      _refreshSessionFuture = null;
+    }
   }
 
   Future<void> _authenticate(Future<AuthResponse> Function() action) async {
@@ -138,6 +161,35 @@ class AuthStore extends ChangeNotifier {
       key: _userKey,
       value: jsonEncode(_user?.toJson() ?? {}),
     );
+  }
+
+  Future<String?> _loadRefreshToken() async {
+    final token = await _secureStorage.read(key: _refreshTokenKey);
+    if (token != null && token.isNotEmpty) {
+      _refreshToken = token;
+      return token;
+    }
+    _refreshToken = null;
+    return null;
+  }
+
+  Future<bool> _refreshSessionInternal() async {
+    final token = _refreshToken ?? await _loadRefreshToken();
+    if (token == null || token.isEmpty) {
+      await _clearSession();
+      notifyListeners();
+      return false;
+    }
+    try {
+      final response = await _authService.refresh(refreshToken: token);
+      await _applyAuthResponse(response);
+      notifyListeners();
+      return true;
+    } catch (_) {
+      await _clearSession();
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<void> _clearSession() async {
