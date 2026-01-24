@@ -15,7 +15,7 @@ import { ActivateDto } from './dto/activate.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { AuthResponse, AuthUserView, JwtAccessPayload } from './auth.types';
-import { normalizeActivationCode } from './auth.normalize';
+import { hashActivationCode, normalizeActivationCode } from './auth.normalize';
 
 type ResidentRecord = {
   id: string;
@@ -134,7 +134,7 @@ export class AuthService {
 
     this.activationLimiter.check(this.rateLimitKey(tenantId, email, clientKey));
 
-    const codeHash = this.hashToken(activationCode);
+    const codeHash = hashActivationCode(tenantId, activationCode);
     const { activationEntry, resident } =
       await this.findActivationWithResident(tenantId, codeHash);
 
@@ -143,9 +143,7 @@ export class AuthService {
       console.info('[activate_lookup]', {
         tenantId,
         activationCodeLength: activationCode.length,
-        activationFound: Boolean(activationEntry),
-        residentIdPresent: Boolean(activationEntry?.residentId),
-        residentFound: Boolean(resident),
+        activationCodeHashPrefix: codeHash.slice(0, 8),
       });
     }
 
@@ -213,9 +211,9 @@ export class AuthService {
       );
     }
 
-    const existingCodes = (await this.activationCodes.getAll(tenantId)).map(
-      (code) => this.normalizeActivationCode(code),
-    );
+    const existingCodes = (await this.activationCodes.getAll(tenantId))
+      .map((code) => this.normalizeActivationCode(code))
+      .filter((code) => code.tenantId === tenantId);
     const existingHashes = new Set(existingCodes.map((code) => code.codeHash));
     const now = new Date();
     const nowIso = now.toISOString();
@@ -238,7 +236,8 @@ export class AuthService {
           );
         }
         code = this.generateActivationCode(tenantId);
-        codeHash = this.hashToken(normalizeActivationCode(code));
+        const normalized = normalizeActivationCode(code);
+        codeHash = hashActivationCode(tenantId, normalized);
         attempts += 1;
       } while (existingHashes.has(codeHash));
 
@@ -275,9 +274,9 @@ export class AuthService {
       throw new BadRequestException('expiresAt ist ungültig');
     }
 
-    const existingCodes = (await this.activationCodes.getAll(tenantId)).map(
-      (code) => this.normalizeActivationCode(code),
-    );
+    const existingCodes = (await this.activationCodes.getAll(tenantId))
+      .map((code) => this.normalizeActivationCode(code))
+      .filter((code) => code.tenantId === tenantId);
     const existingHashes = new Set(existingCodes.map((code) => code.codeHash));
     const nowIso = new Date().toISOString();
 
@@ -292,7 +291,8 @@ export class AuthService {
         );
       }
       code = this.generateActivationCode(tenantId);
-      codeHash = this.hashToken(normalizeActivationCode(code));
+      const normalized = normalizeActivationCode(code);
+      codeHash = hashActivationCode(tenantId, normalized);
       attempts += 1;
     } while (existingHashes.has(codeHash));
 
@@ -527,7 +527,9 @@ export class AuthService {
     ]);
     const activationEntry = codes
       .map((code) => this.normalizeActivationCode(code))
-      .find((code) => code.codeHash === codeHash);
+      .find(
+        (code) => code.tenantId === tenantId && code.codeHash === codeHash,
+      );
     if (!activationEntry?.residentId) {
       return { activationEntry, resident: undefined };
     }

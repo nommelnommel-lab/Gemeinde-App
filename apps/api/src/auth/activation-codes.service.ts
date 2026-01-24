@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomBytes, randomUUID, createHmac } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
 import { ActivationCode } from './activation-codes.model';
-import { normalizeActivationCode } from './auth.normalize';
+import { hashActivationCode, normalizeActivationCode } from './auth.normalize';
 
 @Injectable()
 export class ActivationCodesService {
@@ -36,8 +36,12 @@ export class ActivationCodesService {
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
       code = this.generateCode();
-      codeHash = this.hashCode(code);
-      const exists = updatedCodes.some((entry) => entry.codeHash === codeHash);
+      const normalized = normalizeActivationCode(code);
+      codeHash = hashActivationCode(tenantId, normalized);
+      const exists = updatedCodes.some(
+        (entry) =>
+          entry.tenantId === tenantId && entry.codeHash === codeHash,
+      );
       if (!exists) {
         break;
       }
@@ -67,7 +71,9 @@ export class ActivationCodesService {
     codeHash: string,
   ): Promise<ActivationCode | undefined> {
     const codes = await this.repository.getAll(tenantId);
-    const match = codes.find((entry) => entry.codeHash === codeHash);
+    const match = codes.find(
+      (entry) => entry.tenantId === tenantId && entry.codeHash === codeHash,
+    );
     return match ? this.normalizeActivationCode(match) : undefined;
   }
 
@@ -107,15 +113,6 @@ export class ActivationCodesService {
     codes[index] = updated;
     await this.repository.setAll(tenantId, codes);
     return updated;
-  }
-
-  hashCode(code: string): string {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error('JWT_SECRET fehlt');
-    }
-    const normalized = normalizeActivationCode(code);
-    return createHmac('sha256', secret).update(normalized).digest('hex');
   }
 
   private generateCode() {
