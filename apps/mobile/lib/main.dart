@@ -75,6 +75,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
       tenantStore: widget.tenantStore,
       adminKeyStore: widget.adminKeyStore,
       accessTokenProvider: () => _authStore.accessToken,
+      refreshSession: () => _authStore.refreshSession(),
     );
     _authStore = AuthStore(
       secureStorage: const FlutterSecureStorage(),

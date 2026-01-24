@@ -38,9 +38,11 @@ class ApiClient {
     http.Client? httpClient,
     AdminKeyStore? adminKeyStore,
     String? Function()? accessTokenProvider,
+    Future<bool> Function()? refreshSession,
   })  : _http = httpClient ?? http.Client(),
         _adminKeyStore = adminKeyStore,
         _accessTokenProvider = accessTokenProvider,
+        _refreshSession = refreshSession,
         _tenantStore = tenantStore;
 
   factory ApiClient.platform({
@@ -48,6 +50,7 @@ class ApiClient {
     http.Client? httpClient,
     AdminKeyStore? adminKeyStore,
     String? Function()? accessTokenProvider,
+    Future<bool> Function()? refreshSession,
   }) {
     return ApiClient(
       baseUrl: AppConfig.apiBaseUrl,
@@ -55,6 +58,7 @@ class ApiClient {
       httpClient: httpClient,
       adminKeyStore: adminKeyStore,
       accessTokenProvider: accessTokenProvider,
+      refreshSession: refreshSession,
     );
   }
 
@@ -62,8 +66,10 @@ class ApiClient {
   final http.Client _http;
   final AdminKeyStore? _adminKeyStore;
   final String? Function()? _accessTokenProvider;
+  final Future<bool> Function()? _refreshSession;
   final TenantStore _tenantStore;
   static const Duration _requestTimeout = Duration(seconds: 10);
+  Future<bool>? _refreshSessionFuture;
 
   String resolveTenantId() => _tenantStore.resolveTenantId();
 
@@ -84,33 +90,18 @@ class ApiClient {
   Future<Map<String, dynamic>> getJson(
     String path, {
     bool includeAdminKey = false,
+    bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
-    final headers = _buildHeaders(includeAdminKey: includeAdminKey);
-    _logRequest('GET', uri, headers);
-
-    http.Response res;
-    try {
-      res = await _http
+    final res = await _sendWithAuthRetry(
+      method: 'GET',
+      uri: uri,
+      allowAuthRetry: allowAuthRetry,
+      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      send: (headers) => _http
           .get(uri, headers: headers)
-          .timeout(_requestTimeout);
-    } on SocketException catch (e, stack) {
-      _logException('SocketException', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    } on TimeoutException catch (e, stack) {
-      _logException('TimeoutException', e, stack);
-      throw ApiException('Zeitüberschreitung: $e');
-    } on HttpException catch (e, stack) {
-      _logException('HttpException', e, stack);
-      throw ApiException('HTTP-Fehler: $e');
-    } on FormatException catch (e, stack) {
-      _logException('FormatException', e, stack);
-      throw ApiException('Antwortformat-Fehler: $e');
-    } on Exception catch (e, stack) {
-      _logException('Exception', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    }
-    _logResponse(res);
+          .timeout(_requestTimeout),
+    );
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -135,33 +126,18 @@ class ApiClient {
   Future<List<dynamic>> getJsonList(
     String path, {
     bool includeAdminKey = false,
+    bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
-    final headers = _buildHeaders(includeAdminKey: includeAdminKey);
-    _logRequest('GET', uri, headers);
-
-    http.Response res;
-    try {
-      res = await _http
+    final res = await _sendWithAuthRetry(
+      method: 'GET',
+      uri: uri,
+      allowAuthRetry: allowAuthRetry,
+      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      send: (headers) => _http
           .get(uri, headers: headers)
-          .timeout(_requestTimeout);
-    } on SocketException catch (e, stack) {
-      _logException('SocketException', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    } on TimeoutException catch (e, stack) {
-      _logException('TimeoutException', e, stack);
-      throw ApiException('Zeitüberschreitung: $e');
-    } on HttpException catch (e, stack) {
-      _logException('HttpException', e, stack);
-      throw ApiException('HTTP-Fehler: $e');
-    } on FormatException catch (e, stack) {
-      _logException('FormatException', e, stack);
-      throw ApiException('Antwortformat-Fehler: $e');
-    } on Exception catch (e, stack) {
-      _logException('Exception', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    }
-    _logResponse(res);
+          .timeout(_requestTimeout),
+    );
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -186,33 +162,18 @@ class ApiClient {
   Future<dynamic> getJsonFlexible(
     String path, {
     bool includeAdminKey = false,
+    bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
-    final headers = _buildHeaders(includeAdminKey: includeAdminKey);
-    _logRequest('GET', uri, headers);
-
-    http.Response res;
-    try {
-      res = await _http
+    final res = await _sendWithAuthRetry(
+      method: 'GET',
+      uri: uri,
+      allowAuthRetry: allowAuthRetry,
+      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      send: (headers) => _http
           .get(uri, headers: headers)
-          .timeout(_requestTimeout);
-    } on SocketException catch (e, stack) {
-      _logException('SocketException', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    } on TimeoutException catch (e, stack) {
-      _logException('TimeoutException', e, stack);
-      throw ApiException('Zeitüberschreitung: $e');
-    } on HttpException catch (e, stack) {
-      _logException('HttpException', e, stack);
-      throw ApiException('HTTP-Fehler: $e');
-    } on FormatException catch (e, stack) {
-      _logException('FormatException', e, stack);
-      throw ApiException('Antwortformat-Fehler: $e');
-    } on Exception catch (e, stack) {
-      _logException('Exception', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    }
-    _logResponse(res);
+          .timeout(_requestTimeout),
+    );
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -235,33 +196,18 @@ class ApiClient {
   Future<ApiResponse<dynamic>> getJsonFlexibleWithResponse(
     String path, {
     bool includeAdminKey = false,
+    bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
-    final headers = _buildHeaders(includeAdminKey: includeAdminKey);
-    _logRequest('GET', uri, headers);
-
-    http.Response res;
-    try {
-      res = await _http
+    final res = await _sendWithAuthRetry(
+      method: 'GET',
+      uri: uri,
+      allowAuthRetry: allowAuthRetry,
+      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      send: (headers) => _http
           .get(uri, headers: headers)
-          .timeout(_requestTimeout);
-    } on SocketException catch (e, stack) {
-      _logException('SocketException', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    } on TimeoutException catch (e, stack) {
-      _logException('TimeoutException', e, stack);
-      throw ApiException('Zeitüberschreitung: $e');
-    } on HttpException catch (e, stack) {
-      _logException('HttpException', e, stack);
-      throw ApiException('HTTP-Fehler: $e');
-    } on FormatException catch (e, stack) {
-      _logException('FormatException', e, stack);
-      throw ApiException('Antwortformat-Fehler: $e');
-    } on Exception catch (e, stack) {
-      _logException('Exception', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    }
-    _logResponse(res);
+          .timeout(_requestTimeout),
+    );
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -290,6 +236,7 @@ class ApiClient {
     Map<String, dynamic> body, {
     bool includeAdminKey = false,
     String? adminKeyOverride,
+    bool allowAuthRetry = true,
   }) async {
     return _sendJson(
       'POST',
@@ -297,6 +244,7 @@ class ApiClient {
       body,
       includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
+      allowAuthRetry: allowAuthRetry,
     );
   }
 
@@ -305,6 +253,7 @@ class ApiClient {
     Map<String, dynamic> body, {
     bool includeAdminKey = false,
     String? adminKeyOverride,
+    bool allowAuthRetry = true,
   }) async {
     return _sendJson(
       'PUT',
@@ -312,39 +261,25 @@ class ApiClient {
       body,
       includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
+      allowAuthRetry: allowAuthRetry,
     );
   }
 
   Future<Map<String, dynamic>> deleteJson(
     String path, {
     bool includeAdminKey = false,
+    bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
-    final headers = _buildHeaders(includeAdminKey: includeAdminKey);
-    _logRequest('DELETE', uri, headers);
-
-    http.Response res;
-    try {
-      res = await _http
+    final res = await _sendWithAuthRetry(
+      method: 'DELETE',
+      uri: uri,
+      allowAuthRetry: allowAuthRetry,
+      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      send: (headers) => _http
           .delete(uri, headers: headers)
-          .timeout(_requestTimeout);
-    } on SocketException catch (e, stack) {
-      _logException('SocketException', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    } on TimeoutException catch (e, stack) {
-      _logException('TimeoutException', e, stack);
-      throw ApiException('Zeitüberschreitung: $e');
-    } on HttpException catch (e, stack) {
-      _logException('HttpException', e, stack);
-      throw ApiException('HTTP-Fehler: $e');
-    } on FormatException catch (e, stack) {
-      _logException('FormatException', e, stack);
-      throw ApiException('Antwortformat-Fehler: $e');
-    } on Exception catch (e, stack) {
-      _logException('Exception', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    }
-    _logResponse(res);
+          .timeout(_requestTimeout),
+    );
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -372,42 +307,27 @@ class ApiClient {
     Map<String, dynamic> body, {
     bool includeAdminKey = false,
     String? adminKeyOverride,
+    bool allowAuthRetry = true,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
-    final headers = _buildHeaders(
-      includeJson: true,
-      includeAdminKey: includeAdminKey,
-      adminKeyOverride: adminKeyOverride,
-    );
-    _logRequest(method, uri, headers);
-
-    http.Response res;
-    try {
-      res = await _http
+    final res = await _sendWithAuthRetry(
+      method: method,
+      uri: uri,
+      allowAuthRetry: allowAuthRetry,
+      buildHeaders: () => _buildHeaders(
+        includeJson: true,
+        includeAdminKey: includeAdminKey,
+        adminKeyOverride: adminKeyOverride,
+      ),
+      send: (headers) => _http
           .send(
             http.Request(method, uri)
               ..headers.addAll(headers)
               ..body = jsonEncode(body),
           )
           .then(http.Response.fromStream)
-          .timeout(_requestTimeout);
-    } on SocketException catch (e, stack) {
-      _logException('SocketException', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    } on TimeoutException catch (e, stack) {
-      _logException('TimeoutException', e, stack);
-      throw ApiException('Zeitüberschreitung: $e');
-    } on HttpException catch (e, stack) {
-      _logException('HttpException', e, stack);
-      throw ApiException('HTTP-Fehler: $e');
-    } on FormatException catch (e, stack) {
-      _logException('FormatException', e, stack);
-      throw ApiException('Antwortformat-Fehler: $e');
-    } on Exception catch (e, stack) {
-      _logException('Exception', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
-    }
-    _logResponse(res);
+          .timeout(_requestTimeout),
+    );
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -452,6 +372,78 @@ class ApiClient {
       headers['Authorization'] = 'Bearer $trimmedToken';
     }
     return headers;
+  }
+
+  Future<http.Response> _sendWithAuthRetry({
+    required String method,
+    required Uri uri,
+    required bool allowAuthRetry,
+    required Map<String, String> Function() buildHeaders,
+    required Future<http.Response> Function(Map<String, String> headers) send,
+  }) async {
+    var headers = buildHeaders();
+    _logRequest(method, uri, headers);
+    var res = await _performRequest(() => send(headers));
+    if (_shouldAttemptRefresh(headers, allowAuthRetry) && res.statusCode == 401) {
+      final refreshed = await _attemptRefresh();
+      if (refreshed) {
+        headers = buildHeaders();
+        _logRequest('$method (retry)', uri, headers);
+        res = await _performRequest(() => send(headers));
+      }
+    }
+    _logResponse(res);
+    return res;
+  }
+
+  bool _shouldAttemptRefresh(
+    Map<String, String> headers,
+    bool allowAuthRetry,
+  ) {
+    if (!allowAuthRetry || _refreshSession == null) {
+      return false;
+    }
+    return headers.containsKey('Authorization');
+  }
+
+  Future<bool> _attemptRefresh() async {
+    if (_refreshSession == null) {
+      return false;
+    }
+    if (_refreshSessionFuture != null) {
+      return _refreshSessionFuture!;
+    }
+    _refreshSessionFuture = _refreshSession!();
+    try {
+      return await _refreshSessionFuture!;
+    } catch (_) {
+      return false;
+    } finally {
+      _refreshSessionFuture = null;
+    }
+  }
+
+  Future<http.Response> _performRequest(
+    Future<http.Response> Function() request,
+  ) async {
+    try {
+      return await request();
+    } on SocketException catch (e, stack) {
+      _logException('SocketException', e, stack);
+      throw ApiException('Netzwerkfehler: $e');
+    } on TimeoutException catch (e, stack) {
+      _logException('TimeoutException', e, stack);
+      throw ApiException('Zeitüberschreitung: $e');
+    } on HttpException catch (e, stack) {
+      _logException('HttpException', e, stack);
+      throw ApiException('HTTP-Fehler: $e');
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('Antwortformat-Fehler: $e');
+    } on Exception catch (e, stack) {
+      _logException('Exception', e, stack);
+      throw ApiException('Netzwerkfehler: $e');
+    }
   }
 
   void _logRequest(String method, Uri uri, Map<String, String> headers) {
