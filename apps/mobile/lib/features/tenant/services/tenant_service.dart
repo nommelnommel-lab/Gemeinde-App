@@ -19,7 +19,6 @@ class TenantService {
     final data = await _apiClient.putJson(
       '/api/tenant/settings',
       config.toJson(),
-      includeAdminKey: true,
       adminKeyOverride: adminKeyOverride,
     );
     final payload = _extractPayload(data);

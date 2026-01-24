@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../config/app_config.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../models/tenant_config.dart';
@@ -151,7 +150,8 @@ class _TenantInfoScreenState extends State<TenantInfoScreen> {
     if (_config == null) return;
     final services = AppServicesScope.of(context);
     final adminKeyStore = services.adminKeyStore;
-    final storedAdminKey = adminKeyStore.getAdminKey(AppConfig.tenantId);
+    final tenantId = services.tenantStore.resolveTenantId();
+    final storedAdminKey = adminKeyStore.getAdminKey(tenantId);
     String? adminKeyOverride;
     if (storedAdminKey == null || storedAdminKey.isEmpty) {
       adminKeyOverride = await _promptAdminKey();
