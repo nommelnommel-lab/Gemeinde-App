@@ -30,14 +30,16 @@ const getHeaderValue = (
 const parseAdminKeyMap = () => {
   const raw = process.env.ADMIN_KEYS_JSON;
   if (!raw) {
-    return null;
+    return {};
   }
 
   try {
     const parsed = JSON.parse(raw) as Record<string, string>;
-    return parsed && typeof parsed === 'object' ? parsed : null;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed
+      : {};
   } catch {
-    return null;
+    return {};
   }
 };
 
@@ -56,7 +58,7 @@ export class AdminGuard implements CanActivate {
     }
 
     const adminKeyMap = parseAdminKeyMap();
-    if (!adminKeyMap) {
+    if (Object.keys(adminKeyMap).length === 0) {
       throw new UnauthorizedException('X-ADMIN-KEY fehlt oder ist ungültig');
     }
 
