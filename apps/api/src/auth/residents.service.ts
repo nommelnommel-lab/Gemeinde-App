@@ -80,6 +80,7 @@ export class ResidentsService {
   ): Promise<{
     created: number;
     updated: number;
+    failed: number;
     errors: Array<{ index: number; reason: string }>;
   }> {
     let created = 0;
@@ -109,7 +110,7 @@ export class ResidentsService {
       }
     }
 
-    return { created, updated, errors };
+    return { created, updated, failed: errors.length, errors };
   }
 
   async list(tenantId: string): Promise<Resident[]> {

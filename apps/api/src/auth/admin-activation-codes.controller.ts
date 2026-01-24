@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -8,14 +9,12 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { AdminGuard } from '../admin/admin.guard';
 import { requireTenant } from '../tenant/tenant-auth';
 import { AuthService } from './auth.service';
 import { ResidentsService } from './residents.service';
-import {
-  ActivationCodeBulkRequestDto,
-  ActivationCodeCreateDto,
-} from './dto/admin-activation-code.dto';
+import { ActivationCodeCreateDto } from './dto/admin-activation-code.dto';
 
 @Controller('api/admin/activation-codes')
 @UseGuards(AdminGuard)
@@ -39,7 +38,7 @@ export class AdminActivationCodesController {
   ) {
     const tenantId = requireTenant(headers);
     const resident = await this.requireResident(tenantId, payload.residentId);
-    const expiresAt = this.resolveExpiry(payload.expiresInDays ?? 30);
+    const expiresAt = this.resolveExpiry(payload.expiresInDays);
 
     const result = await this.authService.createActivationCodeForResident({
       tenantId,
@@ -58,19 +57,24 @@ export class AdminActivationCodesController {
   @Post('bulk')
   async bulkActivationCodes(
     @Headers() headers: Record<string, string | string[] | undefined>,
-    @Body() payload: ActivationCodeBulkRequestDto,
+    @Body() payload: unknown,
   ) {
     const tenantId = requireTenant(headers);
-    const rows: Array<{ residentId: string; code: string; expiresAt: string }> =
-      [];
-    const errors: Array<{ index: number; residentId?: string; message: string }> =
-      [];
+    const request = this.normalizeBulkPayload(payload);
+    const rows: Array<{
+      displayName: string;
+      postalCode: string;
+      houseNumber: string;
+      code: string;
+      expiresAt: string;
+    }> = [];
+    const errors: Array<{ index: number; residentId?: string; message: string }> = [];
 
-    for (let index = 0; index < payload.items.length; index += 1) {
-      const entry = payload.items[index];
+    for (let index = 0; index < request.items.length; index += 1) {
+      const entry = request.items[index];
       try {
         const resident = await this.requireResident(tenantId, entry.residentId);
-        const expiresAt = this.resolveExpiry(entry.expiresInDays ?? 30);
+        const expiresAt = this.resolveExpiry(entry.expiresInDays);
         const result = await this.authService.createActivationCodeForResident({
           tenantId,
           residentId: resident.id,
@@ -78,7 +82,9 @@ export class AdminActivationCodesController {
           createdBy: 'admin',
         });
         rows.push({
-          residentId: resident.id,
+          displayName: this.displayName(resident.firstName, resident.lastName),
+          postalCode: resident.postalCode,
+          houseNumber: resident.houseNumber,
           code: result.code,
           expiresAt: result.expiresAt,
         });
@@ -91,13 +97,13 @@ export class AdminActivationCodesController {
       }
     }
 
-    return { rows, errors, processed: payload.items.length };
+    return { rows, errors, processed: request.items.length };
   }
 
-  private resolveExpiry(expiresInDays: number) {
-    const days = expiresInDays > 0 ? expiresInDays : 30;
+  private resolveExpiry(expiresInDays?: number) {
+    const resolvedDays = this.normalizeExpiresInDays(expiresInDays);
     const date = new Date();
-    date.setDate(date.getDate() + days);
+    date.setDate(date.getDate() + resolvedDays);
     return date;
   }
 
@@ -112,5 +118,94 @@ export class AdminActivationCodesController {
       }
       throw error;
     }
+  }
+
+  private normalizeBulkPayload(payload: unknown) {
+    if (Array.isArray(payload)) {
+      if (payload.length === 0) {
+        throw new BadRequestException('residentIds darf nicht leer sein');
+      }
+      return {
+        items: payload.map((residentId, index) => ({
+          residentId: this.requireResidentId(
+            residentId,
+            `residentIds[${index}]`,
+          ),
+        })),
+      };
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      throw new BadRequestException('payload muss ein Array oder Objekt sein');
+    }
+
+    const record = payload as Record<string, unknown>;
+    if (Array.isArray(record.items)) {
+      if (record.items.length === 0) {
+        throw new BadRequestException('items darf nicht leer sein');
+      }
+      return {
+        items: record.items.map((item, index) => {
+          if (!item || typeof item !== 'object') {
+            throw new BadRequestException(`items[${index}] ist ungültig`);
+          }
+          const itemRecord = item as Record<string, unknown>;
+          return {
+            residentId: this.requireResidentId(
+              itemRecord.residentId,
+              `items[${index}].residentId`,
+            ),
+            expiresInDays: this.normalizeExpiresInDays(itemRecord.expiresInDays),
+          };
+        }),
+      };
+    }
+
+    if (Array.isArray(record.residentIds)) {
+      if (record.residentIds.length === 0) {
+        throw new BadRequestException('residentIds darf nicht leer sein');
+      }
+      const expiresInDays = this.normalizeExpiresInDays(record.expiresInDays);
+      return {
+        items: record.residentIds.map((residentId, index) => ({
+          residentId: this.requireResidentId(
+            residentId,
+            `residentIds[${index}]`,
+          ),
+          expiresInDays,
+        })),
+      };
+    }
+
+    throw new BadRequestException('payload muss residentIds oder items enthalten');
+  }
+
+  private requireResidentId(value: unknown, label: string) {
+    if (typeof value !== 'string' || !isUUID(value)) {
+      throw new BadRequestException(`${label} ist ungültig`);
+    }
+    return value;
+  }
+
+  private normalizeExpiresInDays(value: unknown) {
+    if (value === undefined || value === null || value === '') {
+      return 30;
+    }
+    const resolved =
+      typeof value === 'number' ? value : Number.parseInt(String(value), 10);
+    if (!Number.isInteger(resolved)) {
+      throw new BadRequestException('expiresInDays muss eine Zahl sein');
+    }
+    if (resolved < 1 || resolved > 365) {
+      throw new BadRequestException(
+        'expiresInDays muss zwischen 1 und 365 liegen',
+      );
+    }
+    return resolved;
+  }
+
+  private displayName(firstName: string, lastName: string) {
+    const initial = lastName.trim().charAt(0);
+    return `${firstName.trim()} ${initial}.`;
   }
 }
