@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../api/api_client.dart';
@@ -33,49 +35,96 @@ class AuthService {
         'codeNormLen=${normalizedActivationCode.length}',
       );
     }
-    final response = await _apiClient.postJson(
-      '/api/auth/activate',
-      {
-        'activationCode': normalizedActivationCode,
-        'postalCode': postalCode,
-        'houseNumber': houseNumber,
-        'email': email,
-        'password': password,
-      },
-    );
-    return AuthResponse.fromJson(response);
+    return _wrapAuthCall(() async {
+      final response = await _apiClient.postJson(
+        '/api/auth/activate',
+        {
+          'activationCode': normalizedActivationCode,
+          'postalCode': postalCode,
+          'houseNumber': houseNumber,
+          'email': email,
+          'password': password,
+        },
+      );
+      return AuthResponse.fromJson(response);
+    });
   }
 
   Future<AuthResponse> login({
     required String email,
     required String password,
   }) async {
-    final response = await _apiClient.postJson(
-      '/api/auth/login',
-      {
-        'email': email,
-        'password': password,
-      },
-    );
-    return AuthResponse.fromJson(response);
+    return _wrapAuthCall(() async {
+      final response = await _apiClient.postJson(
+        '/api/auth/login',
+        {
+          'email': email,
+          'password': password,
+        },
+      );
+      return AuthResponse.fromJson(response);
+    });
   }
 
   Future<AuthResponse> refresh({
     required String refreshToken,
   }) async {
-    final response = await _apiClient.postJson(
-      '/api/auth/refresh',
-      {'refreshToken': refreshToken},
-    );
-    return AuthResponse.fromJson(response);
+    return _wrapAuthCall(() async {
+      final response = await _apiClient.postJson(
+        '/api/auth/refresh',
+        {'refreshToken': refreshToken},
+      );
+      return AuthResponse.fromJson(response);
+    });
   }
 
   Future<void> logout({
     required String refreshToken,
   }) async {
-    await _apiClient.postJson(
-      '/api/auth/logout',
-      {'refreshToken': refreshToken},
-    );
+    await _wrapAuthCall(() async {
+      await _apiClient.postJson(
+        '/api/auth/logout',
+        {'refreshToken': refreshToken},
+      );
+    });
   }
+
+  Future<T> _wrapAuthCall<T>(Future<T> Function() action) async {
+    try {
+      return await action();
+    } on ApiException catch (e) {
+      if (e.statusCode != null) {
+        final message = _extractMessage(e.message);
+        throw AuthException(
+          message.isEmpty ? 'Unbekannter Fehler' : message,
+          statusCode: e.statusCode,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  String _extractMessage(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message'];
+        if (message is String && message.isNotEmpty) {
+          return message;
+        }
+      }
+    } catch (_) {}
+    return body;
+  }
+}
+
+class AuthException implements Exception {
+  AuthException(this.message, {this.statusCode});
+
+  final String message;
+  final int? statusCode;
+
+  @override
+  String toString() =>
+      statusCode == null ? message : 'HTTP $statusCode: $message';
 }
