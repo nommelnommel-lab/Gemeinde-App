@@ -68,11 +68,12 @@ export class ActivationCodesService {
 
     updatedCodes.push(activation);
     await this.repository.setAll(tenantId, updatedCodes);
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
-      console.info('[activation_code_created]', {
+      console.info('[activation_code_issued]', {
         tenantId,
-        activationCodeLength: canonicalCode.length,
+        activationCodeNormalizedLength: canonicalCode.length,
+        activationCodeHashPrefix: codeHash.slice(0, 8),
       });
     }
     return { code, activation };
@@ -128,7 +129,7 @@ export class ActivationCodesService {
   }
 
   private generateCode() {
-    return randomBytes(4).toString('hex').toUpperCase();
+    return randomBytes(6).toString('hex').toUpperCase();
   }
 
   private normalizeActivationCode(entry: ActivationCode): ActivationCode {

@@ -126,18 +126,18 @@ export class AuthService {
       'activationCode',
     );
     const activationCode = normalizeActivationCode(rawActivationCode);
-    const codeHash = hashActivationCode(tenantId, activationCode);
-    this.logger.log('[activate_attempt]', {
-      tenantId,
-      activationCodeInputLength: rawActivationCode.length,
-      activationCodeNormalizedLength: activationCode.length,
-      activationCodeHashPrefix: codeHash.slice(0, 8),
-    });
-    if (
-      !activationCode ||
-      activationCode.length < 8 ||
-      !/^[A-Z0-9]+$/.test(activationCode)
-    ) {
+    const codeHash = activationCode
+      ? hashActivationCode(tenantId, activationCode)
+      : '';
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log('[activate_attempt]', {
+        tenantId,
+        activationCodeInputLength: rawActivationCode.length,
+        activationCodeNormalizedLength: activationCode.length,
+        activationCodeHashPrefix: codeHash.slice(0, 8),
+      });
+    }
+    if (!activationCode || !/^[A-Z0-9]{12}$/.test(activationCode)) {
       throw new BadRequestException('Aktivierungscode Format ungültig');
     }
     const email = this.normalizeEmail(payload.email);
@@ -230,6 +230,7 @@ export class AuthService {
     for (let i = 0; i < count; i += 1) {
       let code = '';
       let codeHash = '';
+      let canonical = '';
       let attempts = 0;
       do {
         if (attempts > 20) {
@@ -238,7 +239,7 @@ export class AuthService {
             HttpStatus.INTERNAL_SERVER_ERROR,
           );
         }
-        const canonical = normalizeActivationCode(
+        canonical = normalizeActivationCode(
           this.generateActivationCode(tenantId),
         );
         codeHash = hashActivationCode(tenantId, canonical);
@@ -248,6 +249,15 @@ export class AuthService {
 
       existingHashes.add(codeHash);
       generated.push({ code, expiresAt });
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.log('[activation_code_issued]', {
+          tenantId,
+          activationCodeNormalizedLength: canonical.length,
+          activationCodeHashPrefix: codeHash.slice(0, 8),
+          expiresAt,
+          createdBy,
+        });
+      }
       newRecords.push({
         id: randomUUID(),
         tenantId,
@@ -287,6 +297,7 @@ export class AuthService {
 
     let code = '';
     let codeHash = '';
+    let canonical = '';
     let attempts = 0;
     do {
       if (attempts > 20) {
@@ -295,7 +306,7 @@ export class AuthService {
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
-      const canonical = normalizeActivationCode(
+      canonical = normalizeActivationCode(
         this.generateActivationCode(tenantId),
       );
       codeHash = hashActivationCode(tenantId, canonical);
@@ -316,12 +327,12 @@ export class AuthService {
 
     await this.activationCodes.setAll(tenantId, [...existingCodes, record]);
 
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.info('[activation_code_issued]', {
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log('[activation_code_issued]', {
         tenantId,
         residentId,
-        activationCodeLength: normalizeActivationCode(code).length,
+        activationCodeNormalizedLength: canonical.length,
+        activationCodeHashPrefix: codeHash.slice(0, 8),
         expiresAt: expiresAtIso,
         createdBy,
       });
@@ -608,7 +619,7 @@ export class AuthService {
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '')
       .slice(0, 4);
-    const usePrefix = prefix.length >= 2;
+    const usePrefix = prefix.length === 4;
     const segments = [];
     const segmentCount = usePrefix ? 2 : 3;
 
