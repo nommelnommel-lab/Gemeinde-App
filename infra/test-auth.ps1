@@ -23,6 +23,35 @@ $publicHeaders = @{
   "X-SITE-KEY" = $siteKey
 }
 
+function Invoke-Json {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Method,
+    [Parameter(Mandatory = $true)]
+    [string]$Uri,
+    [hashtable]$Headers,
+    $BodyObj
+  )
+
+  try {
+    if ($null -ne $BodyObj) {
+      $jsonBody = $BodyObj | ConvertTo-Json -Depth 10
+      return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers -ContentType "application/json" -Body $jsonBody
+    }
+
+    return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers
+  } catch {
+    $response = $_.Exception.Response
+    if ($response -and $response.GetResponseStream()) {
+      $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
+      $body = $reader.ReadToEnd()
+      $status = [int]$response.StatusCode
+      Write-Host "Request failed ($status): $body"
+    }
+    throw
+  }
+}
+
 $unique = Get-Random -Minimum 1000 -Maximum 9999
 $firstName = "Test$unique"
 $lastName = "Resident"
@@ -32,6 +61,12 @@ $email = "test$unique@example.com"
 $password = "Test-Password-$unique"
 
 Write-Host "Creating resident..."
+$residentResponse = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/admin/residents" -Headers $adminHeaders -BodyObj @{
+  firstName = $firstName
+  lastName = $lastName
+  postalCode = $postalCode
+  houseNumber = $houseNumber
+})
 $residentResponse = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/admin/residents" \
   -Headers $adminHeaders \
   -Body (@{
@@ -48,6 +83,10 @@ if (-not $residentId) {
 }
 
 Write-Host "Creating activation code..."
+$act = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/admin/activation-codes" -Headers $adminHeaders -BodyObj @{
+  residentId = $residentId
+  expiresInDays = 14
+})
 $act = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/admin/activation-codes" \
   -Headers $adminHeaders \
   -Body (@{
@@ -62,6 +101,13 @@ if (-not $activationCode) {
 }
 
 Write-Host "Activating resident..."
+$login = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/activate" -Headers $publicHeaders -BodyObj @{
+  activationCode = $activationCode
+  email = $email
+  password = $password
+  postalCode = $postalCode
+  houseNumber = $houseNumber
+})
 $login = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/auth/activate" \
   -Headers $publicHeaders \
   -Body (@{
@@ -78,6 +124,21 @@ if (-not $refreshToken) {
   throw "refreshToken fehlt nach Aktivierung"
 }
 
+Write-Host "Logging in..."
+$login = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/login" -Headers $publicHeaders -BodyObj @{
+  email = $email
+  password = $password
+})
+
+$refreshToken = $login.refreshToken
+if (-not $refreshToken) {
+  throw "refreshToken fehlt nach Login"
+}
+
+Write-Host "Refreshing token..."
+$ref = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/refresh" -Headers $publicHeaders -BodyObj @{
+  refreshToken = $refreshToken
+})
 Write-Host "Refreshing token..."
 $ref = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/auth/refresh" \
   -Headers $publicHeaders \
@@ -90,6 +151,19 @@ if (-not $ref.refreshToken) {
   throw "refreshToken fehlt nach Refresh"
 }
 
+Write-Host "Refreshing with old token (should be 401)..."
+$oldRefreshResponse = Invoke-WebRequest -Method Post -Uri "$baseUrl/api/auth/refresh" -Headers $publicHeaders -ContentType "application/json" -Body (@{
+  refreshToken = $refreshToken
+} | ConvertTo-Json -Depth 10) -SkipHttpErrorCheck
+
+if ($oldRefreshResponse.StatusCode -ne 401) {
+  throw "Refresh mit altem Token sollte 401 liefern, bekam $($oldRefreshResponse.StatusCode)"
+}
+
+Write-Host "Logging out..."
+$logout = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/logout" -Headers $publicHeaders -BodyObj @{
+  refreshToken = $ref.refreshToken
+})
 Write-Host "Logging out..."
 $logout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/auth/logout" \
   -Headers $publicHeaders \
@@ -103,6 +177,9 @@ if (-not $logout.ok) {
 }
 
 Write-Host "Refreshing after logout (should be 401)..."
+$refreshAfterLogout = Invoke-WebRequest -Method Post -Uri "$baseUrl/api/auth/refresh" -Headers $publicHeaders -ContentType "application/json" -Body (@{
+  refreshToken = $ref.refreshToken
+} | ConvertTo-Json -Depth 10) -SkipHttpErrorCheck
 $refreshAfterLogout = Invoke-WebRequest -Method Post -Uri "$baseUrl/api/auth/refresh" \
   -Headers $publicHeaders \
   -Body (@{
