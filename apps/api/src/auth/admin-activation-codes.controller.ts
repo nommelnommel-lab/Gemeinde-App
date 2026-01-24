@@ -16,6 +16,16 @@ import { AuthService } from './auth.service';
 import { ResidentsService } from './residents.service';
 import { ActivationCodeCreateDto } from './dto/admin-activation-code.dto';
 
+type BulkActivationCodeEntry = {
+  residentId: string;
+  expiresInDays?: number;
+};
+
+type BulkActivationCodeRequest = {
+  items: BulkActivationCodeEntry[];
+  expiresInDays?: number;
+};
+
 @Controller('api/admin/activation-codes')
 @UseGuards(AdminGuard)
 @UsePipes(
@@ -38,7 +48,10 @@ export class AdminActivationCodesController {
   ) {
     const tenantId = requireTenant(headers);
     const resident = await this.requireResident(tenantId, payload.residentId);
-    const expiresAt = this.resolveExpiry(payload.expiresInDays);
+    const expiresInDays =
+      this.normalizeOptionalExpiresInDays(payload.expiresInDays) ??
+      this.defaultExpiresInDays();
+    const expiresAt = this.resolveExpiry(expiresInDays);
 
     const result = await this.authService.createActivationCodeForResident({
       tenantId,
@@ -74,7 +87,11 @@ export class AdminActivationCodesController {
       const entry = request.items[index];
       try {
         const resident = await this.requireResident(tenantId, entry.residentId);
-        const expiresAt = this.resolveExpiry(entry.expiresInDays);
+        const expiresInDays =
+          entry.expiresInDays ??
+          request.expiresInDays ??
+          this.defaultExpiresInDays();
+        const expiresAt = this.resolveExpiry(expiresInDays);
         const result = await this.authService.createActivationCodeForResident({
           tenantId,
           residentId: resident.id,
@@ -100,10 +117,9 @@ export class AdminActivationCodesController {
     return { rows, errors, processed: request.items.length };
   }
 
-  private resolveExpiry(expiresInDays?: number) {
-    const resolvedDays = this.normalizeExpiresInDays(expiresInDays);
+  private resolveExpiry(expiresInDays: number) {
     const date = new Date();
-    date.setDate(date.getDate() + resolvedDays);
+    date.setDate(date.getDate() + expiresInDays);
     return date;
   }
 
@@ -120,7 +136,7 @@ export class AdminActivationCodesController {
     }
   }
 
-  private normalizeBulkPayload(payload: unknown) {
+  private normalizeBulkPayload(payload: unknown): BulkActivationCodeRequest {
     if (Array.isArray(payload)) {
       if (payload.length === 0) {
         throw new BadRequestException('residentIds darf nicht leer sein');
@@ -131,6 +147,7 @@ export class AdminActivationCodesController {
             residentId,
             `residentIds[${index}]`,
           ),
+          expiresInDays: undefined,
         })),
       };
     }
@@ -155,9 +172,36 @@ export class AdminActivationCodesController {
               itemRecord.residentId,
               `items[${index}].residentId`,
             ),
-            expiresInDays: this.normalizeExpiresInDays(itemRecord.expiresInDays),
+            expiresInDays: this.normalizeOptionalExpiresInDays(
+              itemRecord.expiresInDays,
+            ),
           };
         }),
+        expiresInDays: this.normalizeOptionalExpiresInDays(record.expiresInDays),
+      };
+    }
+
+    if (Array.isArray(record.entries)) {
+      if (record.entries.length === 0) {
+        throw new BadRequestException('entries darf nicht leer sein');
+      }
+      return {
+        items: record.entries.map((entry, index) => {
+          if (!entry || typeof entry !== 'object') {
+            throw new BadRequestException(`entries[${index}] ist ungültig`);
+          }
+          const entryRecord = entry as Record<string, unknown>;
+          return {
+            residentId: this.requireResidentId(
+              entryRecord.residentId,
+              `entries[${index}].residentId`,
+            ),
+            expiresInDays: this.normalizeOptionalExpiresInDays(
+              entryRecord.expiresInDays,
+            ),
+          };
+        }),
+        expiresInDays: this.normalizeOptionalExpiresInDays(record.expiresInDays),
       };
     }
 
@@ -165,7 +209,9 @@ export class AdminActivationCodesController {
       if (record.residentIds.length === 0) {
         throw new BadRequestException('residentIds darf nicht leer sein');
       }
-      const expiresInDays = this.normalizeExpiresInDays(record.expiresInDays);
+      const expiresInDays = this.normalizeOptionalExpiresInDays(
+        record.expiresInDays,
+      );
       return {
         items: record.residentIds.map((residentId, index) => ({
           residentId: this.requireResidentId(
@@ -174,10 +220,13 @@ export class AdminActivationCodesController {
           ),
           expiresInDays,
         })),
+        expiresInDays,
       };
     }
 
-    throw new BadRequestException('payload muss residentIds oder items enthalten');
+    throw new BadRequestException(
+      'payload muss residentIds, items oder entries enthalten',
+    );
   }
 
   private requireResidentId(value: unknown, label: string) {
@@ -187,10 +236,14 @@ export class AdminActivationCodesController {
     return value;
   }
 
-  private normalizeExpiresInDays(value: unknown) {
+  private normalizeOptionalExpiresInDays(value: unknown) {
     if (value === undefined || value === null || value === '') {
-      return 30;
+      return undefined;
     }
+    return this.normalizeExpiresInDays(value);
+  }
+
+  private normalizeExpiresInDays(value: unknown) {
     const resolved =
       typeof value === 'number' ? value : Number.parseInt(String(value), 10);
     if (!Number.isInteger(resolved)) {
@@ -202,6 +255,10 @@ export class AdminActivationCodesController {
       );
     }
     return resolved;
+  }
+
+  private defaultExpiresInDays() {
+    return 30;
   }
 
   private displayName(firstName: string, lastName: string) {
