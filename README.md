@@ -96,6 +96,25 @@ curl -X POST http://localhost:3000/api/auth/activate ^
 ```
 Hinweis: Die postalCode/houseNumber-Werte müssen zu einem bekannten Bewohner des Tenants passen.
 
+## Admin UI (Bewohner & Aktivierungscodes)
+1. App öffnen → Tab **Mehr**.
+2. **Admin Key** eintragen und **Apply** drücken. Danach muss „Admin: Ja“ erscheinen.
+3. Im Tab **Mehr** erscheint der Eintrag **Admin** (nur sichtbar bei Admin-Berechtigung).
+4. Im Admin-Bereich:
+   - Bewohnerliste durchsuchen (Suchfeld).
+   - **Bewohner anlegen** (Vorname, Nachname, PLZ, Hausnummer).
+   - **CSV importieren** (Spalten: `firstName,lastName,postalCode,houseNumber`, Case-insensitive).
+   - Bewohner auswählen → **Codes erzeugen** → CSV kopieren oder herunterladen.
+
+## Test-Skript für Admin Flow
+```powershell
+$env:BASE_URL="http://localhost:3000"
+$env:TENANT="hilders"
+$env:SITE_KEY="<site-key>"
+$env:ADMIN_KEY="<admin-key>"
+npm --prefix apps/api run test:admin-flow
+```
+
 ## Ports
 - API: `3000`
 - PostgreSQL: `5432`

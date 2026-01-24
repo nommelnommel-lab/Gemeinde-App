@@ -541,6 +541,11 @@ export class AuthService {
     return residents.find((resident) => resident.id === residentId);
   }
 
+  async isResidentActivated(tenantId: string, residentId: string) {
+    const users = await this.users.getAll(tenantId);
+    return users.some((user) => user.residentId === residentId);
+  }
+
   private async findActivationWithResident(tenantId: string, codeHash: string) {
     const [codes, residents] = await Promise.all([
       this.activationCodes.getAll(tenantId),

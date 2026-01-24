@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../api/health_service.dart';
 import '../../features/events/services/events_service.dart';
+import '../../features/admin/services/admin_service.dart';
 import '../../features/news/services/news_service.dart';
 import '../../features/posts/services/posts_service.dart';
 import '../../features/start/services/feed_service.dart';
@@ -13,6 +14,7 @@ import '../tenant/tenant_store.dart';
 
 class AppServices {
   const AppServices({
+    required this.adminService,
     required this.eventsService,
     required this.feedService,
     required this.newsService,
@@ -25,6 +27,7 @@ class AppServices {
     required this.tenantStore,
   });
 
+  final AdminService adminService;
   final EventsService eventsService;
   final FeedService feedService;
   final NewsService newsService;
