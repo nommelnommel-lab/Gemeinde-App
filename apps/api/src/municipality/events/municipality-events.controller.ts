@@ -12,9 +12,10 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { Role } from '../../auth/roles';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { Roles } from '../../auth/roles.decorator';
 import { RolesGuard } from '../../auth/roles.guard';
+import { UserRole } from '../../auth/user-roles';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityEventsService } from './municipality-events.service';
 import {
@@ -71,8 +72,8 @@ export class MunicipalityEventsController {
   }
 
   @Get('api/admin/events')
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async getAdminEvents(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -91,8 +92,8 @@ export class MunicipalityEventsController {
   }
 
   @Post('api/admin/events')
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async createEvent(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -104,8 +105,8 @@ export class MunicipalityEventsController {
   }
 
   @Patch('api/admin/events/:id')
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async updateEvent(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -118,8 +119,8 @@ export class MunicipalityEventsController {
   }
 
   @Delete('api/admin/events/:id')
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async deleteEvent(
     @Headers() headers: Record<string, string | string[] | undefined>,

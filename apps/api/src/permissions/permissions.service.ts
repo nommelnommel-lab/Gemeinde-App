@@ -1,122 +1,86 @@
-import {
-  ForbiddenException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { resolveTenantId } from '../tenant/tenant-resolver';
-import { AccessTokenService } from '../auth/access-token.service';
-import { Role, normalizeRole } from '../auth/roles';
-import { UsersService } from '../auth/users.service';
+import { Injectable } from '@nestjs/common';
+import { ContentType } from '../content/content.types';
+import { verifyAccessToken } from '../auth/jwt.utils';
+import { UserRole } from '../auth/user-roles';
 
-const ADMIN_KEY_HEADER = 'x-admin-key';
-
-const getHeaderValue = (
-  headers: Record<string, string | string[] | undefined>,
-  headerName: string,
-) => {
-  const direct = headers[headerName];
-  const resolved =
-    direct ??
-    Object.entries(headers).find(
-      ([key]) => key.toLowerCase() === headerName.toLowerCase(),
-    )?.[1];
-
-  if (Array.isArray(resolved)) {
-    return resolved[0];
-  }
-
-  return resolved;
+type PermissionsPayload = {
+  role: UserRole;
+  isAdmin: boolean;
+  canCreate: {
+    marketplace: boolean;
+    help: boolean;
+    movingClearance: boolean;
+    cafeMeetup: boolean;
+    kidsMeetup: boolean;
+    apartmentSearch: boolean;
+    lostFound: boolean;
+    rideSharing: boolean;
+    jobsLocal: boolean;
+    volunteering: boolean;
+    giveaway: boolean;
+    skillExchange: boolean;
+    officialNews: boolean;
+    officialWarnings: boolean;
+    officialEvents: boolean;
+  };
+  canModerateUserContent: boolean;
+  canManageResidents: boolean;
+  canGenerateActivationCodes: boolean;
+  canManageRoles: boolean;
 };
 
-const parseAdminKeyMap = () => {
-  const raw = process.env.ADMIN_KEYS_JSON;
-  if (!raw) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Record<string, string>;
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed
-      : {};
-  } catch {
-    return {};
-  }
+const userCreatePermissions = {
+  marketplace: true,
+  help: true,
+  movingClearance: true,
+  cafeMeetup: true,
+  kidsMeetup: true,
+  apartmentSearch: true,
+  lostFound: true,
+  rideSharing: true,
+  jobsLocal: true,
+  volunteering: true,
+  giveaway: true,
+  skillExchange: true,
 };
 
 @Injectable()
 export class PermissionsService {
-  constructor(
-    private readonly accessTokenService: AccessTokenService,
-    private readonly usersService: UsersService,
-  ) {}
-
-  async getPermissions(
+  getPermissions(
     headers: Record<string, string | string[] | undefined>,
-  ) {
-    const role = await this.resolveRole(headers);
-    return this.buildPermissions(role);
-  }
+  ): PermissionsPayload {
+    const payload = verifyAccessToken(headers);
+    const role = payload?.role ?? UserRole.USER;
 
-  private buildPermissions(role: Role) {
-    const isAdmin = role === Role.ADMIN;
-    const canManageContent = role !== Role.USER;
+    const canCreateOfficial = role === UserRole.STAFF || role === UserRole.ADMIN;
+    const canModerateUserContent = role !== UserRole.USER;
+    const isAdmin = role === UserRole.ADMIN;
+
     return {
       role,
       isAdmin,
-      canCreateEvents: canManageContent,
-      canCreatePosts: canManageContent,
-      canCreateNews: canManageContent,
-      canCreateWarnings: canManageContent,
-      canModerate: canManageContent,
+      canCreate: {
+        ...userCreatePermissions,
+        officialNews: canCreateOfficial,
+        officialWarnings: canCreateOfficial,
+        officialEvents: canCreateOfficial,
+      },
+      canModerateUserContent,
       canManageResidents: isAdmin,
       canGenerateActivationCodes: isAdmin,
+      canManageRoles: isAdmin,
     };
   }
 
-  private async resolveRole(
-    headers: Record<string, string | string[] | undefined>,
-  ): Promise<Role> {
-    const tenantId = resolveTenantId(headers, { required: true });
-    const payload = this.accessTokenService.getPayloadFromHeaders(headers);
-    if (payload) {
-      if (payload.tenantId !== tenantId) {
-        throw new ForbiddenException('Token gehört zu einem anderen Tenant');
-      }
-      try {
-        const user = await this.usersService.getById(tenantId, payload.sub);
-        return normalizeRole(user.role);
-      } catch {
-        throw new UnauthorizedException('Benutzer nicht gefunden');
-      }
-    }
-
-    if (this.hasAdminKey(headers, tenantId)) {
-      return Role.ADMIN;
-    }
-
-    return Role.USER;
+  canCreateOfficialContent(role: UserRole) {
+    return role === UserRole.STAFF || role === UserRole.ADMIN;
   }
 
-  private hasAdminKey(
-    headers: Record<string, string | string[] | undefined>,
-    tenantId: string,
-  ) {
-    const adminKey = getHeaderValue(headers, ADMIN_KEY_HEADER)?.trim();
-    if (!adminKey) {
-      return false;
-    }
-
-    const adminKeyMap = parseAdminKeyMap();
-    if (Object.keys(adminKeyMap).length === 0) {
-      return false;
-    }
-
-    const mappedTenant = adminKeyMap[adminKey];
-    if (!mappedTenant) {
-      return false;
-    }
-
-    return tenantId === mappedTenant;
+  isUserContent(type: ContentType) {
+    return (
+      type !== ContentType.OFFICIAL_EVENT &&
+      type !== ContentType.OFFICIAL_NEWS &&
+      type !== ContentType.OFFICIAL_WARNING
+    );
   }
 }

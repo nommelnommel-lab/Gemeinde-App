@@ -160,6 +160,7 @@ class ApiClient {
 
   Future<dynamic> getJsonFlexible(
     String path, {
+    bool includeAdminKey = false,
     bool allowAuthRetry = true,
     bool includeAdminKey = false,
   }) async {
@@ -194,6 +195,7 @@ class ApiClient {
 
   Future<ApiResponse<dynamic>> getJsonFlexibleWithResponse(
     String path, {
+    bool includeAdminKey = false,
     bool allowAuthRetry = true,
     bool includeAdminKey = false,
   }) async {
@@ -233,6 +235,7 @@ class ApiClient {
   Future<Map<String, dynamic>> postJson(
     String path,
     Map<String, dynamic> body, {
+    bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
     bool includeAdminKey = false,
@@ -241,6 +244,7 @@ class ApiClient {
       'POST',
       path,
       body,
+      includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
       allowAuthRetry: allowAuthRetry,
       includeAdminKey: includeAdminKey,
@@ -303,6 +307,7 @@ class ApiClient {
   Future<Map<String, dynamic>> putJson(
     String path,
     Map<String, dynamic> body, {
+    bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
     bool includeAdminKey = false,
@@ -311,6 +316,7 @@ class ApiClient {
       'PUT',
       path,
       body,
+      includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
       allowAuthRetry: allowAuthRetry,
       includeAdminKey: includeAdminKey,
@@ -319,6 +325,7 @@ class ApiClient {
 
   Future<Map<String, dynamic>> deleteJson(
     String path, {
+    bool includeAdminKey = false,
     bool allowAuthRetry = true,
     bool includeAdminKey = false,
   }) async {
@@ -357,6 +364,7 @@ class ApiClient {
     String method,
     String path,
     Map<String, dynamic> body, {
+    bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
     bool includeAdminKey = false,
@@ -413,7 +421,7 @@ class ApiClient {
     final tenantId = _tenantStore.resolveTenantId();
     headers['X-TENANT'] = tenantId;
     headers['X-SITE-KEY'] = AppConfig.siteKey;
-    if (includeAdminKey) {
+    if (includeAdminKey && kDebugMode) {
       final adminKey =
           _adminKeyStore?.getAdminKey(adminKeyOverride ?? tenantId);
       if (adminKey != null && adminKey.isNotEmpty) {

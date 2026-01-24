@@ -5,6 +5,7 @@ class AuthUser {
     required this.residentId,
     required this.displayName,
     required this.email,
+    required this.role,
   });
 
   final String id;
@@ -12,6 +13,7 @@ class AuthUser {
   final String residentId;
   final String displayName;
   final String email;
+  final String role;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
@@ -20,6 +22,7 @@ class AuthUser {
       residentId: json['residentId'] as String? ?? '',
       displayName: json['displayName'] as String? ?? '',
       email: json['email'] as String? ?? '',
+      role: json['role'] as String? ?? 'USER',
     );
   }
 
@@ -30,6 +33,7 @@ class AuthUser {
       'residentId': residentId,
       'displayName': displayName,
       'email': email,
+      'role': role,
     };
   }
 }

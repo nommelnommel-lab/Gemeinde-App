@@ -151,20 +151,9 @@ class _TenantInfoScreenState extends State<TenantInfoScreen> {
   Future<void> _handleEdit() async {
     if (kReleaseMode) return;
     if (_config == null) return;
-    final services = AppServicesScope.of(context);
-    final adminKeyStore = services.adminKeyStore;
-    final tenantId = services.tenantStore.resolveTenantId();
-    final storedAdminKey = adminKeyStore.getAdminKey(tenantId);
-    String? adminKeyOverride;
-    if (storedAdminKey == null || storedAdminKey.isEmpty) {
-      adminKeyOverride = await _promptAdminKey();
-      if (adminKeyOverride == null) return;
-    }
-
     final updated = await AppRouterScope.of(context).push<TenantConfig>(
       TenantConfigEditScreen(
         initialConfig: _config ?? TenantConfig.empty(),
-        adminKeyOverride: adminKeyOverride,
       ),
     );
 
@@ -173,41 +162,6 @@ class _TenantInfoScreenState extends State<TenantInfoScreen> {
     }
   }
 
-  Future<String?> _promptAdminKey() async {
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Admin-Schlüssel eingeben'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'Admin-Schlüssel',
-            ),
-            obscureText: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Abbrechen'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final value = controller.text.trim();
-                if (value.isEmpty) {
-                  return;
-                }
-                Navigator.of(context).pop(value);
-              },
-              child: const Text('Weiter'),
-            ),
-          ],
-        );
-      },
-    );
-    return result;
-  }
 }
 
 class _SectionCard extends StatelessWidget {

@@ -6,7 +6,7 @@ export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
   @Get()
-  async getPermissions(
+  getPermissions(
     @Headers() headers: Record<string, string | string[] | undefined>,
   ) {
     return this.permissionsService.getPermissions(headers);

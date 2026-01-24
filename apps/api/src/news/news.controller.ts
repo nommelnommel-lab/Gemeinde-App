@@ -9,9 +9,10 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
-import { Role } from '../auth/roles';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from '../auth/user-roles';
 import { NewsPayloadDto } from './news.dto';
 import { NewsService } from './news.service';
 import { NewsEntity } from './news.types';
@@ -31,8 +32,8 @@ export class NewsController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async createNews(
     @Body() payload: NewsPayloadDto,
   ): Promise<NewsEntity> {
@@ -41,8 +42,8 @@ export class NewsController {
   }
 
   @Put(':id')
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async updateNews(
     @Param('id') id: string,
     @Body() payload: NewsPayloadDto,
@@ -52,8 +53,8 @@ export class NewsController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async deleteNews(
     @Param('id') id: string,
   ) {

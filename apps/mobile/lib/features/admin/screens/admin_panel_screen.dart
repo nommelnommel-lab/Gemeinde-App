@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -43,13 +44,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   @override
   Widget build(BuildContext context) {
     final permissions =
-        AppPermissionsScope.maybePermissionsOf(context) ??
-            const AppPermissions.empty();
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
     final adminKey = AppServicesScope.of(context)
         .adminKeyStore
         .getAdminKey(AppServicesScope.of(context).tenantStore.resolveTenantId());
     final hasAdminKey = adminKey != null && adminKey.trim().isNotEmpty;
-    final isAdmin = permissions.canManageResidents && hasAdminKey;
+    final isAdmin =
+        kDebugMode && permissions.canManageResidents && hasAdminKey;
 
     return Scaffold(
       appBar: AppBar(
@@ -67,7 +68,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!hasAdminKey)
+              if (!kDebugMode)
+                const _InfoBanner(
+                  message:
+                      'Der Admin-Bereich ist nur in Debug-Builds verfügbar.',
+                )
+              else if (!hasAdminKey)
                 _InfoBanner(
                   message:
                       'Kein Admin Key gesetzt. Bitte im Mehr-Tab hinterlegen.',

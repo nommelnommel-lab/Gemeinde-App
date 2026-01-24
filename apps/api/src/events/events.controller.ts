@@ -9,9 +9,10 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
-import { Role } from '../auth/roles';
+import { UserRole } from '../auth/user-roles';
 import { EventsService } from './events.service';
 import { EventEntity } from './events.types';
 
@@ -37,8 +38,8 @@ export class EventsController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async createEvent(
     @Body() payload: EventPayload,
   ): Promise<EventEntity> {
@@ -47,8 +48,8 @@ export class EventsController {
   }
 
   @Put(':id')
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async updateEvent(
     @Param('id') id: string,
     @Body() payload: EventPayload,
@@ -58,8 +59,8 @@ export class EventsController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async deleteEvent(
     @Param('id') id: string,
   ) {

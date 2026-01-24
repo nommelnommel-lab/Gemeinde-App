@@ -1,4 +1,4 @@
-import { Role } from './roles';
+import { UserRole } from './user-roles';
 
 export type AuthUser = {
   id: string;
@@ -6,7 +6,7 @@ export type AuthUser = {
   residentId: string;
   email: string;
   passwordHash: string;
-  role: Role;
+  role: UserRole;
   emailVerifiedAt?: string;
   createdAt: string;
   updatedAt: string;

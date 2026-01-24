@@ -7,15 +7,15 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthSharedModule } from './auth-shared.module';
 import { ResidentsService } from './residents.service';
+import { UsersService } from './users.service';
 
 @Module({
-  imports: [AuthSharedModule],
   controllers: [
     AuthController,
     AdminActivationCodesController,
     AdminResidentsController,
     AdminUsersController,
   ],
-  providers: [AuthService, AdminGuard, ResidentsService],
+  providers: [AuthService, AdminGuard, ResidentsService, UsersService],
 })
 export class AuthModule {}

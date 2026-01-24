@@ -55,8 +55,8 @@ class _MehrScreenState extends State<MehrScreen> {
   @override
   Widget build(BuildContext context) {
     final permissions =
-        AppPermissionsScope.maybePermissionsOf(context) ??
-            const AppPermissions.empty();
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final isStaff = permissions.isStaff;
     final services = AppServicesScope.of(context);
     final showAdminTools = !kReleaseMode;
     final adminKey =
@@ -72,7 +72,7 @@ class _MehrScreenState extends State<MehrScreen> {
             title: Text(authStore.user?.displayName ?? 'Angemeldet'),
             subtitle: Text(authStore.user?.email ?? ''),
             trailing: TextButton(
-              onPressed: authStore.isLoading ? null : authStore.logout,
+              onPressed: authStore.isLoading ? null : _logout,
               child: const Text('Logout'),
             ),
           )
@@ -87,6 +87,15 @@ class _MehrScreenState extends State<MehrScreen> {
             },
           ),
         const Divider(height: 0),
+        if (isStaff)
+          ListTile(
+            leading: const Icon(Icons.verified_user_outlined),
+            title: Text(
+              permissions.isAdmin ? 'Staff-Modus (Admin)' : 'Staff-Modus',
+            ),
+            subtitle: Text('Rolle: ${permissions.role}'),
+          ),
+        if (isStaff) const Divider(height: 0),
         ListTile(
           leading: const Icon(Icons.monitor_heart),
           title: const Text('Systemstatus'),
@@ -138,7 +147,7 @@ class _MehrScreenState extends State<MehrScreen> {
           },
         ),
         const Divider(height: 0),
-        if (showAdminTools && permissions.canManageResidents && hasAdminKey)
+        if (kDebugMode && permissions.canManageResidents && hasAdminKey)
           ListTile(
             leading: const Icon(Icons.admin_panel_settings_outlined),
             title: const Text('Admin'),
@@ -150,16 +159,16 @@ class _MehrScreenState extends State<MehrScreen> {
               );
             },
           ),
-        if (showAdminTools) const Divider(height: 0),
-        if (showAdminTools)
+        if (kDebugMode) const Divider(height: 0),
+        if (kDebugMode)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
             child: Text(
-              'Admin Key (nur Entwicklung)',
+              'Admin Key (Debug)',
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
-        if (showAdminTools)
+        if (kDebugMode)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Card(
@@ -188,7 +197,7 @@ class _MehrScreenState extends State<MehrScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Admin: ${permissions.isAdmin ? 'Ja' : 'Nein'}',
+                      'Admin: ${permissions.canManageResidents ? 'Ja' : 'Nein'}',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 12),
@@ -201,7 +210,7 @@ class _MehrScreenState extends State<MehrScreen> {
               ),
             ),
           ),
-        if (showAdminTools) const SizedBox(height: 24),
+        if (kDebugMode) const SizedBox(height: 24),
       ],
     );
   }
@@ -222,5 +231,13 @@ class _MehrScreenState extends State<MehrScreen> {
         setState(() => _saving = false);
       }
     }
+  }
+
+  Future<void> _logout() async {
+    final authStore = AuthScope.of(context);
+    await authStore.logout();
+    if (!mounted) return;
+    AppPermissionsScope.controllerOf(context)
+        .setPermissions(AppPermissions.empty);
   }
 }

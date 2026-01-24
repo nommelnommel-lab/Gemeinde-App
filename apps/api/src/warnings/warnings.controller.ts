@@ -9,9 +9,10 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
-import { Role } from '../auth/roles';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from '../auth/user-roles';
 import { WarningsService } from './warnings.service';
 import { WarningEntity, WarningSeverity } from './warnings.types';
 
@@ -44,8 +45,8 @@ export class WarningsController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async createWarning(
     @Body() payload: WarningPayload,
   ): Promise<WarningEntity> {
@@ -54,8 +55,8 @@ export class WarningsController {
   }
 
   @Put(':id')
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async updateWarning(
     @Param('id') id: string,
     @Body() payload: WarningPayload,
@@ -65,8 +66,8 @@ export class WarningsController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles(Role.STAFF)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   async deleteWarning(
     @Param('id') id: string,
   ) {

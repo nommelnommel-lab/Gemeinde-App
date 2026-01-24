@@ -15,14 +15,11 @@ class TenantService {
   }
 
   Future<TenantConfig> updateTenantConfig(
-    TenantConfig config, {
-    String? adminKeyOverride,
-  }) async {
+    TenantConfig config,
+  ) async {
     final data = await _apiClient.putJson(
       '/api/tenant/settings',
       config.toJson(),
-      adminKeyOverride: adminKeyOverride,
-      includeAdminKey: !kReleaseMode,
     );
     final payload = _extractPayload(data);
     return TenantConfig.fromJson(payload);

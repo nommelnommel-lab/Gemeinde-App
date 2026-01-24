@@ -12,7 +12,10 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { AdminGuard } from '../../admin/admin.guard';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { Roles } from '../../auth/roles.decorator';
+import { RolesGuard } from '../../auth/roles.guard';
+import { UserRole } from '../../auth/user-roles';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityPlacesService } from './municipality-places.service';
 import {
@@ -55,7 +58,8 @@ export class MunicipalityPlacesController {
   }
 
   @Get('api/admin/places')
-  @UseGuards(AdminGuard)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async getAdminPlaces(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -72,7 +76,8 @@ export class MunicipalityPlacesController {
   }
 
   @Post('api/admin/places')
-  @UseGuards(AdminGuard)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async createPlace(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -84,7 +89,8 @@ export class MunicipalityPlacesController {
   }
 
   @Patch('api/admin/places/:id')
-  @UseGuards(AdminGuard)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async updatePlace(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -97,7 +103,8 @@ export class MunicipalityPlacesController {
   }
 
   @Delete('api/admin/places/:id')
-  @UseGuards(AdminGuard)
+  @UseGuards(new JwtAuthGuard(), new RolesGuard())
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @Header('Cache-Control', 'no-store')
   async deletePlace(
     @Headers() headers: Record<string, string | string[] | undefined>,
