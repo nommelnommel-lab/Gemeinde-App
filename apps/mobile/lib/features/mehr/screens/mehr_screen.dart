@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../config/app_config.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/permissions_service.dart';
@@ -39,8 +38,9 @@ class _MehrScreenState extends State<MehrScreen> {
     }
     final services = AppServicesScope.of(context);
     _permissionsService = services.permissionsService;
+    final tenantId = services.tenantStore.resolveTenantId();
     _adminKeyController.text =
-        services.adminKeyStore.getAdminKey(AppConfig.tenantId) ?? '';
+        services.adminKeyStore.getAdminKey(tenantId) ?? '';
     _initialized = true;
   }
 
@@ -189,7 +189,7 @@ class _MehrScreenState extends State<MehrScreen> {
     try {
       final services = AppServicesScope.of(context);
       await services.adminKeyStore.setAdminKey(
-        AppConfig.tenantId,
+        services.tenantStore.resolveTenantId(),
         _adminKeyController.text,
       );
       final permissions = await _permissionsService.getPermissions();
