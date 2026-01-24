@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
 import { AuthUser } from './users.model';
+import { Role, normalizeRole } from './roles';
 
 @Injectable()
 export class UsersService {
@@ -14,6 +15,7 @@ export class UsersService {
       email: string;
       passwordHash: string;
       emailVerifiedAt?: string;
+      role?: Role;
     },
   ): Promise<AuthUser> {
     const users = await this.repository.getAll(tenantId);
@@ -24,13 +26,14 @@ export class UsersService {
       residentId: payload.residentId,
       email: payload.email,
       passwordHash: payload.passwordHash,
+      role: normalizeRole(payload.role),
       emailVerifiedAt: payload.emailVerifiedAt,
       createdAt: now,
       updatedAt: now,
     };
     users.push(user);
     await this.repository.setAll(tenantId, users);
-    return user;
+    return this.normalize(user);
   }
 
   async getById(tenantId: string, id: string): Promise<AuthUser> {
@@ -39,13 +42,16 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('Benutzer nicht gefunden');
     }
-    return user;
+    return this.normalize(user);
   }
 
   async findByEmail(tenantId: string, email: string): Promise<AuthUser | undefined> {
     const users = await this.repository.getAll(tenantId);
-    const normalized = this.normalize(email);
-    return users.find((entry) => this.normalize(entry.email) === normalized);
+    const normalized = this.normalizeString(email);
+    const match = users.find(
+      (entry) => this.normalizeString(entry.email) === normalized,
+    );
+    return match ? this.normalize(match) : undefined;
   }
 
   async findByResidentId(
@@ -53,7 +59,8 @@ export class UsersService {
     residentId: string,
   ): Promise<AuthUser | undefined> {
     const users = await this.repository.getAll(tenantId);
-    return users.find((entry) => entry.residentId === residentId);
+    const match = users.find((entry) => entry.residentId === residentId);
+    return match ? this.normalize(match) : undefined;
   }
 
   async update(
@@ -69,15 +76,26 @@ export class UsersService {
 
     const updated: AuthUser = {
       ...users[index],
-      ...patch,
+      ...this.normalizePatch(patch),
       updatedAt: new Date().toISOString(),
     };
     users[index] = updated;
     await this.repository.setAll(tenantId, users);
-    return updated;
+    return this.normalize(updated);
   }
 
-  private normalize(value: string) {
+  private normalizeString(value: string) {
     return value.trim().toLowerCase();
+  }
+
+  private normalize(user: AuthUser): AuthUser {
+    return { ...user, role: normalizeRole(user.role) };
+  }
+
+  private normalizePatch(patch: Partial<AuthUser>): Partial<AuthUser> {
+    if (patch.role === undefined) {
+      return patch;
+    }
+    return { ...patch, role: normalizeRole(patch.role) };
   }
 }

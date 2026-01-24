@@ -1,5 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { resolveTenantId } from '../tenant/tenant-resolver';
+import { AccessTokenService } from '../auth/access-token.service';
+import { Role, normalizeRole } from '../auth/roles';
+import { UsersService } from '../auth/users.service';
 
 const ADMIN_KEY_HEADER = 'x-admin-key';
 
@@ -39,9 +46,62 @@ const parseAdminKeyMap = () => {
 
 @Injectable()
 export class PermissionsService {
-  isAdmin(
+  constructor(
+    private readonly accessTokenService: AccessTokenService,
+    private readonly usersService: UsersService,
+  ) {}
+
+  async getPermissions(
     headers: Record<string, string | string[] | undefined>,
-  ): boolean {
+  ) {
+    const role = await this.resolveRole(headers);
+    return this.buildPermissions(role);
+  }
+
+  private buildPermissions(role: Role) {
+    const isAdmin = role === Role.ADMIN;
+    const canManageContent = role !== Role.USER;
+    return {
+      role,
+      isAdmin,
+      canCreateEvents: canManageContent,
+      canCreatePosts: canManageContent,
+      canCreateNews: canManageContent,
+      canCreateWarnings: canManageContent,
+      canModerate: canManageContent,
+      canManageResidents: isAdmin,
+      canGenerateActivationCodes: isAdmin,
+    };
+  }
+
+  private async resolveRole(
+    headers: Record<string, string | string[] | undefined>,
+  ): Promise<Role> {
+    const tenantId = resolveTenantId(headers, { required: true });
+    const payload = this.accessTokenService.getPayloadFromHeaders(headers);
+    if (payload) {
+      if (payload.tenantId !== tenantId) {
+        throw new ForbiddenException('Token gehört zu einem anderen Tenant');
+      }
+      try {
+        const user = await this.usersService.getById(tenantId, payload.sub);
+        return normalizeRole(user.role);
+      } catch {
+        throw new UnauthorizedException('Benutzer nicht gefunden');
+      }
+    }
+
+    if (this.hasAdminKey(headers, tenantId)) {
+      return Role.ADMIN;
+    }
+
+    return Role.USER;
+  }
+
+  private hasAdminKey(
+    headers: Record<string, string | string[] | undefined>,
+    tenantId: string,
+  ) {
     const adminKey = getHeaderValue(headers, ADMIN_KEY_HEADER)?.trim();
     if (!adminKey) {
       return false;
@@ -57,11 +117,6 @@ export class PermissionsService {
       return false;
     }
 
-    try {
-      const tenantId = resolveTenantId(headers, { required: true });
-      return tenantId === mappedTenant;
-    } catch {
-      return false;
-    }
+    return tenantId === mappedTenant;
   }
 }

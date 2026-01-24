@@ -11,12 +11,12 @@ class PostDetailScreen extends StatefulWidget {
     super.key,
     required this.post,
     this.postsService,
-    this.isAdmin = false,
+    this.canEdit = false,
   });
 
   final Post post;
   final PostsService? postsService;
-  final bool isAdmin;
+  final bool canEdit;
 
   @override
   State<PostDetailScreen> createState() => _PostDetailScreenState();
@@ -37,7 +37,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       appBar: AppBar(
         title: Text(_post.title),
         actions: [
-          if (widget.isAdmin && widget.postsService != null)
+          if (widget.canEdit && widget.postsService != null)
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: _openEdit,
@@ -110,7 +110,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         postsService: postsService,
         type: _post.type,
         post: _post,
-        isAdmin: widget.isAdmin,
+        canEdit: widget.canEdit,
       ),
     );
 

@@ -3,13 +3,15 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
-  Headers,
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
+import { Role } from '../auth/roles';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { WarningsService } from './warnings.service';
 import { WarningEntity, WarningSeverity } from './warnings.types';
 
@@ -42,32 +44,32 @@ export class WarningsController {
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles(Role.STAFF)
   async createWarning(
-    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: WarningPayload,
   ): Promise<WarningEntity> {
-    this.requireAdmin(headers);
     const data = this.validatePayload(payload);
     return this.warningsService.create(data);
   }
 
   @Put(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.STAFF)
   async updateWarning(
     @Param('id') id: string,
-    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: WarningPayload,
   ): Promise<WarningEntity> {
-    this.requireAdmin(headers);
     const data = this.validatePayload(payload);
     return this.warningsService.update(id, data);
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.STAFF)
   async deleteWarning(
     @Param('id') id: string,
-    @Headers() headers: Record<string, string | string[] | undefined>,
   ) {
-    this.requireAdmin(headers);
     await this.warningsService.remove(id);
     return { ok: true };
   }
@@ -124,21 +126,4 @@ export class WarningsController {
     return trimmed;
   }
 
-  private requireAdmin(
-    headers: Record<string, string | string[] | undefined>,
-  ) {
-    const adminKey = process.env.ADMIN_KEY;
-    if (!adminKey) {
-      return;
-    }
-
-    const providedHeader = headers['x-admin-key'];
-    const provided = Array.isArray(providedHeader)
-      ? providedHeader[0]
-      : providedHeader;
-
-    if (provided !== adminKey) {
-      throw new ForbiddenException('Ungültiger Admin-Schlüssel');
-    }
-  }
 }

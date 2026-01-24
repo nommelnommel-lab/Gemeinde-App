@@ -44,12 +44,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   Widget build(BuildContext context) {
     final permissions =
         AppPermissionsScope.maybePermissionsOf(context) ??
-            const AppPermissions(canManageContent: false);
+            const AppPermissions.empty();
     final adminKey = AppServicesScope.of(context)
         .adminKeyStore
         .getAdminKey(AppServicesScope.of(context).tenantStore.resolveTenantId());
     final hasAdminKey = adminKey != null && adminKey.trim().isNotEmpty;
-    final isAdmin = permissions.canManageContent && hasAdminKey;
+    final isAdmin = permissions.canManageResidents && hasAdminKey;
 
     return Scaffold(
       appBar: AppBar(
@@ -72,7 +72,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   message:
                       'Kein Admin Key gesetzt. Bitte im Mehr-Tab hinterlegen.',
                 )
-              else if (!permissions.canManageContent)
+              else if (!permissions.canManageResidents)
                 const _InfoBanner(
                   message:
                       'Admin Key ist gesetzt, aber keine Admin-Berechtigung.',

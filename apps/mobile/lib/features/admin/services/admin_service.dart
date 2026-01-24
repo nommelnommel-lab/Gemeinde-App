@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
+
 import '../../../api/api_client.dart';
 import '../models/admin_models.dart';
 
@@ -33,7 +35,7 @@ class AdminService {
     );
     final data = await _apiClient.getJsonFlexible(
       uri.toString(),
-      includeAdminKey: true,
+      includeAdminKey: !kReleaseMode,
     );
     final list = _extractList(data);
     return list
@@ -46,7 +48,7 @@ class AdminService {
     final data = await _apiClient.postJson(
       '/api/admin/residents',
       input.toJson(),
-      includeAdminKey: true,
+      includeAdminKey: !kReleaseMode,
     );
     final residentId = data['residentId'];
     if (residentId is String) {
@@ -64,7 +66,7 @@ class AdminService {
       fieldName: 'file',
       bytes: bytes,
       filename: filename,
-      includeAdminKey: true,
+      includeAdminKey: !kReleaseMode,
     );
     return AdminImportSummary.fromJson(data);
   }
@@ -79,7 +81,7 @@ class AdminService {
         'residentIds': residentIds,
         'expiresInDays': expiresInDays,
       },
-      includeAdminKey: true,
+      includeAdminKey: !kReleaseMode,
     );
     return BulkActivationResult.fromJson(data);
   }

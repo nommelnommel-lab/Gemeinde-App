@@ -11,7 +11,8 @@
     "seed:tenant": "ts-node scripts/seed-tenant.ts",
     "test:admin-guard": "ts-node scripts/test-admin-guard.ts",
     "test:admin-flow": "node ./scripts/test-admin-flow.mjs",
-    "test:activation-flow": "node ./scripts/test-activation-flow.mjs"
+    "test:activation-flow": "node ./scripts/test-activation-flow.mjs",
+    "test:role-permissions": "node ./scripts/test-role-permissions.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

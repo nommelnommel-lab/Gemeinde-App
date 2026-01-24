@@ -61,7 +61,7 @@ class _EventsScreenState extends State<EventsScreen> {
   @override
   Widget build(BuildContext context) {
     final canEdit =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+        AppPermissionsScope.maybePermissionsOf(context)?.canCreateEvents ??
             false;
 
     return Scaffold(
@@ -163,7 +163,7 @@ class _EventsScreenState extends State<EventsScreen> {
 
   Future<void> _openEventDetail(Event event) async {
     final canEdit =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+        AppPermissionsScope.maybePermissionsOf(context)?.canCreateEvents ??
             false;
     final result = await AppRouterScope.of(context).push(
       EventDetailScreen(

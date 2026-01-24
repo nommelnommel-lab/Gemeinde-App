@@ -34,8 +34,7 @@ class _NewsScreenState extends State<NewsScreen> {
       _load();
     }
     final canManage =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-            false;
+        AppPermissionsScope.maybePermissionsOf(context)?.canCreateNews ?? false;
     _canManageContent = canManage;
   }
 

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthSharedModule } from '../auth/auth-shared.module';
 import { MunicipalityClubsController } from './clubs/municipality-clubs.controller';
 import { MunicipalityClubsService } from './clubs/municipality-clubs.service';
 import { MunicipalityEventsController } from './events/municipality-events.controller';
@@ -18,6 +19,7 @@ import { MunicipalityWastePickupsService } from './waste-pickups/municipality-wa
 import { AdminGuard } from '../admin/admin.guard';
 
 @Module({
+  imports: [AuthSharedModule],
   controllers: [
     TenantSettingsController,
     MunicipalityEventsController,

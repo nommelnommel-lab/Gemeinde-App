@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shared/auth/auth_scope.dart';
@@ -53,10 +54,11 @@ class _MehrScreenState extends State<MehrScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-            false;
+    final permissions =
+        AppPermissionsScope.maybePermissionsOf(context) ??
+            const AppPermissions.empty();
     final services = AppServicesScope.of(context);
+    final showAdminTools = !kReleaseMode;
     final adminKey =
         services.adminKeyStore.getAdminKey(services.tenantStore.resolveTenantId());
     final hasAdminKey = adminKey != null && adminKey.trim().isNotEmpty;
@@ -136,7 +138,7 @@ class _MehrScreenState extends State<MehrScreen> {
           },
         ),
         const Divider(height: 0),
-        if (isAdmin && hasAdminKey)
+        if (showAdminTools && permissions.canManageResidents && hasAdminKey)
           ListTile(
             leading: const Icon(Icons.admin_panel_settings_outlined),
             title: const Text('Admin'),
@@ -148,56 +150,58 @@ class _MehrScreenState extends State<MehrScreen> {
               );
             },
           ),
-        if (isAdmin && hasAdminKey) const Divider(height: 0),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-          child: Text(
-            'Admin Key',
-            style: Theme.of(context).textTheme.titleMedium,
+        if (showAdminTools) const Divider(height: 0),
+        if (showAdminTools)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+            child: Text(
+              'Admin Key (nur Entwicklung)',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _adminKeyController,
-                    decoration: InputDecoration(
-                      labelText: 'Admin Key',
-                      suffixIcon: _adminKeyController.text.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: 'Leeren',
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                setState(() {
-                                  _adminKeyController.clear();
-                                });
-                              },
-                            ),
+        if (showAdminTools)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _adminKeyController,
+                      decoration: InputDecoration(
+                        labelText: 'Admin Key',
+                        suffixIcon: _adminKeyController.text.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Leeren',
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setState(() {
+                                    _adminKeyController.clear();
+                                  });
+                                },
+                              ),
+                      ),
+                      onChanged: (_) => setState(() {}),
                     ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Admin: ${isAdmin ? 'Ja' : 'Nein'}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: _saving ? null : _applyAdminKey,
-                    child: Text(_saving ? 'Wird angewendet...' : 'Apply'),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Text(
+                      'Admin: ${permissions.isAdmin ? 'Ja' : 'Nein'}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: _saving ? null : _applyAdminKey,
+                      child: Text(_saving ? 'Wird angewendet...' : 'Apply'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 24),
+        if (showAdminTools) const SizedBox(height: 24),
       ],
     );
   }

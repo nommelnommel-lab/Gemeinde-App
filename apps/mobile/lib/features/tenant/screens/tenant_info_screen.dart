@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../shared/di/app_services_scope.dart';
@@ -56,10 +57,11 @@ class _TenantInfoScreenState extends State<TenantInfoScreen> {
       appBar: AppBar(
         title: const Text('Gemeinde-Infos'),
         actions: [
-          TextButton(
-            onPressed: _config == null ? null : _handleEdit,
-            child: const Text('Bearbeiten'),
-          ),
+          if (!kReleaseMode)
+            TextButton(
+              onPressed: _config == null ? null : _handleEdit,
+              child: const Text('Bearbeiten'),
+            ),
         ],
       ),
       body: RefreshIndicator(
@@ -147,6 +149,7 @@ class _TenantInfoScreenState extends State<TenantInfoScreen> {
   }
 
   Future<void> _handleEdit() async {
+    if (kReleaseMode) return;
     if (_config == null) return;
     final services = AppServicesScope.of(context);
     final adminKeyStore = services.adminKeyStore;
