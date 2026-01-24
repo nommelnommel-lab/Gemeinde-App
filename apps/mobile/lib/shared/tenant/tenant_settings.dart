@@ -135,7 +135,7 @@ class TenantSettings {
         'brandingJson': branding.toJson(),
       };
 
-  bool isFeatureEnabled(String key) => featureFlags[key] == true;
+  bool isFeatureEnabled(String key) => featureFlags[key] ?? true;
 
   static List<dynamic> _parseList(
     Map<String, dynamic> json,
