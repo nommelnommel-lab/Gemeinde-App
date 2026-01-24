@@ -74,19 +74,28 @@ export class AdminActivationCodesController {
   ) {
     const tenantId = requireTenant(headers);
     const request = this.normalizeBulkPayload(payload);
-    const rows: Array<{
-      displayName: string;
-      postalCode: string;
-      houseNumber: string;
+    const created: Array<{
+      residentId: string;
       code: string;
       expiresAt: string;
     }> = [];
-    const errors: Array<{ index: number; residentId?: string; message: string }> = [];
+    const skipped: Array<{ residentId: string; reason: string }> = [];
 
     for (let index = 0; index < request.items.length; index += 1) {
       const entry = request.items[index];
       try {
         const resident = await this.requireResident(tenantId, entry.residentId);
+        const alreadyActivated = await this.authService.isResidentActivated(
+          tenantId,
+          resident.id,
+        );
+        if (alreadyActivated) {
+          skipped.push({
+            residentId: resident.id,
+            reason: 'Bewohner ist bereits aktiviert',
+          });
+          continue;
+        }
         const expiresInDays =
           entry.expiresInDays ??
           request.expiresInDays ??
@@ -98,23 +107,20 @@ export class AdminActivationCodesController {
           expiresAt,
           createdBy: 'admin',
         });
-        rows.push({
-          displayName: this.displayName(resident.firstName, resident.lastName),
-          postalCode: resident.postalCode,
-          houseNumber: resident.houseNumber,
+        created.push({
+          residentId: resident.id,
           code: result.code,
           expiresAt: result.expiresAt,
         });
       } catch (error) {
-        errors.push({
-          index,
+        skipped.push({
           residentId: entry.residentId,
-          message: error instanceof Error ? error.message : 'Unbekannter Fehler',
+          reason: error instanceof Error ? error.message : 'Unbekannter Fehler',
         });
       }
     }
 
-    return { rows, errors, processed: request.items.length };
+    return { created, skipped };
   }
 
   private resolveExpiry(expiresInDays: number) {
@@ -137,74 +143,11 @@ export class AdminActivationCodesController {
   }
 
   private normalizeBulkPayload(payload: unknown): BulkActivationCodeRequest {
-    if (Array.isArray(payload)) {
-      if (payload.length === 0) {
-        throw new BadRequestException('residentIds darf nicht leer sein');
-      }
-      return {
-        items: payload.map((residentId, index) => ({
-          residentId: this.requireResidentId(
-            residentId,
-            `residentIds[${index}]`,
-          ),
-          expiresInDays: undefined,
-        })),
-      };
-    }
-
     if (!payload || typeof payload !== 'object') {
       throw new BadRequestException('payload muss ein Array oder Objekt sein');
     }
 
     const record = payload as Record<string, unknown>;
-    if (Array.isArray(record.items)) {
-      if (record.items.length === 0) {
-        throw new BadRequestException('items darf nicht leer sein');
-      }
-      return {
-        items: record.items.map((item, index) => {
-          if (!item || typeof item !== 'object') {
-            throw new BadRequestException(`items[${index}] ist ungültig`);
-          }
-          const itemRecord = item as Record<string, unknown>;
-          return {
-            residentId: this.requireResidentId(
-              itemRecord.residentId,
-              `items[${index}].residentId`,
-            ),
-            expiresInDays: this.normalizeOptionalExpiresInDays(
-              itemRecord.expiresInDays,
-            ),
-          };
-        }),
-        expiresInDays: this.normalizeOptionalExpiresInDays(record.expiresInDays),
-      };
-    }
-
-    if (Array.isArray(record.entries)) {
-      if (record.entries.length === 0) {
-        throw new BadRequestException('entries darf nicht leer sein');
-      }
-      return {
-        items: record.entries.map((entry, index) => {
-          if (!entry || typeof entry !== 'object') {
-            throw new BadRequestException(`entries[${index}] ist ungültig`);
-          }
-          const entryRecord = entry as Record<string, unknown>;
-          return {
-            residentId: this.requireResidentId(
-              entryRecord.residentId,
-              `entries[${index}].residentId`,
-            ),
-            expiresInDays: this.normalizeOptionalExpiresInDays(
-              entryRecord.expiresInDays,
-            ),
-          };
-        }),
-        expiresInDays: this.normalizeOptionalExpiresInDays(record.expiresInDays),
-      };
-    }
-
     if (Array.isArray(record.residentIds)) {
       if (record.residentIds.length === 0) {
         throw new BadRequestException('residentIds darf nicht leer sein');
@@ -261,8 +204,4 @@ export class AdminActivationCodesController {
     return 30;
   }
 
-  private displayName(firstName: string, lastName: string) {
-    const initial = lastName.trim().charAt(0);
-    return `${firstName.trim()} ${initial}.`;
-  }
 }

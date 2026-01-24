@@ -241,6 +241,59 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> postMultipartFile(
+    String path, {
+    required String fieldName,
+    required List<int> bytes,
+    required String filename,
+    Map<String, String>? fields,
+    bool includeAdminKey = false,
+    String? adminKeyOverride,
+    bool allowAuthRetry = false,
+  }) async {
+    final uri = Uri.parse('$baseUrl$path');
+    final res = await _sendWithAuthRetry(
+      method: 'POST',
+      uri: uri,
+      allowAuthRetry: allowAuthRetry,
+      buildHeaders: () => _buildHeaders(
+        includeAdminKey: includeAdminKey,
+        adminKeyOverride: adminKeyOverride,
+      ),
+      send: (headers) async {
+        final request = http.MultipartRequest('POST', uri);
+        request.headers.addAll(headers);
+        if (fields != null) {
+          request.fields.addAll(fields);
+        }
+        request.files.add(
+          http.MultipartFile.fromBytes(fieldName, bytes, filename: filename),
+        );
+        final streamed = await request.send();
+        return http.Response.fromStream(streamed);
+      },
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw ApiException(
+        res.body.isEmpty ? 'Request failed' : res.body,
+        statusCode: res.statusCode,
+      );
+    }
+
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      throw ApiException('Unerwartetes JSON-Format');
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('JSON parse error: $e');
+    } catch (e, stack) {
+      _logException('Exception', e, stack);
+      throw ApiException('JSON parse error: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> putJson(
     String path,
     Map<String, dynamic> body, {

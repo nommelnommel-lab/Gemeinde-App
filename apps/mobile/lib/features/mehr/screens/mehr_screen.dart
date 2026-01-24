@@ -5,6 +5,7 @@ import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/permissions_service.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../admin/screens/admin_panel_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../hilfe/screens/hilfe_screen.dart';
 import '../../systemstatus/screens/health_screen.dart';
@@ -55,6 +56,10 @@ class _MehrScreenState extends State<MehrScreen> {
     final isAdmin =
         AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
             false;
+    final services = AppServicesScope.of(context);
+    final adminKey =
+        services.adminKeyStore.getAdminKey(services.tenantStore.resolveTenantId());
+    final hasAdminKey = adminKey != null && adminKey.trim().isNotEmpty;
     final authStore = AuthScope.of(context);
 
     return ListView(
@@ -131,6 +136,19 @@ class _MehrScreenState extends State<MehrScreen> {
           },
         ),
         const Divider(height: 0),
+        if (isAdmin && hasAdminKey)
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings_outlined),
+            title: const Text('Admin'),
+            subtitle: const Text('Bewohner & Aktivierungscodes verwalten'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              AppRouterScope.of(context).push(
+                const AdminPanelScreen(),
+              );
+            },
+          ),
+        if (isAdmin && hasAdminKey) const Divider(height: 0),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
           child: Text(

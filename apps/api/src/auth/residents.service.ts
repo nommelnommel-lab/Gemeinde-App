@@ -42,17 +42,26 @@ export class ResidentsService {
     tenantId: string,
     q?: string,
     limit = 50,
+    postalCode?: string,
+    houseNumber?: string,
+    status?: ResidentStatus,
   ): Promise<
     Array<{
       id: string;
       displayName: string;
       status: ResidentStatus;
       createdAt: string;
+      postalCode: string;
+      houseNumber: string;
     }>
   > {
     const residents = await this.repository.getAll(tenantId);
     const cappedLimit = this.clampLimit(limit);
     const normalizedQuery = q ? this.normalizeQuery(q) : undefined;
+    const normalizedPostal = postalCode
+      ? this.normalizePostalCode(postalCode)
+      : undefined;
+    const normalizedHouse = houseNumber ? this.normalize(houseNumber) : undefined;
     const filtered = normalizedQuery
       ? residents.filter(
           (resident) =>
@@ -60,12 +69,29 @@ export class ResidentsService {
             this.normalize(resident.lastName).includes(normalizedQuery),
         )
       : residents;
+    const filteredByPostal = normalizedPostal
+      ? filtered.filter(
+          (resident) =>
+            this.normalizePostalCode(resident.postalCode) === normalizedPostal,
+        )
+      : filtered;
+    const filteredByHouse = normalizedHouse
+      ? filteredByPostal.filter(
+          (resident) =>
+            this.normalize(resident.houseNumber) === normalizedHouse,
+        )
+      : filteredByPostal;
+    const filteredByStatus = status
+      ? filteredByHouse.filter((resident) => resident.status === status)
+      : filteredByHouse;
 
-    return filtered.slice(0, cappedLimit).map((resident) => ({
+    return filteredByStatus.slice(0, cappedLimit).map((resident) => ({
       id: resident.id,
       displayName: this.displayName(resident.firstName, resident.lastName),
       status: resident.status,
       createdAt: resident.createdAt,
+      postalCode: resident.postalCode,
+      houseNumber: resident.houseNumber,
     }));
   }
 
@@ -111,6 +137,15 @@ export class ResidentsService {
     }
 
     return { created, updated, failed: errors.length, errors };
+  }
+
+  normalizeResidentInput(payload: {
+    firstName: string;
+    lastName: string;
+    postalCode: string;
+    houseNumber: string;
+  }) {
+    return this.normalizeResident(payload);
   }
 
   async list(tenantId: string): Promise<Resident[]> {
@@ -331,7 +366,7 @@ export class ResidentsService {
     return {
       firstName: this.requireString(payload.firstName, 'firstName'),
       lastName: this.requireString(payload.lastName, 'lastName'),
-      postalCode: this.requireString(payload.postalCode, 'postalCode'),
+      postalCode: this.normalizePostalCode(payload.postalCode),
       houseNumber: this.requireString(payload.houseNumber, 'houseNumber'),
     };
   }
@@ -341,6 +376,15 @@ export class ResidentsService {
       throw new BadRequestException(`${field} ist erforderlich`);
     }
     return value.trim();
+  }
+
+  private normalizePostalCode(value: string | undefined) {
+    const trimmed = this.requireString(value, 'postalCode');
+    const digits = trimmed.replace(/\D/g, '');
+    if (!digits) {
+      throw new BadRequestException('postalCode ist erforderlich');
+    }
+    return digits;
   }
 
   private displayName(firstName: string, lastName: string) {
