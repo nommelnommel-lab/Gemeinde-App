@@ -6,11 +6,24 @@
    ```bash
    cp .env.example .env
    ```
+   > Tipp: Ohne `.env` werden die Defaults aus `.env.example` geladen, aber wir empfehlen eine eigene `.env` für lokale Anpassungen.
 2. After changing `.env`, restart the stack:
    ```bash
    docker compose down
    docker compose up -d --build
    ```
+
+### Example values
+
+```dotenv
+SITE_KEYS_JSON={"HD-2026-9f3c1a2b-KEY":"hilders","NEW-2026-KEY":"new-town"}
+ADMIN_KEYS_JSON={"ADMIN-KEY-1":"hilders","ADMIN-KEY-2":"new-town"}
+JWT_SECRET=dev-secret-change-me
+POSTGRES_USER=gemeinde
+POSTGRES_PASSWORD=gemeinde
+POSTGRES_DB=gemeinde
+DATABASE_URL=postgresql://gemeinde:gemeinde@postgres:5432/gemeinde
+```
 
 ## Windows (PowerShell) setup
 
