@@ -25,42 +25,60 @@ $publicHeaders = @{
 
 function Invoke-Json {
   param(
-    [Parameter(Mandatory = $true)]
-    [string]$Method,
-    [Parameter(Mandatory = $true)]
-    [string]$Uri,
-    [hashtable]$Headers,
-    $BodyObj
+    [Parameter(Mandatory = $true)][string]$Method,
+    [Parameter(Mandatory = $true)][string]$Uri,
+    [hashtable]$Headers = @{},
+    $BodyObj = $null
   )
 
   $jsonBody = $null
+  if ($null -ne $BodyObj) {
+    $jsonBody = ($BodyObj | ConvertTo-Json -Depth 10)
+  }
+
   try {
-    if ($null -ne $BodyObj) {
-      $jsonBody = $BodyObj | ConvertTo-Json -Depth 10
-      return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers -ContentType "application/json" -Body $jsonBody
-    }
-
-    return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers
-  } catch {
-    $response = $_.Exception.Response
-    Write-Host "Request failed: $Method $Uri"
     if ($null -ne $jsonBody) {
-      Write-Host "Request body: $jsonBody"
+      return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers -ContentType "application/json" -Body $jsonBody
+    } else {
+      return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $Headers
+    }
+  } catch {
+    $status = $null
+    $body = $null
+
+    # PowerShell 5: WebException -> Exception.Response (HttpWebResponse)
+    if ($_.Exception -and $_.Exception.Response) {
+      try {
+        $resp = $_.Exception.Response
+        if ($resp.StatusCode) { $status = [int]$resp.StatusCode }
+        $stream = $resp.GetResponseStream()
+        if ($stream) {
+          $reader = New-Object System.IO.StreamReader($stream)
+          $body = $reader.ReadToEnd()
+          $reader.Close()
+        }
+      } catch { }
     }
 
-    if ($response -is [System.Net.Http.HttpResponseMessage]) {
-      $status = [int]$response.StatusCode
-      $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-      Write-Host "Request failed ($status): $body"
-    } elseif ($response -and $response.GetResponseStream()) {
-      $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
-      $body = $reader.ReadToEnd()
-      $status = if ($null -ne $response.StatusCode) { [int]$response.StatusCode } else { $null }
-      if ($null -ne $status) {
-        Write-Host "Request failed ($status): $body"
-      } else {
-        Write-Host "Request failed: $body"
-      }
+    # PowerShell 7: ErrorDetails.Message enthält oft JSON Body
+    if (-not $body -and $_.ErrorDetails -and $_.ErrorDetails.Message) {
+      $body = $_.ErrorDetails.Message
+    }
+
+    # Fallback: Exception.Message
+    if (-not $body) {
+      $body = $_.Exception.Message
+    }
+
+    Write-Host ""
+    Write-Host ("Request failed: {0} {1}" -f $Method.ToUpper(), $Uri) -ForegroundColor Red
+    if ($null -ne $jsonBody) {
+      Write-Host "Request body: $jsonBody" -ForegroundColor DarkGray
+    }
+    if ($status) {
+      Write-Host ("HTTP {0}: {1}" -f $status, $body) -ForegroundColor Yellow
+    } else {
+      Write-Host $body -ForegroundColor Yellow
     }
     throw
   }
