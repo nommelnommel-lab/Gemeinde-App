@@ -25,6 +25,7 @@ services:
       - "${API_PORT:-3000}:3000"
     environment:
       PORT: "3000"
+      NODE_ENV: development
       SITE_KEYS_JSON: ${SITE_KEYS_JSON}
       ADMIN_KEYS_JSON: ${ADMIN_KEYS_JSON}
       JWT_SECRET: ${JWT_SECRET}

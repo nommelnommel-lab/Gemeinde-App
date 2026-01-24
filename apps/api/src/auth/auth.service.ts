@@ -4,6 +4,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -93,6 +94,7 @@ class InMemoryRateLimiter {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly activationCodes = new TenantFileRepository<ActivationCodeRecord>(
     'activation-codes',
   );
@@ -120,6 +122,13 @@ export class AuthService {
       'activationCode',
     );
     const activationCode = normalizeActivationCode(rawActivationCode);
+    const codeHash = hashActivationCode(tenantId, activationCode);
+    this.logger.log('[activate_attempt]', {
+      tenantId,
+      activationCodeInputLength: rawActivationCode.length,
+      activationCodeNormalizedLength: activationCode.length,
+      activationCodeHashPrefix: codeHash.slice(0, 8),
+    });
     if (
       !activationCode ||
       activationCode.length < 8 ||
@@ -134,18 +143,8 @@ export class AuthService {
 
     this.activationLimiter.check(this.rateLimitKey(tenantId, email, clientKey));
 
-    const codeHash = hashActivationCode(tenantId, activationCode);
     const { activationEntry, resident } =
       await this.findActivationWithResident(tenantId, codeHash);
-
-    if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.info('[activate_lookup]', {
-        tenantId,
-        activationCodeLength: activationCode.length,
-        activationCodeHashPrefix: codeHash.slice(0, 8),
-      });
-    }
 
     if (!activationEntry || !resident) {
       throw new UnauthorizedException('Aktivierungscode ungültig');
