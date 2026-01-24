@@ -59,7 +59,7 @@ class TenantSettingsStore extends ChangeNotifier {
     }
   }
 
-  bool isFeatureEnabled(String key) => _settings?.isFeatureEnabled(key) ?? false;
+  bool isFeatureEnabled(String key) => _settings?.isFeatureEnabled(key) ?? true;
 
   @override
   void dispose() {
