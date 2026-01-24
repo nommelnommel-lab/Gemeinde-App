@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 const DASH_VARIANTS = /[\u2010\u2011\u2012\u2013\u2014\u2212\u00AD]/g;
 
 export const normalizeActivationCode = (input: string) => {
@@ -8,4 +10,13 @@ export const normalizeActivationCode = (input: string) => {
     .replace(/\s+/g, '')
     .replace(/[^A-Z0-9-]/g, '')
     .replace(/-+/g, '-');
+};
+
+export const hashActivationCode = (
+  tenantId: string,
+  normalizedCode: string,
+) => {
+  return createHash('sha256')
+    .update(`${tenantId}:${normalizedCode}`)
+    .digest('hex');
 };
