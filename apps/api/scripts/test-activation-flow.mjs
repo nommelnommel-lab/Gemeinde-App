@@ -1,20 +1,72 @@
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
 const TENANT = process.env.TENANT ?? 'hilders';
-const SITE_KEY = process.env.SITE_KEY ?? 'HD-2026-9f3c1a2b-KEY';
-const ADMIN_KEY = process.env.ADMIN_KEY ?? 'ADMIN-KEY-1';
+const SITE_KEY = process.env.SITE_KEY ?? process.env.X_SITE_KEY ?? '';
+const ADMIN_KEY = process.env.ADMIN_KEY ?? process.env.X_ADMIN_KEY ?? '';
 
-const adminHeaders = () => ({
-  'Content-Type': 'application/json',
+const headersPublic = () => ({
+  'X-TENANT': TENANT,
+  'X-SITE-KEY': SITE_KEY,
+});
+
+const headersAdmin = () => ({
   'X-TENANT': TENANT,
   'X-SITE-KEY': SITE_KEY,
   'X-ADMIN-KEY': ADMIN_KEY,
 });
 
-const siteHeaders = () => ({
-  'Content-Type': 'application/json',
-  'X-TENANT': TENANT,
-  'X-SITE-KEY': SITE_KEY,
-});
+const ensureRequiredEnv = () => {
+  const missing = [];
+  if (!SITE_KEY) {
+    missing.push('SITE_KEY (oder X_SITE_KEY)');
+  }
+  if (!ADMIN_KEY) {
+    missing.push('ADMIN_KEY (oder X_ADMIN_KEY)');
+  }
+  if (missing.length === 0) {
+    return;
+  }
+  // eslint-disable-next-line no-console
+  console.error(
+    [
+      'Setze die fehlenden ENV Variablen und starte erneut:',
+      `Fehlt: ${missing.join(', ')}`,
+      '',
+      '$env:SITE_KEY="HD-2026-9f3c1a2b-KEY"',
+      '$env:ADMIN_KEY="HD-ADMIN-TEST-KEY"',
+      '$env:TENANT="hilders"',
+      '$env:BASE_URL="http://localhost:3000"',
+      '$env:DEBUG="1"',
+      'npm --prefix apps/api run test:activation-flow',
+    ].join('\n'),
+  );
+  process.exit(1);
+};
+
+const maskKey = (value) => {
+  if (!value) {
+    return 'missing';
+  }
+  const prefixLength = Math.min(4, value.length);
+  const prefix = value.slice(0, prefixLength);
+  return `${prefix}***`;
+};
+
+const logDebug = (method, path) => {
+  if (process.env.DEBUG !== '1') {
+    return;
+  }
+  const tenantSet = Boolean(TENANT);
+  const siteKeyLength = SITE_KEY.length;
+  const adminKeyLength = ADMIN_KEY.length;
+  const siteKeyMasked = maskKey(SITE_KEY);
+  const adminKeyMasked = maskKey(ADMIN_KEY);
+  // eslint-disable-next-line no-console
+  console.info(
+    `[debug] ${method} ${path} tenant=${tenantSet ? 'yes' : 'no'} ` +
+      `siteKey=${siteKeyLength} (${siteKeyMasked}) ` +
+      `adminKey=${adminKeyLength} (${adminKeyMasked})`,
+  );
+};
 
 const parseBody = async (response) => {
   const text = await response.text();
@@ -29,9 +81,13 @@ const parseBody = async (response) => {
 };
 
 const requestJson = async (path, { method = 'POST', headers, body }) => {
+  logDebug(method, path);
   const response = await fetch(`${BASE_URL}${path}`, {
     method,
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await parseBody(response);
@@ -67,7 +123,7 @@ const createResident = async (suffix) => {
     houseNumber: '12A',
   };
   const data = await requireOk('/api/admin/residents', {
-    headers: adminHeaders(),
+    headers: headersAdmin(),
     body: payload,
   });
   if (!data?.residentId) {
@@ -78,7 +134,7 @@ const createResident = async (suffix) => {
 
 const createActivationCode = async (residentId) => {
   const data = await requireOk('/api/admin/activation-codes', {
-    headers: adminHeaders(),
+    headers: headersAdmin(),
     body: { residentId, expiresInDays: 14 },
   });
   if (!data?.code) {
@@ -89,7 +145,7 @@ const createActivationCode = async (residentId) => {
 
 const activate = async ({ activationCode, email, postalCode, houseNumber }) =>
   requireOk('/api/auth/activate', {
-    headers: siteHeaders(),
+    headers: headersPublic(),
     body: {
       activationCode,
       email,
@@ -101,7 +157,7 @@ const activate = async ({ activationCode, email, postalCode, houseNumber }) =>
 
 const login = async (email) =>
   requireOk('/api/auth/login', {
-    headers: siteHeaders(),
+    headers: headersPublic(),
     body: {
       email,
       password: 'secret-pass-123',
@@ -110,17 +166,18 @@ const login = async (email) =>
 
 const refresh = async (refreshToken) =>
   requireOk('/api/auth/refresh', {
-    headers: siteHeaders(),
+    headers: headersPublic(),
     body: { refreshToken },
   });
 
 const logout = async (refreshToken) =>
   requireOk('/api/auth/logout', {
-    headers: siteHeaders(),
+    headers: headersPublic(),
     body: { refreshToken },
   });
 
 const run = async () => {
+  ensureRequiredEnv();
   const residentExact = await createResident('Exact');
   const codeExact = await createActivationCode(residentExact.residentId);
   if (!codeExact.includes('-')) {
@@ -138,7 +195,7 @@ const run = async () => {
   await expectStatus(
     '/api/auth/activate',
     {
-      headers: siteHeaders(),
+      headers: headersPublic(),
       body: {
         activationCode: codeExact,
         email: 'activation.tester.exact.retry@example.com',
@@ -183,7 +240,7 @@ const run = async () => {
   await expectStatus(
     '/api/auth/refresh',
     {
-      headers: siteHeaders(),
+      headers: headersPublic(),
       body: { refreshToken: loginResponse.refreshToken },
     },
     401,
@@ -194,7 +251,7 @@ const run = async () => {
   await expectStatus(
     '/api/auth/refresh',
     {
-      headers: siteHeaders(),
+      headers: headersPublic(),
       body: { refreshToken: refreshed.refreshToken },
     },
     401,
