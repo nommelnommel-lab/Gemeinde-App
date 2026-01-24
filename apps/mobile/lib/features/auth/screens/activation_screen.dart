@@ -6,6 +6,7 @@ import '../../../config/app_config.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/auth/auth_store.dart';
 import '../../../shared/auth/activation_code_normalizer.dart';
+import '../services/auth_service.dart';
 
 class ActivationScreen extends StatefulWidget {
   const ActivationScreen({super.key});
@@ -167,7 +168,14 @@ class _ActivationScreenState extends State<ActivationScreen> {
       Navigator.of(context).pop();
     } catch (error) {
       if (!mounted) return;
-      setState(() => _error = error.toString());
+      String message = error.toString();
+      int? statusCode;
+      if (error is AuthException) {
+        message = error.message;
+        statusCode = error.statusCode;
+      }
+      debugPrint('ACTIVATE FAILED status=${statusCode ?? 'unknown'} msg=$message');
+      setState(() => _error = message);
     } finally {
       if (mounted) {
         setState(() => _submitting = false);

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
@@ -61,6 +63,7 @@ class ApiClient {
   final AdminKeyStore? _adminKeyStore;
   final String? Function()? _accessTokenProvider;
   final TenantStore _tenantStore;
+  static const Duration _requestTimeout = Duration(seconds: 10);
 
   String resolveTenantId() => _tenantStore.resolveTenantId();
 
@@ -88,11 +91,26 @@ class ApiClient {
 
     http.Response res;
     try {
-      res =
-          await _http.get(uri, headers: headers).timeout(const Duration(seconds: 5));
-    } catch (e) {
+      res = await _http
+          .get(uri, headers: headers)
+          .timeout(_requestTimeout);
+    } on SocketException catch (e, stack) {
+      _logException('SocketException', e, stack);
+      throw ApiException('Netzwerkfehler: $e');
+    } on TimeoutException catch (e, stack) {
+      _logException('TimeoutException', e, stack);
+      throw ApiException('Zeitüberschreitung: $e');
+    } on HttpException catch (e, stack) {
+      _logException('HttpException', e, stack);
+      throw ApiException('HTTP-Fehler: $e');
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('Antwortformat-Fehler: $e');
+    } on Exception catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('Netzwerkfehler: $e');
     }
+    _logResponse(res);
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -105,7 +123,11 @@ class ApiClient {
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) return decoded;
       throw ApiException('Unerwartetes JSON-Format');
-    } catch (e) {
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('JSON parse error: $e');
+    } catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('JSON parse error: $e');
     }
   }
@@ -120,11 +142,26 @@ class ApiClient {
 
     http.Response res;
     try {
-      res =
-          await _http.get(uri, headers: headers).timeout(const Duration(seconds: 5));
-    } catch (e) {
+      res = await _http
+          .get(uri, headers: headers)
+          .timeout(_requestTimeout);
+    } on SocketException catch (e, stack) {
+      _logException('SocketException', e, stack);
+      throw ApiException('Netzwerkfehler: $e');
+    } on TimeoutException catch (e, stack) {
+      _logException('TimeoutException', e, stack);
+      throw ApiException('Zeitüberschreitung: $e');
+    } on HttpException catch (e, stack) {
+      _logException('HttpException', e, stack);
+      throw ApiException('HTTP-Fehler: $e');
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('Antwortformat-Fehler: $e');
+    } on Exception catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('Netzwerkfehler: $e');
     }
+    _logResponse(res);
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -137,7 +174,11 @@ class ApiClient {
       final decoded = jsonDecode(res.body);
       if (decoded is List<dynamic>) return decoded;
       throw ApiException('Unerwartetes JSON-Format');
-    } catch (e) {
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('JSON parse error: $e');
+    } catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('JSON parse error: $e');
     }
   }
@@ -152,11 +193,26 @@ class ApiClient {
 
     http.Response res;
     try {
-      res =
-          await _http.get(uri, headers: headers).timeout(const Duration(seconds: 5));
-    } catch (e) {
+      res = await _http
+          .get(uri, headers: headers)
+          .timeout(_requestTimeout);
+    } on SocketException catch (e, stack) {
+      _logException('SocketException', e, stack);
+      throw ApiException('Netzwerkfehler: $e');
+    } on TimeoutException catch (e, stack) {
+      _logException('TimeoutException', e, stack);
+      throw ApiException('Zeitüberschreitung: $e');
+    } on HttpException catch (e, stack) {
+      _logException('HttpException', e, stack);
+      throw ApiException('HTTP-Fehler: $e');
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('Antwortformat-Fehler: $e');
+    } on Exception catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('Netzwerkfehler: $e');
     }
+    _logResponse(res);
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -167,7 +223,11 @@ class ApiClient {
 
     try {
       return jsonDecode(res.body);
-    } catch (e) {
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('JSON parse error: $e');
+    } catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('JSON parse error: $e');
     }
   }
@@ -182,11 +242,26 @@ class ApiClient {
 
     http.Response res;
     try {
-      res =
-          await _http.get(uri, headers: headers).timeout(const Duration(seconds: 5));
-    } catch (e) {
+      res = await _http
+          .get(uri, headers: headers)
+          .timeout(_requestTimeout);
+    } on SocketException catch (e, stack) {
+      _logException('SocketException', e, stack);
+      throw ApiException('Netzwerkfehler: $e');
+    } on TimeoutException catch (e, stack) {
+      _logException('TimeoutException', e, stack);
+      throw ApiException('Zeitüberschreitung: $e');
+    } on HttpException catch (e, stack) {
+      _logException('HttpException', e, stack);
+      throw ApiException('HTTP-Fehler: $e');
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('Antwortformat-Fehler: $e');
+    } on Exception catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('Netzwerkfehler: $e');
     }
+    _logResponse(res);
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -201,7 +276,11 @@ class ApiClient {
         statusCode: res.statusCode,
         uri: uri,
       );
-    } catch (e) {
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('JSON parse error: $e');
+    } catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('JSON parse error: $e');
     }
   }
@@ -248,10 +327,24 @@ class ApiClient {
     try {
       res = await _http
           .delete(uri, headers: headers)
-          .timeout(const Duration(seconds: 5));
-    } catch (e) {
+          .timeout(_requestTimeout);
+    } on SocketException catch (e, stack) {
+      _logException('SocketException', e, stack);
+      throw ApiException('Netzwerkfehler: $e');
+    } on TimeoutException catch (e, stack) {
+      _logException('TimeoutException', e, stack);
+      throw ApiException('Zeitüberschreitung: $e');
+    } on HttpException catch (e, stack) {
+      _logException('HttpException', e, stack);
+      throw ApiException('HTTP-Fehler: $e');
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('Antwortformat-Fehler: $e');
+    } on Exception catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('Netzwerkfehler: $e');
     }
+    _logResponse(res);
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -264,7 +357,11 @@ class ApiClient {
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) return decoded;
       throw ApiException('Unerwartetes JSON-Format');
-    } catch (e) {
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('JSON parse error: $e');
+    } catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('JSON parse error: $e');
     }
   }
@@ -293,10 +390,24 @@ class ApiClient {
               ..body = jsonEncode(body),
           )
           .then(http.Response.fromStream)
-          .timeout(const Duration(seconds: 5));
-    } catch (e) {
+          .timeout(_requestTimeout);
+    } on SocketException catch (e, stack) {
+      _logException('SocketException', e, stack);
+      throw ApiException('Netzwerkfehler: $e');
+    } on TimeoutException catch (e, stack) {
+      _logException('TimeoutException', e, stack);
+      throw ApiException('Zeitüberschreitung: $e');
+    } on HttpException catch (e, stack) {
+      _logException('HttpException', e, stack);
+      throw ApiException('HTTP-Fehler: $e');
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('Antwortformat-Fehler: $e');
+    } on Exception catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('Netzwerkfehler: $e');
     }
+    _logResponse(res);
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
@@ -309,7 +420,11 @@ class ApiClient {
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) return decoded;
       throw ApiException('Unerwartetes JSON-Format');
-    } catch (e) {
+    } on FormatException catch (e, stack) {
+      _logException('FormatException', e, stack);
+      throw ApiException('JSON parse error: $e');
+    } catch (e, stack) {
+      _logException('Exception', e, stack);
       throw ApiException('JSON parse error: $e');
     }
   }
@@ -352,5 +467,31 @@ class ApiClient {
     debugPrint(
       'API $method $uri headers: tenant=$hasTenant siteKey=$hasSiteKey siteKeyPreview=$siteKeyPreview',
     );
+  }
+
+  void _logResponse(http.Response response) {
+    if (!kDebugMode) {
+      return;
+    }
+    final bodyPreview = _truncateBody(response.body);
+    debugPrint('API RESP ${response.statusCode} $bodyPreview');
+  }
+
+  void _logException(String type, Object error, StackTrace stack) {
+    if (!kDebugMode) {
+      return;
+    }
+    debugPrint('API EXCEPTION $type $error');
+    debugPrint(stack.toString());
+  }
+
+  String _truncateBody(String body) {
+    if (body.isEmpty) {
+      return '<empty>';
+    }
+    if (body.length <= 500) {
+      return body;
+    }
+    return '${body.substring(0, 500)}...';
   }
 }
