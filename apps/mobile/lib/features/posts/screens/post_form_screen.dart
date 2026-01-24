@@ -9,13 +9,13 @@ class PostFormScreen extends StatefulWidget {
     required this.postsService,
     required this.type,
     this.post,
-    this.isAdmin = false,
+    this.canEdit = false,
   });
 
   final PostsService postsService;
   final PostType type;
   final Post? post;
-  final bool isAdmin;
+  final bool canEdit;
 
   @override
   State<PostFormScreen> createState() => _PostFormScreenState();
@@ -103,12 +103,12 @@ class _PostFormScreenState extends State<PostFormScreen> {
         body: body,
       );
       if (widget.post == null) {
-        await widget.postsService.createPost(input, isAdmin: widget.isAdmin);
+        await widget.postsService.createPost(input, canEdit: widget.canEdit);
       } else {
         await widget.postsService.updatePost(
           widget.post!.id,
           input,
-          isAdmin: widget.isAdmin,
+          canEdit: widget.canEdit,
         );
       }
       if (!mounted) return;

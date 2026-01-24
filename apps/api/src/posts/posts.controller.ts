@@ -3,14 +3,16 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
-  Headers,
   Param,
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { Role } from '../auth/roles';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { PostsService } from './posts.service';
 import { PostEntity, PostType } from './posts.types';
 
@@ -44,39 +46,32 @@ export class PostsController {
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles(Role.STAFF)
   async createPost(
-    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: PostPayload,
   ): Promise<PostEntity> {
     const data = this.validatePayload(payload);
-    if (this.requiresAdmin(data.type)) {
-      this.requireAdmin(headers);
-    }
     return this.postsService.create(data);
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.STAFF)
   async updatePost(
     @Param('id') id: string,
-    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: PostPayload,
   ): Promise<PostEntity> {
     const data = this.validatePayload(payload);
-    if (this.requiresAdmin(data.type)) {
-      this.requireAdmin(headers);
-    }
     return this.postsService.update(id, data);
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.STAFF)
   async deletePost(
     @Param('id') id: string,
-    @Headers() headers: Record<string, string | string[] | undefined>,
   ) {
-    const post = await this.postsService.getById(id);
-    if (this.requiresAdmin(post.type)) {
-      this.requireAdmin(headers);
-    }
     await this.postsService.remove(id);
     return { ok: true };
   }
@@ -171,25 +166,4 @@ export class PostsController {
     }
   }
 
-  private requiresAdmin(type: PostType) {
-    return type === 'news' || type === 'warning' || type === 'event';
-  }
-
-  private requireAdmin(
-    headers: Record<string, string | string[] | undefined>,
-  ) {
-    const adminKey = process.env.ADMIN_KEY;
-    if (!adminKey) {
-      throw new ForbiddenException('Admin-Schlüssel ist erforderlich');
-    }
-
-    const providedHeader = headers['x-admin-key'];
-    const provided = Array.isArray(providedHeader)
-      ? providedHeader[0]
-      : providedHeader;
-
-    if (provided !== adminKey) {
-      throw new ForbiddenException('Ungültiger Admin-Schlüssel');
-    }
-  }
 }

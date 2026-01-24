@@ -329,9 +329,19 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
   }
 
   Future<void> _handleTap(_FeedItem item) async {
-    final canEdit =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
-            false;
+    final permissions = AppPermissionsScope.maybePermissionsOf(context);
+    bool canEdit;
+    switch (item.type) {
+      case _FeedItemType.event:
+        canEdit = permissions?.canCreateEvents ?? false;
+        break;
+      case _FeedItemType.news:
+        canEdit = permissions?.canCreateNews ?? false;
+        break;
+      case _FeedItemType.warning:
+        canEdit = permissions?.canCreateWarnings ?? false;
+        break;
+    }
     switch (item.type) {
       case _FeedItemType.event:
         if (item.event == null) return;

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../api/api_client.dart';
 import '../models/tenant_config.dart';
 
@@ -20,6 +22,7 @@ class TenantService {
       '/api/tenant/settings',
       config.toJson(),
       adminKeyOverride: adminKeyOverride,
+      includeAdminKey: !kReleaseMode,
     );
     final payload = _extractPayload(data);
     return TenantConfig.fromJson(payload);

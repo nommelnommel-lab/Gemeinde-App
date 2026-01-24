@@ -29,7 +29,7 @@ class _WarningsScreenState extends State<WarningsScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final canManage =
-        AppPermissionsScope.maybePermissionsOf(context)?.canManageContent ??
+        AppPermissionsScope.maybePermissionsOf(context)?.canCreateWarnings ??
             false;
     _canManageContent = canManage;
     if (_initialized) {
@@ -98,21 +98,20 @@ class _WarningsScreenState extends State<WarningsScreen> {
                       '${warning.severity.label} · ${formatDateTime(warning.publishedAt)}',
                     ),
                     trailing: const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    final updated = await AppRouterScope.of(context)
-                        .push<bool>(
-                      WarningDetailScreen(
-                        warning: warning,
-                        warningsService: _warningsService,
-                        canEdit: _canManageContent,
-                      ),
-                    );
-                    if (updated == true) {
-                      await _load();
-                    }
-                  },
+                    onTap: () async {
+                      final updated = await AppRouterScope.of(context).push<bool>(
+                        WarningDetailScreen(
+                          warning: warning,
+                          warningsService: _warningsService,
+                          canEdit: _canManageContent,
+                        ),
+                      );
+                      if (updated == true) {
+                        await _load();
+                      }
+                    },
+                  ),
                 ),
-              ),
               ),
           ],
         ),

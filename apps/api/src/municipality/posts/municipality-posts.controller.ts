@@ -12,7 +12,9 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { AdminGuard } from '../../admin/admin.guard';
+import { Role } from '../../auth/roles';
+import { Roles } from '../../auth/roles.decorator';
+import { RolesGuard } from '../../auth/roles.guard';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityPostsService } from './municipality-posts.service';
 import {
@@ -65,7 +67,8 @@ export class MunicipalityPostsController {
   }
 
   @Get('api/admin/posts')
-  @UseGuards(AdminGuard)
+  @UseGuards(RolesGuard)
+  @Roles(Role.STAFF)
   @Header('Cache-Control', 'no-store')
   async getAdminPosts(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -87,7 +90,8 @@ export class MunicipalityPostsController {
   }
 
   @Post('api/admin/posts')
-  @UseGuards(AdminGuard)
+  @UseGuards(RolesGuard)
+  @Roles(Role.STAFF)
   @Header('Cache-Control', 'no-store')
   async createPost(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -99,7 +103,8 @@ export class MunicipalityPostsController {
   }
 
   @Patch('api/admin/posts/:id')
-  @UseGuards(AdminGuard)
+  @UseGuards(RolesGuard)
+  @Roles(Role.STAFF)
   @Header('Cache-Control', 'no-store')
   async updatePost(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -112,7 +117,8 @@ export class MunicipalityPostsController {
   }
 
   @Delete('api/admin/posts/:id')
-  @UseGuards(AdminGuard)
+  @UseGuards(RolesGuard)
+  @Roles(Role.STAFF)
   @Header('Cache-Control', 'no-store')
   async deletePost(
     @Headers() headers: Record<string, string | string[] | undefined>,

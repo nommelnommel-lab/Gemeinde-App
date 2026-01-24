@@ -16,6 +16,7 @@ import { ActivateDto } from './dto/activate.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { AuthResponse, AuthUserView, JwtAccessPayload } from './auth.types';
+import { Role } from './roles';
 import {
   formatActivationCode,
   hashActivationCode,
@@ -49,6 +50,7 @@ type UserRecord = {
   residentId: string;
   email: string;
   passwordHash: string;
+  role: Role;
   createdAt: string;
   updatedAt: string;
 };
@@ -175,6 +177,7 @@ export class AuthService {
       residentId: resident.id,
       email,
       passwordHash: await this.hashPassword(password),
+      role: Role.USER,
       createdAt: now,
       updatedAt: now,
     };

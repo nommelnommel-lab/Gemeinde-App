@@ -65,7 +65,8 @@ class _GemeindeAppState extends State<GemeindeApp> {
   late final AppServices _services;
   late final AuthStore _authStore;
   late final TenantSettingsStore _tenantSettingsStore;
-  AppPermissions _permissions = const AppPermissions(canManageContent: false);
+  AppPermissions _permissions = const AppPermissions.empty();
+  String? _lastAccessToken;
 
   @override
   void initState() {
@@ -82,6 +83,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
       secureStorage: const FlutterSecureStorage(),
       authService: AuthService(_apiClient),
     );
+    _authStore.addListener(_handleAuthChange);
     _services = AppServices(
       adminService: AdminService(_apiClient),
       eventsService: EventsService(_apiClient),
@@ -107,6 +109,21 @@ class _GemeindeAppState extends State<GemeindeApp> {
     final permissions = await _services.permissionsService.getPermissions();
     if (!mounted) return;
     setState(() => _permissions = permissions);
+  }
+
+  void _handleAuthChange() {
+    final currentToken = _authStore.accessToken;
+    if (currentToken != null && currentToken != _lastAccessToken) {
+      _lastAccessToken = currentToken;
+      _loadPermissions();
+      return;
+    }
+    if (currentToken == null && _lastAccessToken != null) {
+      _lastAccessToken = null;
+      if (mounted) {
+        setState(() => _permissions = const AppPermissions.empty());
+      }
+    }
   }
 
   @override
@@ -140,6 +157,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
 
   @override
   void dispose() {
+    _authStore.removeListener(_handleAuthChange);
     _tenantSettingsStore.dispose();
     super.dispose();
   }

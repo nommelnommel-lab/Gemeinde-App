@@ -11,12 +11,12 @@ class PostsScreen extends StatefulWidget {
     super.key,
     required this.type,
     required this.postsService,
-    this.isAdmin = false,
+    this.canEdit = false,
   });
 
   final PostType type;
   final PostsService postsService;
-  final bool isAdmin;
+  final bool canEdit;
 
   @override
   State<PostsScreen> createState() => _PostsScreenState();
@@ -74,7 +74,7 @@ class _PostsScreenState extends State<PostsScreen> {
                     subtitle: Text(
                       '${_formatDate(_displayDate(post))} · ${_preview(post.body)}',
                     ),
-                    trailing: widget.isAdmin
+                    trailing: widget.canEdit
                         ? const Icon(Icons.chevron_right)
                         : null,
                     onTap: () => _openDetail(post),
@@ -84,7 +84,7 @@ class _PostsScreenState extends State<PostsScreen> {
           ],
         ),
       ),
-      floatingActionButton: widget.isAdmin
+      floatingActionButton: widget.canEdit
           ? FloatingActionButton(
               onPressed: _openCreate,
               child: const Icon(Icons.add),
@@ -98,7 +98,7 @@ class _PostsScreenState extends State<PostsScreen> {
       PostDetailScreen(
         post: post,
         postsService: widget.postsService,
-        isAdmin: widget.isAdmin,
+        canEdit: widget.canEdit,
       ),
     );
 
@@ -112,7 +112,7 @@ class _PostsScreenState extends State<PostsScreen> {
       PostFormScreen(
         postsService: widget.postsService,
         type: widget.type,
-        isAdmin: widget.isAdmin,
+        canEdit: widget.canEdit,
       ),
     );
 

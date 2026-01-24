@@ -1,32 +1,110 @@
 import 'package:flutter/widgets.dart';
 
+enum AppRole { user, staff, admin }
+
 @immutable
 class AppPermissions {
-  const AppPermissions({required this.canManageContent});
+  const AppPermissions({
+    required this.role,
+    required this.isAdmin,
+    required this.canCreateEvents,
+    required this.canCreatePosts,
+    required this.canCreateNews,
+    required this.canCreateWarnings,
+    required this.canModerate,
+    required this.canManageResidents,
+    required this.canGenerateActivationCodes,
+  });
 
-  final bool canManageContent;
+  const AppPermissions.empty()
+      : role = AppRole.user,
+        isAdmin = false,
+        canCreateEvents = false,
+        canCreatePosts = false,
+        canCreateNews = false,
+        canCreateWarnings = false,
+        canModerate = false,
+        canManageResidents = false,
+        canGenerateActivationCodes = false;
 
-  AppPermissions copyWith({bool? canManageContent}) {
+  final AppRole role;
+  final bool isAdmin;
+  final bool canCreateEvents;
+  final bool canCreatePosts;
+  final bool canCreateNews;
+  final bool canCreateWarnings;
+  final bool canModerate;
+  final bool canManageResidents;
+  final bool canGenerateActivationCodes;
+
+  bool get isStaffMode => role != AppRole.user;
+
+  bool get canManageContent =>
+      canCreateEvents ||
+      canCreatePosts ||
+      canCreateNews ||
+      canCreateWarnings ||
+      canModerate;
+
+  AppPermissions copyWith({
+    AppRole? role,
+    bool? isAdmin,
+    bool? canCreateEvents,
+    bool? canCreatePosts,
+    bool? canCreateNews,
+    bool? canCreateWarnings,
+    bool? canModerate,
+    bool? canManageResidents,
+    bool? canGenerateActivationCodes,
+  }) {
     return AppPermissions(
-      canManageContent: canManageContent ?? this.canManageContent,
+      role: role ?? this.role,
+      isAdmin: isAdmin ?? this.isAdmin,
+      canCreateEvents: canCreateEvents ?? this.canCreateEvents,
+      canCreatePosts: canCreatePosts ?? this.canCreatePosts,
+      canCreateNews: canCreateNews ?? this.canCreateNews,
+      canCreateWarnings: canCreateWarnings ?? this.canCreateWarnings,
+      canModerate: canModerate ?? this.canModerate,
+      canManageResidents: canManageResidents ?? this.canManageResidents,
+      canGenerateActivationCodes:
+          canGenerateActivationCodes ?? this.canGenerateActivationCodes,
     );
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        other is AppPermissions && other.canManageContent == canManageContent;
+        other is AppPermissions &&
+            other.role == role &&
+            other.isAdmin == isAdmin &&
+            other.canCreateEvents == canCreateEvents &&
+            other.canCreatePosts == canCreatePosts &&
+            other.canCreateNews == canCreateNews &&
+            other.canCreateWarnings == canCreateWarnings &&
+            other.canModerate == canModerate &&
+            other.canManageResidents == canManageResidents &&
+            other.canGenerateActivationCodes == canGenerateActivationCodes;
   }
 
   @override
-  int get hashCode => canManageContent.hashCode;
+  int get hashCode => Object.hash(
+        role,
+        isAdmin,
+        canCreateEvents,
+        canCreatePosts,
+        canCreateNews,
+        canCreateWarnings,
+        canModerate,
+        canManageResidents,
+        canGenerateActivationCodes,
+      );
 }
 
 class AppPermissionsScope extends StatefulWidget {
   const AppPermissionsScope({
     super.key,
     required this.child,
-    this.permissions = const AppPermissions(canManageContent: false),
+    this.permissions = const AppPermissions.empty(),
   });
 
   final Widget child;
@@ -70,12 +148,6 @@ class AppPermissionsScopeState extends State<AppPermissionsScope> {
     if (oldWidget.permissions != widget.permissions) {
       _permissions = widget.permissions;
     }
-  }
-
-  void setCanManageContent(bool value) {
-    setState(() {
-      _permissions = _permissions.copyWith(canManageContent: value);
-    });
   }
 
   void setPermissions(AppPermissions permissions) {

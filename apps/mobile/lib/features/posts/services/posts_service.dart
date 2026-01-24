@@ -32,9 +32,9 @@ class PostsService {
   /// Endpoint: POST /posts
   Future<Post> createPost(
     PostInput input, {
-    bool isAdmin = false,
+    bool canEdit = false,
   }) async {
-    _assertAdmin(isAdmin);
+    _assertPermission(canEdit);
     final data = await _apiClient.postJson(postsEndpoint, input.toJson());
     return Post.fromJson(data);
   }
@@ -43,9 +43,9 @@ class PostsService {
   Future<Post> updatePost(
     String id,
     PostInput input, {
-    bool isAdmin = false,
+    bool canEdit = false,
   }) async {
-    _assertAdmin(isAdmin);
+    _assertPermission(canEdit);
     final data = await _apiClient.putJson(
       postByIdEndpoint(id),
       input.toJson(),
@@ -56,9 +56,9 @@ class PostsService {
   /// Endpoint: DELETE /posts/:id
   Future<void> deletePost(
     String id, {
-    bool isAdmin = false,
+    bool canEdit = false,
   }) async {
-    _assertAdmin(isAdmin);
+    _assertPermission(canEdit);
     await _apiClient.deleteJson(postByIdEndpoint(id));
   }
 
@@ -86,8 +86,8 @@ class PostsService {
     throw ApiException('Unerwartetes JSON-Format');
   }
 
-  void _assertAdmin(bool isAdmin) {
-    if (!isAdmin) {
+  void _assertPermission(bool canEdit) {
+    if (!canEdit) {
       throw StateError('Keine Berechtigung für diese Aktion.');
     }
   }

@@ -5,6 +5,7 @@ import '../../mehr/screens/mehr_screen.dart';
 import '../../start/screens/start_screen.dart';
 import '../../verwaltung/screens/verwaltung_hub_screen.dart';
 import '../../warnings/screens/warnings_screen.dart';
+import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/tenant/tenant_settings_scope.dart';
 import '../../../shared/tenant/tenant_settings_store.dart';
 
@@ -35,6 +36,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       'places',
       'waste',
     ]);
+    final permissions = AppPermissionsScope.maybePermissionsOf(context);
 
     final items = <_NavItem>[
       _NavItem(
@@ -89,7 +91,35 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Scaffold(
       appBar: items.isEmpty
           ? null
-          : AppBar(title: Text(items[selectedIndex].title)),
+          : AppBar(
+              title: Text(items[selectedIndex].title),
+              actions: [
+                if (permissions?.isStaffMode ?? false)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.deepOrange.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.deepOrange.shade200),
+                        ),
+                        child: const Text(
+                          'Staff mode',
+                          style: TextStyle(
+                            color: Colors.deepOrange,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
       body: items.isEmpty
           ? const SizedBox.shrink()
           : SafeArea(child: items[selectedIndex].screen),
