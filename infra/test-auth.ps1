@@ -67,15 +67,6 @@ $residentResponse = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/admin/residen
   postalCode = $postalCode
   houseNumber = $houseNumber
 })
-$residentResponse = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/admin/residents" \
-  -Headers $adminHeaders \
-  -Body (@{
-    firstName = $firstName
-    lastName = $lastName
-    postalCode = $postalCode
-    houseNumber = $houseNumber
-  } | ConvertTo-Json) \
-  -ErrorAction Stop
 
 $residentId = $residentResponse.residentId
 if (-not $residentId) {
@@ -87,13 +78,6 @@ $act = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/admin/activation-codes" -H
   residentId = $residentId
   expiresInDays = 14
 })
-$act = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/admin/activation-codes" \
-  -Headers $adminHeaders \
-  -Body (@{
-    residentId = $residentId
-    expiresInDays = 14
-  } | ConvertTo-Json) \
-  -ErrorAction Stop
 
 $activationCode = $act.code
 if (-not $activationCode) {
@@ -108,21 +92,12 @@ $login = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/activate" -Headers 
   postalCode = $postalCode
   houseNumber = $houseNumber
 })
-$login = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/auth/activate" \
-  -Headers $publicHeaders \
-  -Body (@{
-    activationCode = $activationCode
-    email = $email
-    password = $password
-    postalCode = $postalCode
-    houseNumber = $houseNumber
-  } | ConvertTo-Json) \
-  -ErrorAction Stop
 
-$refreshToken = $login.refreshToken
-if (-not $refreshToken) {
+$activationRefreshToken = $login.refreshToken
+if (-not $activationRefreshToken) {
   throw "refreshToken fehlt nach Aktivierung"
 }
+Write-Host "Activation refresh token erhalten."
 
 Write-Host "Logging in..."
 $login = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/login" -Headers $publicHeaders -BodyObj @{
@@ -130,30 +105,26 @@ $login = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/login" -Headers $pu
   password = $password
 })
 
-$refreshToken = $login.refreshToken
-if (-not $refreshToken) {
+$loginRefreshToken = $login.refreshToken
+if (-not $loginRefreshToken) {
   throw "refreshToken fehlt nach Login"
 }
+Write-Host "Login refresh token erhalten."
 
 Write-Host "Refreshing token..."
 $ref = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/refresh" -Headers $publicHeaders -BodyObj @{
-  refreshToken = $refreshToken
+  refreshToken = $loginRefreshToken
 })
-Write-Host "Refreshing token..."
-$ref = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/auth/refresh" \
-  -Headers $publicHeaders \
-  -Body (@{
-    refreshToken = $refreshToken
-  } | ConvertTo-Json) \
-  -ErrorAction Stop
 
 if (-not $ref.refreshToken) {
   throw "refreshToken fehlt nach Refresh"
 }
+$rotatedRefreshToken = $ref.refreshToken
+Write-Host "Refresh token rotiert."
 
 Write-Host "Refreshing with old token (should be 401)..."
 $oldRefreshResponse = Invoke-WebRequest -Method Post -Uri "$baseUrl/api/auth/refresh" -Headers $publicHeaders -ContentType "application/json" -Body (@{
-  refreshToken = $refreshToken
+  refreshToken = $loginRefreshToken
 } | ConvertTo-Json -Depth 10) -SkipHttpErrorCheck
 
 if ($oldRefreshResponse.StatusCode -ne 401) {
@@ -162,15 +133,8 @@ if ($oldRefreshResponse.StatusCode -ne 401) {
 
 Write-Host "Logging out..."
 $logout = (Invoke-Json -Method "Post" -Uri "$baseUrl/api/auth/logout" -Headers $publicHeaders -BodyObj @{
-  refreshToken = $ref.refreshToken
+  refreshToken = $rotatedRefreshToken
 })
-Write-Host "Logging out..."
-$logout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/auth/logout" \
-  -Headers $publicHeaders \
-  -Body (@{
-    refreshToken = $ref.refreshToken
-  } | ConvertTo-Json) \
-  -ErrorAction Stop
 
 if (-not $logout.ok) {
   throw "Logout nicht ok"
@@ -178,14 +142,8 @@ if (-not $logout.ok) {
 
 Write-Host "Refreshing after logout (should be 401)..."
 $refreshAfterLogout = Invoke-WebRequest -Method Post -Uri "$baseUrl/api/auth/refresh" -Headers $publicHeaders -ContentType "application/json" -Body (@{
-  refreshToken = $ref.refreshToken
+  refreshToken = $rotatedRefreshToken
 } | ConvertTo-Json -Depth 10) -SkipHttpErrorCheck
-$refreshAfterLogout = Invoke-WebRequest -Method Post -Uri "$baseUrl/api/auth/refresh" \
-  -Headers $publicHeaders \
-  -Body (@{
-    refreshToken = $ref.refreshToken
-  } | ConvertTo-Json) \
-  -SkipHttpErrorCheck
 
 if ($refreshAfterLogout.StatusCode -ne 401) {
   throw "Refresh nach Logout sollte 401 liefern, bekam $($refreshAfterLogout.StatusCode)"
