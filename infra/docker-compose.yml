@@ -25,7 +25,9 @@ services:
       - "${API_PORT:-3000}:3000"
     environment:
       PORT: "3000"
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      SITE_KEYS_JSON: ${SITE_KEYS_JSON}
+      ADMIN_KEYS_JSON: ${ADMIN_KEYS_JSON}
+      JWT_SECRET: ${JWT_SECRET}
       DATABASE_URL: ${DATABASE_URL:-postgresql://gemeinde:gemeinde@postgres:5432/gemeinde}
     depends_on:
       - postgres

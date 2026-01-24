@@ -2,6 +2,23 @@
 
 ## Environment setup
 
+### Quick start
+
+1. Copy the example env file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Start the stack:
+   ```bash
+   docker compose up -d --build
+   ```
+3. Verify the admin keys are present:
+   ```bash
+   docker compose exec api printenv ADMIN_KEYS_JSON
+   ```
+
+### Notes
+
 1. Copy the example env file:
    ```bash
    cp .env.example .env
