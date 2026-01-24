@@ -15,7 +15,11 @@ import { ActivateDto } from './dto/activate.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { AuthResponse, AuthUserView, JwtAccessPayload } from './auth.types';
-import { hashActivationCode, normalizeActivationCode } from './auth.normalize';
+import {
+  formatActivationCode,
+  hashActivationCode,
+  normalizeActivationCode,
+} from './auth.normalize';
 
 type ResidentRecord = {
   id: string;
@@ -123,7 +127,7 @@ export class AuthService {
     if (
       !activationCode ||
       activationCode.length < 8 ||
-      !/^[A-Z0-9-]+$/.test(activationCode)
+      !/^[A-Z0-9]+$/.test(activationCode)
     ) {
       throw new BadRequestException('Aktivierungscode Format ungültig');
     }
@@ -235,9 +239,11 @@ export class AuthService {
             HttpStatus.INTERNAL_SERVER_ERROR,
           );
         }
-        code = this.generateActivationCode(tenantId);
-        const normalized = normalizeActivationCode(code);
-        codeHash = hashActivationCode(tenantId, normalized);
+        const canonical = normalizeActivationCode(
+          this.generateActivationCode(tenantId),
+        );
+        codeHash = hashActivationCode(tenantId, canonical);
+        code = formatActivationCode(canonical);
         attempts += 1;
       } while (existingHashes.has(codeHash));
 
@@ -290,9 +296,11 @@ export class AuthService {
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
-      code = this.generateActivationCode(tenantId);
-      const normalized = normalizeActivationCode(code);
-      codeHash = hashActivationCode(tenantId, normalized);
+      const canonical = normalizeActivationCode(
+        this.generateActivationCode(tenantId),
+      );
+      codeHash = hashActivationCode(tenantId, canonical);
+      code = formatActivationCode(canonical);
       attempts += 1;
     } while (existingHashes.has(codeHash));
 
@@ -314,6 +322,7 @@ export class AuthService {
       console.info('[activation_code_issued]', {
         tenantId,
         residentId,
+        activationCodeLength: normalizeActivationCode(code).length,
         expiresAt: expiresAtIso,
         createdBy,
       });
