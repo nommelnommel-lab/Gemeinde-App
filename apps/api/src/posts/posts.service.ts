@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import { dirname, join } from 'path';
+import { ContentType } from '../content/content.types';
 import { PostEntity, PostType } from './posts.types';
 
 type PostInput = {
@@ -141,7 +142,7 @@ export class PostsService implements OnModuleInit {
     return [
       {
         id: randomUUID(),
-        type: 'OFFICIAL_EVENT',
+        type: ContentType.OFFICIAL_EVENT,
         authorId: 'system',
         title: 'Ernte-Dank Gottesdienst',
         body: 'Wir feiern gemeinsam mit Musik und anschließendem Imbiss.',
@@ -152,7 +153,7 @@ export class PostsService implements OnModuleInit {
       },
       {
         id: randomUUID(),
-        type: 'OFFICIAL_NEWS',
+        type: ContentType.OFFICIAL_NEWS,
         authorId: 'system',
         title: 'Neue Öffnungszeiten im Pfarrbüro',
         body: 'Das Pfarrbüro ist ab Oktober dienstags und donnerstags geöffnet.',
@@ -162,7 +163,7 @@ export class PostsService implements OnModuleInit {
       },
       {
         id: randomUUID(),
-        type: 'OFFICIAL_WARNING',
+        type: ContentType.OFFICIAL_WARNING,
         authorId: 'system',
         title: 'Sturmböen am Wochenende',
         body: 'Bitte achtet auf lose Gegenstände im Außenbereich.',
