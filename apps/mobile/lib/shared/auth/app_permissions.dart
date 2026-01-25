@@ -154,6 +154,7 @@ class AppPermissions {
   final bool canManageRoles;
 
   bool get isStaff => role != 'USER';
+  bool get isStaffMode => isAdmin || isStaff;
 
   static const empty = AppPermissions(
     role: 'USER',

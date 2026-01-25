@@ -66,6 +66,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
   late final AuthStore _authStore;
   late final TenantSettingsStore _tenantSettingsStore;
   AppPermissions _permissions = AppPermissions.empty;
+  String? _lastAccessToken;
 
   @override
   void initState() {
@@ -120,7 +121,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
     if (currentToken == null && _lastAccessToken != null) {
       _lastAccessToken = null;
       if (mounted) {
-        setState(() => _permissions = const AppPermissions.empty());
+        setState(() => _permissions = AppPermissions.empty);
       }
     }
   }
