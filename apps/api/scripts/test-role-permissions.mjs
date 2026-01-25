@@ -140,6 +140,23 @@ const createEventPayload = (suffix) => {
   };
 };
 
+const verifyPermissions = async (token) => {
+  const permissions = await requireOk('/permissions', {
+    method: 'GET',
+    headers: headersAuth(token),
+  });
+  if (permissions?.role !== 'STAFF') {
+    throw new Error(
+      `Expected role STAFF in /permissions, got ${JSON.stringify(permissions)}`,
+    );
+  }
+  if (permissions?.isAdmin !== false) {
+    throw new Error(
+      `Expected isAdmin false in /permissions, got ${JSON.stringify(permissions)}`,
+    );
+  }
+};
+
 const run = async () => {
   ensureRequiredEnv();
   const suffix = Date.now();
@@ -177,6 +194,8 @@ const run = async () => {
     body: { userId: staffAuth.user.id, role: 'STAFF' },
   });
 
+  await verifyPermissions(staffAuth.accessToken);
+
   await requireOk('/api/admin/events', {
     headers: headersAuth(staffAuth.accessToken),
     body: createEventPayload(suffix),
@@ -196,10 +215,12 @@ const run = async () => {
   }
 
   // eslint-disable-next-line no-console
-  console.info('Role permissions check: OK ✅');
+  console.info('PASS: Role permissions check ✅');
 };
 
 run().catch((error) => {
+  // eslint-disable-next-line no-console
+  console.error('FAIL: Role permissions check ❌');
   // eslint-disable-next-line no-console
   console.error(error);
   process.exit(1);

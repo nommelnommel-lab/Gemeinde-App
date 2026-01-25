@@ -10,10 +10,10 @@ type UserRole = 'USER' | 'STAFF' | 'ADMIN';
 type UserSummary = {
   id: string;
   email: string;
+  displayName?: string | null;
   residentId: string;
   role: UserRole;
   createdAt: string;
-  updatedAt: string;
 };
 
 type UsersResponse = {
@@ -62,7 +62,7 @@ export default function RolesPanel() {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      setMessage('Rolle aktualisiert.');
+      setMessage('Rolle wurde erfolgreich aktualisiert.');
       await loadUsers();
     } catch (err) {
       setError(err);
@@ -107,7 +107,8 @@ export default function RolesPanel() {
               <option value="">-- auswählen --</option>
               {users.map((user) => (
                 <option key={user.id} value={user.id}>
-                  {user.email} ({user.role})
+                  {user.email}
+                  {user.displayName ? ` (${user.displayName})` : ''} ({user.role})
                 </option>
               ))}
             </select>
@@ -148,7 +149,7 @@ export default function RolesPanel() {
         >
           Rolle speichern
         </button>
-        {message && <p>{message}</p>}
+        {message && <div className="notice success">{message}</div>}
       </div>
 
       {error && <ErrorNotice error={error} />}
