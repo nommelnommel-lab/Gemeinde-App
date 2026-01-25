@@ -162,7 +162,6 @@ class ApiClient {
     String path, {
     bool includeAdminKey = false,
     bool allowAuthRetry = true,
-    bool includeAdminKey = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
@@ -197,7 +196,6 @@ class ApiClient {
     String path, {
     bool includeAdminKey = false,
     bool allowAuthRetry = true,
-    bool includeAdminKey = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
@@ -238,7 +236,6 @@ class ApiClient {
     bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
-    bool includeAdminKey = false,
   }) async {
     return _sendJson(
       'POST',
@@ -247,7 +244,6 @@ class ApiClient {
       includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
       allowAuthRetry: allowAuthRetry,
-      includeAdminKey: includeAdminKey,
     );
   }
 
@@ -310,7 +306,6 @@ class ApiClient {
     bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
-    bool includeAdminKey = false,
   }) async {
     return _sendJson(
       'PUT',
@@ -319,7 +314,6 @@ class ApiClient {
       includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
       allowAuthRetry: allowAuthRetry,
-      includeAdminKey: includeAdminKey,
     );
   }
 
@@ -327,7 +321,6 @@ class ApiClient {
     String path, {
     bool includeAdminKey = false,
     bool allowAuthRetry = true,
-    bool includeAdminKey = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
@@ -367,7 +360,6 @@ class ApiClient {
     bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
-    bool includeAdminKey = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
