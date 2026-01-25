@@ -5,12 +5,14 @@ import {
   Get,
   Header,
   Headers,
+  NotFoundException,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { AdminGuard } from '../admin/admin.guard';
 import { requireTenant } from '../tenant/tenant-auth';
+import { ResidentsService } from './residents.service';
 import { UsersService } from './users.service';
 import { isUserRole, normalizeUserRole } from './user-roles';
 
@@ -23,7 +25,10 @@ type RolePayload = {
 @Controller('api/admin/users')
 @UseGuards(AdminGuard)
 export class AdminUsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly residentsService: ResidentsService,
+  ) {}
 
   @Get()
   @Header('Cache-Control', 'no-store')
@@ -33,15 +38,16 @@ export class AdminUsersController {
   ) {
     const tenantId = requireTenant(headers);
     const users = await this.usersService.list(tenantId, q);
+    const residents = await this.residentsService.list(tenantId);
+    const residentMap = new Map(residents.map((resident) => [resident.id, resident]));
     return {
       users: users.map((user) => ({
         id: user.id,
-        tenantId: user.tenantId,
-        residentId: user.residentId,
         email: user.email,
+        displayName: this.formatDisplayName(residentMap.get(user.residentId)),
+        residentId: user.residentId,
         role: user.role,
         createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
       })),
     };
   }
@@ -60,21 +66,53 @@ export class AdminUsersController {
       throw new BadRequestException('role ist ungültig');
     }
     const role = normalizeUserRole(payload.role);
-    let userId = payload.userId?.trim();
-    if (!userId && payload.email) {
-      const user = await this.usersService.findByEmail(tenantId, payload.email);
-      if (!user) {
-        throw new BadRequestException('Benutzer nicht gefunden');
-      }
-      userId = user.id;
+    const userId = payload.userId?.trim();
+    const email = payload.email?.trim();
+    const hasUserId = Boolean(userId);
+    const hasEmail = Boolean(email);
+    if (hasUserId === hasEmail) {
+      throw new BadRequestException(
+        'Genau eine der Angaben userId oder email ist erforderlich',
+      );
     }
-    if (!userId) {
-      throw new BadRequestException('userId oder email ist erforderlich');
+
+    const user = hasUserId
+      ? await this.usersService.getById(tenantId, userId as string)
+      : await this.usersService.findByEmail(tenantId, email as string);
+    if (!user) {
+      throw new NotFoundException('Benutzer nicht gefunden');
     }
-    const updated = await this.usersService.update(tenantId, userId, { role });
+    const updated = await this.usersService.update(tenantId, user.id, { role });
+    const residents = await this.residentsService.list(tenantId);
+    const residentMap = new Map(residents.map((resident) => [resident.id, resident]));
     return {
-      id: updated.id,
-      role: updated.role,
+      ok: true,
+      user: {
+        id: updated.id,
+        email: updated.email,
+        displayName: this.formatDisplayName(residentMap.get(updated.residentId)),
+        residentId: updated.residentId,
+        role: updated.role,
+        createdAt: updated.createdAt,
+      },
     };
+  }
+
+  private formatDisplayName(
+    resident?: { firstName?: string; lastName?: string } | null,
+  ) {
+    if (!resident) {
+      return null;
+    }
+    const firstName = resident.firstName?.trim() ?? '';
+    const lastName = resident.lastName?.trim() ?? '';
+    if (!firstName && !lastName) {
+      return null;
+    }
+    if (!lastName) {
+      return firstName;
+    }
+    const initial = lastName.charAt(0);
+    return `${firstName} ${initial}.`;
   }
 }

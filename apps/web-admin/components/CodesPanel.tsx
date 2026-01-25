@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { buildCsv, downloadCsv } from '../lib/csv';
+import { loadSession } from '../lib/storage';
 import ErrorNotice from './ErrorNotice';
 import LoadingState from './LoadingState';
 import ResidentsTable from './ResidentsTable';
@@ -138,10 +139,29 @@ export default function CodesPanel() {
     });
   }, [results, residents]);
 
+  const buildFilename = () => {
+    const sessionTenant = loadSession()?.tenant?.trim();
+    const tenant = sessionTenant || 'tenant';
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+      now.getDate(),
+    )}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+    return `activation-codes-${tenant}-${timestamp}.csv`;
+  };
+
   const exportCsv = () => {
     const csv = buildCsv(
-      ['displayName', 'postalCode', 'houseNumber', 'activationCode', 'expiresAt'],
+      [
+        'residentId',
+        'displayName',
+        'postalCode',
+        'houseNumber',
+        'activationCode',
+        'expiresAt',
+      ],
       codes.map((entry) => [
+        entry.residentId,
         entry.displayName,
         entry.postalCode,
         entry.houseNumber,
@@ -149,13 +169,21 @@ export default function CodesPanel() {
         entry.expiresAt,
       ]),
     );
-    downloadCsv('activation-codes.csv', csv);
+    downloadCsv(buildFilename(), csv);
   };
 
   const copyCsv = async () => {
     const csv = buildCsv(
-      ['displayName', 'postalCode', 'houseNumber', 'activationCode', 'expiresAt'],
+      [
+        'residentId',
+        'displayName',
+        'postalCode',
+        'houseNumber',
+        'activationCode',
+        'expiresAt',
+      ],
       codes.map((entry) => [
+        entry.residentId,
         entry.displayName,
         entry.postalCode,
         entry.houseNumber,

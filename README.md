@@ -91,6 +91,14 @@
    - **Codes**: Bewohner auswählen, Codes erzeugen, CSV exportieren oder kopieren.
    - **Rollen**: Rollen (USER/STAFF/ADMIN) per User ID oder E-Mail setzen.
 
+### CSV Export (Excel DE)
+Der Codes-Export nutzt standardmäßig ein Semikolon als Trennzeichen und enthält ein UTF-8-BOM,
+damit Excel (de-DE) die Datei korrekt als CSV öffnet.
+
+**Spaltenreihenfolge:** `residentId`, `displayName`, `postalCode`, `houseNumber`, `activationCode`, `expiresAt`
+
+**Beispiel-Dateiname:** `activation-codes-hilders-YYYYMMDD-HHmm.csv`
+
 ## Berechtigungen & Content-Kategorien
 **Öffentliche Inhalte:** Alle Nutzer sehen News, Warnungen, Events, Services und Orte.
 
@@ -117,6 +125,23 @@
 
 ## Rollen verwalten (Web-Admin)
 Rollen werden über das Web-Admin-Panel im Tab **Rollen** gesetzt (Admin-Key erforderlich).
+
+**API-Endpunkte (Admin):**
+```powershell
+curl -X GET http://localhost:3000/api/admin/users ^
+  -H "X-Tenant: hilders" ^
+  -H "X-SITE-KEY: <site-key>" ^
+  -H "X-ADMIN-KEY: <admin-key>"
+```
+
+```powershell
+curl -X POST http://localhost:3000/api/admin/users/role ^
+  -H "Content-Type: application/json" ^
+  -H "X-Tenant: hilders" ^
+  -H "X-SITE-KEY: <site-key>" ^
+  -H "X-ADMIN-KEY: <admin-key>" ^
+  -d "{\"userId\":\"<user-id>\",\"role\":\"STAFF\"}"
+```
 
 ## Migration (User-Rollen)
 Bestehende Nutzerinnen und Nutzer ohne Rolle können mit folgendem Script ergänzt werden:
