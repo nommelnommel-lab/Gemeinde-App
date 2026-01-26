@@ -294,6 +294,7 @@ class _CitizenPostFormScreenState extends State<CitizenPostFormScreen> {
             decoration: const InputDecoration(labelText: 'Bild-URL (optional)'),
           ),
         ];
+      case CitizenPostType.userPost:
       case CitizenPostType.rideSharing:
       case CitizenPostType.jobsLocal:
       case CitizenPostType.volunteering:
@@ -589,6 +590,7 @@ class _CitizenPostFormScreenState extends State<CitizenPostFormScreen> {
         _addIfNotEmpty(metadata, 'location', _locationController.text);
         _addIfNotEmpty(metadata, 'image', _imageController.text);
         break;
+      case CitizenPostType.userPost:
       case CitizenPostType.rideSharing:
       case CitizenPostType.jobsLocal:
       case CitizenPostType.volunteering:
