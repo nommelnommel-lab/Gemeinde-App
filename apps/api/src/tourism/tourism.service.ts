@@ -176,9 +176,13 @@ export class TourismService {
 
   private resolveStatusFilter(options: {
     status?: TourismItemStatus;
-  }) {
+    includeHidden?: boolean;
+  }): TourismItemStatus | undefined {
     if (options.status) {
       return options.status;
+    }
+    if (options.includeHidden) {
+      return undefined;
     }
     return 'PUBLISHED';
   }
@@ -186,9 +190,9 @@ export class TourismService {
   private matchesVisibility(
     item: TourismItemEntity,
     options: { includeHidden?: boolean },
-    statusFilter: TourismItemStatus,
+    statusFilter?: TourismItemStatus,
   ) {
-    if (options.includeHidden) {
+    if (!statusFilter) {
       return true;
     }
     return (item.status ?? 'PUBLISHED') === statusFilter;
