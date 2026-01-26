@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/app_scaffold.dart';
 import '../models/warning_item.dart';
 import '../services/warnings_service.dart';
 import '../utils/warning_formatters.dart';
@@ -45,14 +46,14 @@ class _WarningFormScreenState extends State<WarningFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.warning != null;
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Warnung bearbeiten' : 'Warnung erstellen'),
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.zero,
           children: [
             TextFormField(
               controller: _titleController,
@@ -95,11 +96,13 @@ class _WarningFormScreenState extends State<WarningFormScreen> {
                     ),
                   )
                   .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _severity = value);
-                }
-              },
+              onChanged: _saving
+                  ? null
+                  : (value) {
+                      if (value != null) {
+                        setState(() => _severity = value);
+                      }
+                    },
             ),
             const SizedBox(height: 16),
             _ValidUntilPicker(
@@ -150,6 +153,13 @@ class _WarningFormScreenState extends State<WarningFormScreen> {
         );
       }
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isEditing ? 'Warnung aktualisiert.' : 'Warnung erstellt.',
+            ),
+          ),
+        );
         Navigator.of(context).pop(saved);
       }
     } catch (error) {

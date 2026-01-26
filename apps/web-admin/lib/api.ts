@@ -3,11 +3,13 @@ import { AdminSession, loadSession } from './storage';
 export class ApiError extends Error {
   status: number;
   details: unknown;
+  isNetworkError: boolean;
 
   constructor(message: string, status: number, details: unknown) {
     super(message);
     this.status = status;
     this.details = details;
+    this.isNetworkError = status === 0;
   }
 }
 
@@ -91,4 +93,51 @@ export const apiFetch = async <T>(
   }
 
   return data as T;
+};
+
+type HealthStatus = {
+  state: 'ok' | 'down';
+  status: number;
+  message: string;
+};
+
+const HEALTH_CACHE_TTL_MS = 30_000;
+let cachedHealth: { timestamp: number; status: HealthStatus } | null = null;
+
+export const fetchHealthStatus = async (
+  options: { force?: boolean } = {},
+): Promise<HealthStatus> => {
+  const session = loadSession();
+  if (!session) {
+    throw new ApiError('Keine Admin-Sitzung gefunden.', 401, null);
+  }
+  const now = Date.now();
+  if (
+    !options.force &&
+    cachedHealth &&
+    now - cachedHealth.timestamp < HEALTH_CACHE_TTL_MS
+  ) {
+    return cachedHealth.status;
+  }
+  try {
+    const response = await fetch(buildUrl(session.apiBaseUrl, '/health'), {
+      headers: buildAdminHeaders(session),
+      cache: 'no-store',
+    });
+    const status: HealthStatus = {
+      state: response.ok ? 'ok' : 'down',
+      status: response.status,
+      message: response.statusText || 'Unbekannter Fehler',
+    };
+    cachedHealth = { timestamp: now, status };
+    return status;
+  } catch (error) {
+    const status: HealthStatus = {
+      state: 'down',
+      status: 0,
+      message: 'Backend nicht erreichbar',
+    };
+    cachedHealth = { timestamp: now, status };
+    return status;
+  }
 };

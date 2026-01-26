@@ -4,6 +4,8 @@ import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_states.dart';
 import '../../auth/screens/login_screen.dart';
 import '../models/warning_item.dart';
 import '../services/warnings_service.dart';
@@ -67,19 +69,21 @@ class _WarningsScreenState extends State<WarningsScreen> {
     final filtered = _applyFilter(_warnings, _selectedFilter);
     final sorted = _sortedWarnings(filtered);
 
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(title: const Text('Warnungen')),
       floatingActionButton: _canManageContent
           ? FloatingActionButton.extended(
               onPressed: _openCreateWarning,
               icon: const Icon(Icons.add),
-              label: const Text('Add Warning'),
+              label: const Text('Hinzufügen'),
             )
           : null,
+      padBody: false,
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
             _FilterChips(
               selected: _selectedFilter,
@@ -89,11 +93,15 @@ class _WarningsScreenState extends State<WarningsScreen> {
             ),
             const SizedBox(height: 16),
             if (_loading)
-              const Center(child: CircularProgressIndicator())
+              const LoadingState(message: 'Warnungen werden geladen...')
             else if (_error != null)
-              _WarningsErrorView(error: _error!, onRetry: _load)
+              _buildErrorState()
             else if (sorted.isEmpty)
-              Text(_emptyMessage(_selectedFilter))
+              EmptyState(
+                icon: Icons.warning_amber_outlined,
+                title: 'Keine Warnungen',
+                message: _emptyMessage(_selectedFilter),
+              )
             else
               ...sorted.map(
                 (warning) => Card(
@@ -105,7 +113,8 @@ class _WarningsScreenState extends State<WarningsScreen> {
                     ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
-                      final updated = await AppRouterScope.of(context).push<bool>(
+                      final updated =
+                          await AppRouterScope.of(context).push<bool>(
                         WarningDetailScreen(
                           warning: warning,
                           warningsService: _warningsService,
@@ -224,6 +233,25 @@ class _WarningsScreenState extends State<WarningsScreen> {
     }
   }
 
+  Widget _buildErrorState() {
+    final normalized = _error!.toLowerCase();
+    final isAuthError = normalized.contains('http 401') ||
+        normalized.contains('http 403') ||
+        normalized.contains('sitzung abgelaufen');
+    return ErrorState(
+      message: _error!,
+      onRetry: _load,
+      secondaryAction: isAuthError
+          ? OutlinedButton(
+              onPressed: () {
+                AppRouterScope.of(context).push(const LoginScreen());
+              },
+              child: const Text('Anmelden'),
+            )
+          : null,
+    );
+  }
+
   Future<void> _openCreateWarning() async {
     final created = await AppRouterScope.of(context).push<WarningItem>(
       WarningFormScreen(warningsService: _warningsService),
@@ -264,55 +292,6 @@ class _FilterChips extends StatelessWidget {
           onSelected: (_) => onSelected(filter),
         );
       }).toList(),
-    );
-  }
-}
-
-class _WarningsErrorView extends StatelessWidget {
-  const _WarningsErrorView({required this.error, required this.onRetry});
-
-  final String error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final normalized = error.toLowerCase();
-    final isAuthError = normalized.contains('http 401') ||
-        normalized.contains('http 403') ||
-        normalized.contains('sitzung abgelaufen');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Warnungen konnten nicht geladen werden.',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(error),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                FilledButton(
-                  onPressed: onRetry,
-                  child: const Text('Erneut versuchen'),
-                ),
-                if (isAuthError)
-                  OutlinedButton(
-                    onPressed: () {
-                      AppRouterScope.of(context).push(const LoginScreen());
-                    },
-                    child: const Text('Anmelden'),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

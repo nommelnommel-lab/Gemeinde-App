@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../models/warning_item.dart';
 import '../services/warnings_service.dart';
 import '../utils/warning_formatters.dart';
@@ -38,7 +39,7 @@ class _WarningDetailScreenState extends State<WarningDetailScreen> {
     final theme = Theme.of(context);
     return WillPopScope(
       onWillPop: _handleWillPop,
-      child: Scaffold(
+      child: AppScaffold(
         appBar: AppBar(
           title: const Text('Warnung'),
           actions: widget.canEdit
@@ -56,6 +57,7 @@ class _WarningDetailScreenState extends State<WarningDetailScreen> {
                 ]
               : null,
         ),
+        padBody: false,
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [

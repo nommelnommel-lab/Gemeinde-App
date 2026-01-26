@@ -235,6 +235,16 @@ button:disabled {
   font-size: 12px;
 }
 
+.badge.success {
+  background: #e6f6ed;
+  color: #166534;
+}
+
+.badge.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 @media (max-width: 720px) {
   .app-content {
     padding: 20px;

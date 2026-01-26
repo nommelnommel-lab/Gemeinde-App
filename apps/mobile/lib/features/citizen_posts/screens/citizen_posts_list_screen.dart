@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_states.dart';
 import '../../auth/screens/login_screen.dart';
 import '../models/citizen_post.dart';
 import '../services/citizen_posts_service.dart';
@@ -76,19 +78,27 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
     final canFilterMine =
         authStore.isAuthenticated && authStore.user?.id != null;
 
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(title: Text(widget.type.label)),
+      floatingActionButton: canCreate
+          ? FloatingActionButton.extended(
+              onPressed: _openCreate,
+              icon: const Icon(Icons.add),
+              label: const Text('Hinzufügen'),
+            )
+          : null,
+      padBody: false,
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
             if (canFilterMine)
               Card(
                 child: SwitchListTile(
                   title: const Text('Nur meine'),
-                  subtitle:
-                      const Text('Nur eigene Beiträge anzeigen.'),
+                  subtitle: const Text('Nur eigene Beiträge anzeigen.'),
                   value: _onlyMine,
                   onChanged: (value) {
                     setState(() => _onlyMine = value);
@@ -98,11 +108,15 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
               ),
             if (canFilterMine) const SizedBox(height: 12),
             if (_loading)
-              const Center(child: CircularProgressIndicator())
+              const LoadingState(message: 'Beiträge werden geladen...')
             else if (_error != null)
-              _ErrorView(error: _error!, onRetry: _load)
+              _buildErrorState()
             else if (_posts.isEmpty)
-              Text(_emptyMessage())
+              EmptyState(
+                icon: Icons.forum_outlined,
+                title: 'Keine Beiträge',
+                message: _emptyMessage(),
+              )
             else
               ..._posts.map(
                 (post) => Card(
@@ -116,12 +130,6 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
           ],
         ),
       ),
-      floatingActionButton: canCreate
-          ? FloatingActionButton(
-              onPressed: _openCreate,
-              child: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 
@@ -227,53 +235,23 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
       _load();
     }
   }
-}
 
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.error, required this.onRetry});
-
-  final String error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final normalized = error.toLowerCase();
+  Widget _buildErrorState() {
+    final normalized = _error!.toLowerCase();
     final isAuthError = normalized.contains('http 401') ||
         normalized.contains('http 403') ||
         normalized.contains('sitzung abgelaufen');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text(
-              'Etwas ist schiefgelaufen',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            Text(error, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                FilledButton(
-                  onPressed: onRetry,
-                  child: const Text('Erneut versuchen'),
-                ),
-                if (isAuthError)
-                  OutlinedButton(
-                    onPressed: () {
-                      AppRouterScope.of(context).push(const LoginScreen());
-                    },
-                    child: const Text('Anmelden'),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return ErrorState(
+      message: _error!,
+      onRetry: _load,
+      secondaryAction: isAuthError
+          ? OutlinedButton(
+              onPressed: () {
+                AppRouterScope.of(context).push(const LoginScreen());
+              },
+              child: const Text('Anmelden'),
+            )
+          : null,
     );
   }
 }

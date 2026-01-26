@@ -51,13 +51,17 @@ export class UsersService {
   ): Promise<AuthUser[]> {
     const users = await this.repository.getAll(tenantId);
     if (!query) {
-      return users;
+      return [...users].sort(
+        (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+      );
     }
     const normalized = this.normalizeText(query);
-    return users.filter((entry) => {
-      const email = this.normalizeText(entry.email ?? '');
-      return email.includes(normalized) || entry.id.includes(query);
-    });
+    return users
+      .filter((entry) => {
+        const email = this.normalizeText(entry.email ?? '');
+        return email.includes(normalized) || entry.id.includes(query);
+      })
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   }
 
   async findByEmail(tenantId: string, email: string): Promise<AuthUser | undefined> {

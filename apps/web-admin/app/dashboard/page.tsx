@@ -8,7 +8,7 @@ import CodesPanel from '../../components/CodesPanel';
 import RolesPanel from '../../components/RolesPanel';
 import ContentPanel from '../../components/ContentPanel';
 import ModerationPanel from '../../components/ModerationPanel';
-import { buildAdminHeaders } from '../../lib/api';
+import { fetchHealthStatus } from '../../lib/api';
 import { clearSession, loadSession } from '../../lib/storage';
 
 const tabs = [
@@ -30,6 +30,7 @@ export default function DashboardPage() {
     status?: number;
     message?: string;
   }>({ state: 'unknown' });
+  const [healthChecking, setHealthChecking] = useState(false);
 
   useEffect(() => {
     const session = loadSession();
@@ -38,32 +39,34 @@ export default function DashboardPage() {
     }
   }, [router]);
 
+  const checkHealth = async (force = false) => {
+    const session = loadSession();
+    if (!session) {
+      return;
+    }
+    setHealthChecking(true);
+    try {
+      const status = await fetchHealthStatus({ force });
+      setHealthStatus({
+        state: status.state,
+        status: status.status,
+        message: status.message,
+      });
+    } catch (error) {
+      setHealthStatus({
+        state: 'down',
+        status: 0,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Backend nicht erreichbar',
+      });
+    } finally {
+      setHealthChecking(false);
+    }
+  };
+
   useEffect(() => {
-    const checkHealth = async () => {
-      const session = loadSession();
-      if (!session) {
-        return;
-      }
-      try {
-        const response = await fetch(
-          new URL('/health', session.apiBaseUrl).toString(),
-          {
-            headers: buildAdminHeaders(session),
-          },
-        );
-        setHealthStatus({
-          state: response.ok ? 'ok' : 'down',
-          status: response.status,
-          message: response.statusText,
-        });
-      } catch {
-        setHealthStatus({
-          state: 'down',
-          status: 0,
-          message: 'Backend nicht erreichbar',
-        });
-      }
-    };
     checkHealth();
   }, []);
 
@@ -72,13 +75,31 @@ export default function DashboardPage() {
     router.replace('/login');
   };
 
+  const healthLabel =
+    healthStatus.state === 'ok'
+      ? 'API OK'
+      : healthStatus.state === 'down'
+        ? 'API Down'
+        : 'API Prüfen…';
+
   return (
     <div className="stack">
       {healthStatus.state === 'down' && (
         <div className="notice error">
-          Backend nicht erreichbar. Bitte API Base URL prüfen. (HTTP{' '}
-          {healthStatus.status ?? '–'}:{' '}
-          {healthStatus.message ?? 'Unbekannter Fehler'})
+          <div>
+            Backend nicht erreichbar. Bitte API Base URL prüfen. (HTTP{' '}
+            {healthStatus.status ?? '–'}:{' '}
+            {healthStatus.message ?? 'Unbekannter Fehler'})
+          </div>
+          <div className="row" style={{ marginTop: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => checkHealth(true)}
+              disabled={healthChecking}
+            >
+              {healthChecking ? 'Prüfe…' : 'Erneut prüfen'}
+            </button>
+          </div>
         </div>
       )}
       <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -94,9 +115,17 @@ export default function DashboardPage() {
             </button>
           ))}
         </div>
-        <button type="button" className="ghost" onClick={handleLogout}>
-          Logout
-        </button>
+        <div className="row" style={{ gap: '0.75rem', alignItems: 'center' }}>
+          <span
+            className={`badge ${healthStatus.state === 'ok' ? 'success' : healthStatus.state === 'down' ? 'error' : ''}`}
+            title="API Health"
+          >
+            {healthLabel}
+          </span>
+          <button type="button" className="ghost" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </div>
       {activeTab === 'residents' && <ResidentsPanel />}
       {activeTab === 'import' && <ImportPanel />}

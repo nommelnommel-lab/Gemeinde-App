@@ -4,6 +4,8 @@ import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_states.dart';
 import '../../auth/screens/login_screen.dart';
 import '../models/news_item.dart';
 import '../services/news_service.dart';
@@ -62,7 +64,7 @@ class _NewsScreenState extends State<NewsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(
         title: const Text('News'),
         leading: IconButton(
@@ -74,13 +76,15 @@ class _NewsScreenState extends State<NewsScreen> {
           ? FloatingActionButton.extended(
               onPressed: _openCreateNews,
               icon: const Icon(Icons.add),
-              label: const Text('Add News'),
+              label: const Text('Hinzufügen'),
             )
           : null,
+      padBody: false,
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
             TextField(
               decoration: const InputDecoration(
@@ -99,11 +103,15 @@ class _NewsScreenState extends State<NewsScreen> {
             ),
             const SizedBox(height: 16),
             if (_loading)
-              const Center(child: CircularProgressIndicator())
+              const LoadingState(message: 'News werden geladen...')
             else if (_error != null)
-              _ErrorView(error: _error!, onRetry: _load)
+              _buildErrorState()
             else if (_filteredNews.isEmpty)
-              Text(_emptyMessage())
+              EmptyState(
+                icon: Icons.article_outlined,
+                title: 'Keine News gefunden',
+                message: _emptyMessage(),
+              )
             else
               ..._filteredNews.map(
                 (item) => Card(
@@ -187,6 +195,25 @@ class _NewsScreenState extends State<NewsScreen> {
     final year = date.year.toString();
     return '$day.$month.$year';
   }
+
+  Widget _buildErrorState() {
+    final normalized = _error!.toLowerCase();
+    final isAuthError = normalized.contains('http 401') ||
+        normalized.contains('http 403') ||
+        normalized.contains('sitzung abgelaufen');
+    return ErrorState(
+      message: _error!,
+      onRetry: _load,
+      secondaryAction: isAuthError
+          ? OutlinedButton(
+              onPressed: () {
+                AppRouterScope.of(context).push(const LoginScreen());
+              },
+              child: const Text('Anmelden'),
+            )
+          : null,
+    );
+  }
 }
 
 class _CategoryFilter extends StatelessWidget {
@@ -212,56 +239,6 @@ class _CategoryFilter extends StatelessWidget {
           onSelected: (_) => onSelected(category),
         );
       }).toList(),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.error, required this.onRetry});
-
-  final String error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final normalized = error.toLowerCase();
-    final isAuthError = normalized.contains('http 401') ||
-        normalized.contains('http 403') ||
-        normalized.contains('sitzung abgelaufen');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Etwas ist schiefgelaufen',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            Text(error, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                FilledButton(
-                  onPressed: onRetry,
-                  child: const Text('Erneut versuchen'),
-                ),
-                if (isAuthError)
-                  OutlinedButton(
-                    onPressed: () {
-                      AppRouterScope.of(context).push(const LoginScreen());
-                    },
-                    child: const Text('Anmelden'),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

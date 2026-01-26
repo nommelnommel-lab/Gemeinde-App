@@ -85,7 +85,10 @@ export class ResidentsService {
       ? filteredByHouse.filter((resident) => resident.status === status)
       : filteredByHouse;
 
-    return filteredByStatus.slice(0, cappedLimit).map((resident) => ({
+    const sorted = [...filteredByStatus].sort(
+      (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+    );
+    return sorted.slice(0, cappedLimit).map((resident) => ({
       id: resident.id,
       displayName: this.displayName(resident.firstName, resident.lastName),
       status: resident.status,
