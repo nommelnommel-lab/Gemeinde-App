@@ -9,6 +9,7 @@ class TenantSelectionScreen extends StatelessWidget {
 
   static const List<_TenantOption> _options = [
     _TenantOption(id: 'demo', name: 'Demo'),
+    _TenantOption(id: 'hilders-demo', name: 'Hilders Demo'),
     _TenantOption(id: 'hilders', name: 'Hilders'),
     _TenantOption(id: 'fulda', name: 'Fulda'),
   ];

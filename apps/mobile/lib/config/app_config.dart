@@ -27,6 +27,9 @@ class AppConfig {
     if (kIsWeb) {
       return 'http://localhost:3000';
     }
+    if (demoMode && Platform.isAndroid) {
+      return DemoConfig.androidEmulatorBaseUrl;
+    }
     if (Platform.isAndroid && kDebugMode) {
       return 'http://10.0.2.2:3000';
     }
