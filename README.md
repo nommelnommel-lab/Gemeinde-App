@@ -7,6 +7,8 @@
 ## Voraussetzungen
 - Flutter SDK installiert (Windows)
 - Docker Desktop installiert und laufend
+- API läuft standardmäßig auf `http://localhost:3000`, Web-Admin auf `http://localhost:3001`.
+- Für den Zugriff sind Tenant-Header (`X-TENANT`) sowie gültige `SITE_KEYS_JSON` und `ADMIN_KEYS_JSON` erforderlich (siehe `infra/.env.example`).
 
 ## Mobile App starten (Windows)
 1. In den Ordner der App wechseln:

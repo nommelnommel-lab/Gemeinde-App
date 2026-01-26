@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../auth/screens/login_screen.dart';
 import '../models/citizen_post.dart';
 import '../services/citizen_posts_service.dart';
 import 'citizen_post_detail_screen.dart';
@@ -195,6 +196,10 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalized = error.toLowerCase();
+    final isAuthError = normalized.contains('http 401') ||
+        normalized.contains('http 403') ||
+        normalized.contains('sitzung abgelaufen');
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -207,9 +212,23 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(error, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onRetry,
-              child: const Text('Erneut versuchen'),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                FilledButton(
+                  onPressed: onRetry,
+                  child: const Text('Erneut versuchen'),
+                ),
+                if (isAuthError)
+                  OutlinedButton(
+                    onPressed: () {
+                      AppRouterScope.of(context).push(const LoginScreen());
+                    },
+                    child: const Text('Anmelden'),
+                  ),
+              ],
             ),
           ],
         ),

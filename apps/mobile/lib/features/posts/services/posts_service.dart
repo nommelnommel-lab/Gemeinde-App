@@ -14,7 +14,10 @@ class PostsService {
     final path = type == null
         ? postsEndpoint
         : '$postsEndpoint?type=${type.apiValue}';
-    final response = await _apiClient.getJsonFlexible(path);
+    final response = await _apiClient.getJsonFlexible(
+      path,
+      includeAuth: true,
+    );
     final items = _extractList(response);
     return items
         .whereType<Map<String, dynamic>>()
@@ -24,7 +27,10 @@ class PostsService {
 
   /// Endpoint: GET /posts/:id
   Future<Post> getPost(String id) async {
-    final response = await _apiClient.getJsonFlexible(postByIdEndpoint(id));
+    final response = await _apiClient.getJsonFlexible(
+      postByIdEndpoint(id),
+      includeAuth: true,
+    );
     final data = _extractMap(response);
     return Post.fromJson(data);
   }
@@ -35,7 +41,11 @@ class PostsService {
     bool canEdit = false,
   }) async {
     _assertPermission(canEdit);
-    final data = await _apiClient.postJson(postsEndpoint, input.toJson());
+    final data = await _apiClient.postJson(
+      postsEndpoint,
+      input.toJson(),
+      includeAuth: true,
+    );
     return Post.fromJson(data);
   }
 
@@ -49,6 +59,7 @@ class PostsService {
     final data = await _apiClient.putJson(
       postByIdEndpoint(id),
       input.toJson(),
+      includeAuth: true,
     );
     return Post.fromJson(data);
   }
@@ -59,7 +70,10 @@ class PostsService {
     bool canEdit = false,
   }) async {
     _assertPermission(canEdit);
-    await _apiClient.deleteJson(postByIdEndpoint(id));
+    await _apiClient.deleteJson(
+      postByIdEndpoint(id),
+      includeAuth: true,
+    );
   }
 
   List<dynamic> _extractList(dynamic response) {

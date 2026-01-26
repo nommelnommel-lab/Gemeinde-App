@@ -25,3 +25,11 @@ export type PostEntity = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type PostReport = {
+  id: string;
+  tenantId: string;
+  postId: string;
+  reporterUserId: string;
+  createdAt: string;
+};

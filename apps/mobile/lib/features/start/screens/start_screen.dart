@@ -15,6 +15,7 @@ import '../../warnings/models/warning_item.dart';
 import '../../warnings/screens/warning_detail_screen.dart';
 import '../../warnings/services/warnings_service.dart';
 import '../../warnings/utils/warning_formatters.dart';
+import '../../auth/screens/login_screen.dart';
 import '../services/feed_service.dart';
 
 class StartFeedScreen extends StatefulWidget {
@@ -616,6 +617,10 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalized = error.toLowerCase();
+    final isAuthError = normalized.contains('http 401') ||
+        normalized.contains('http 403') ||
+        normalized.contains('sitzung abgelaufen');
     return Center(
       child: Card(
         margin: const EdgeInsets.all(16),
@@ -631,9 +636,23 @@ class _ErrorView extends StatelessWidget {
               const SizedBox(height: 12),
               Text(error, textAlign: TextAlign.center),
               const SizedBox(height: 16),
-              FilledButton(
-                onPressed: onRetry,
-                child: const Text('Erneut versuchen'),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  FilledButton(
+                    onPressed: onRetry,
+                    child: const Text('Erneut versuchen'),
+                  ),
+                  if (isAuthError)
+                    OutlinedButton(
+                      onPressed: () {
+                        AppRouterScope.of(context).push(const LoginScreen());
+                      },
+                      child: const Text('Anmelden'),
+                    ),
+                ],
               ),
             ],
           ),

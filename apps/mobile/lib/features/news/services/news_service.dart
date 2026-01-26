@@ -30,7 +30,11 @@ class NewsService {
     required String body,
   }) async {
     final payload = _buildPayload(title, category, body);
-    final data = await _apiClient.postJson(newsEndpoint, payload);
+    final data = await _apiClient.postJson(
+      newsEndpoint,
+      payload,
+      includeAuth: true,
+    );
     final item = NewsItem.fromJson(data);
     _cachedNews = [item, ..._cachedNews];
     return item;
@@ -44,7 +48,11 @@ class NewsService {
     required String body,
   }) async {
     final payload = _buildPayload(title, category, body);
-    final data = await _apiClient.putJson(newsByIdEndpoint(id), payload);
+    final data = await _apiClient.putJson(
+      newsByIdEndpoint(id),
+      payload,
+      includeAuth: true,
+    );
     final updated = NewsItem.fromJson(data);
     _cachedNews = _cachedNews
         .map((item) => item.id == id ? updated : item)
@@ -54,7 +62,7 @@ class NewsService {
 
   /// Endpoint: DELETE /news/:id
   Future<void> deleteNews(String id) async {
-    await _apiClient.deleteJson(newsByIdEndpoint(id));
+    await _apiClient.deleteJson(newsByIdEndpoint(id), includeAuth: true);
     _cachedNews = _cachedNews.where((item) => item.id != id).toList();
   }
 

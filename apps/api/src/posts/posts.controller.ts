@@ -62,6 +62,7 @@ export class PostsController {
       offset: parsedOffset,
       query,
       includeHidden,
+      viewerUserId: user?.sub,
     });
   }
 
@@ -74,7 +75,10 @@ export class PostsController {
     const user = verifyAccessToken(headers);
     const includeHidden =
       user?.role === UserRole.STAFF || user?.role === UserRole.ADMIN;
-    return this.postsService.getById(tenantId, id, { includeHidden });
+    return this.postsService.getById(tenantId, id, {
+      includeHidden,
+      viewerUserId: user?.sub,
+    });
   }
 
   @Post()
@@ -142,7 +146,7 @@ export class PostsController {
     const reason =
       role === UserRole.STAFF || role === UserRole.ADMIN
         ? 'hidden_by_staff'
-        : 'deleted_by_author';
+        : 'AUTHOR_DELETE';
     await this.postsService.hide(tenantId, id, reason);
     return { ok: true };
   }
@@ -152,10 +156,19 @@ export class PostsController {
   async reportPost(
     @Headers() headers: Record<string, string | string[] | undefined>,
     @Param('id') id: string,
+    @Req() request: { user?: { sub?: string } },
   ) {
     const tenantId = requireTenant(headers);
-    await this.postsService.report(tenantId, id);
-    return { ok: true };
+    const reporterUserId = request.user?.sub;
+    if (!reporterUserId) {
+      throw new ForbiddenException('Authentifizierung erforderlich');
+    }
+    const { alreadyReported } = await this.postsService.report(
+      tenantId,
+      id,
+      reporterUserId,
+    );
+    return { ok: true, alreadyReported };
   }
 
   private validatePayload(payload: PostPayload) {

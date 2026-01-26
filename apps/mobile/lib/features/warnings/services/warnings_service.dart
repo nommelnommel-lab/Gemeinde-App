@@ -31,7 +31,7 @@ class WarningsService {
       'body': body.trim(),
       'severity': severity.name,
       if (validUntil != null) 'validUntil': validUntil.toIso8601String(),
-    });
+    }, includeAuth: true);
     return WarningItem.fromJson(data);
   }
 
@@ -44,12 +44,12 @@ class WarningsService {
       if (warning.validUntil != null)
         'validUntil': warning.validUntil!.toIso8601String(),
       if (warning.source != null) 'source': warning.source,
-    });
+    }, includeAuth: true);
     return WarningItem.fromJson(data);
   }
 
   Future<void> deleteWarning(String id) async {
-    await _apiClient.deleteJson('/warnings/$id');
+    await _apiClient.deleteJson('/warnings/$id', includeAuth: true);
   }
 
   List<dynamic> _extractList(dynamic response) {

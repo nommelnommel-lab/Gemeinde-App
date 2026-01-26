@@ -8,6 +8,7 @@ import CodesPanel from '../../components/CodesPanel';
 import RolesPanel from '../../components/RolesPanel';
 import ContentPanel from '../../components/ContentPanel';
 import ModerationPanel from '../../components/ModerationPanel';
+import { buildAdminHeaders } from '../../lib/api';
 import { clearSession, loadSession } from '../../lib/storage';
 
 const tabs = [
@@ -45,11 +46,7 @@ export default function DashboardPage() {
         const response = await fetch(
           new URL('/health', session.apiBaseUrl).toString(),
           {
-            headers: {
-              'X-TENANT': session.tenant,
-              'X-SITE-KEY': session.siteKey,
-              'X-ADMIN-KEY': session.adminKey,
-            },
+            headers: buildAdminHeaders(session),
           },
         );
         setHealthStatus(response.ok ? 'ok' : 'down');

@@ -11,6 +11,7 @@ type ModerationPost = {
   type: string;
   title: string;
   body: string;
+  authorUserId?: string;
   status: 'PUBLISHED' | 'HIDDEN';
   reportsCount: number;
   reportedAt?: string;
@@ -71,6 +72,10 @@ export default function ModerationPanel() {
 
   const handleHide = async () => {
     if (!hideTarget) {
+      return;
+    }
+    if (!hideReason.trim()) {
+      setError(new Error('Bitte einen Grund für das Ausblenden angeben.'));
       return;
     }
     setLoading(true);
@@ -158,9 +163,11 @@ export default function ModerationPanel() {
                 <tr>
                   <th>Titel</th>
                   <th>Typ</th>
+                  <th>Autor</th>
                   <th>Reports</th>
                   <th>Status</th>
                   <th>Gemeldet</th>
+                  <th>Erstellt</th>
                   <th>Aktionen</th>
                 </tr>
               </thead>
@@ -169,6 +176,7 @@ export default function ModerationPanel() {
                   <tr key={post.id}>
                     <td>{post.title}</td>
                     <td>{post.type}</td>
+                    <td>{post.authorUserId ?? '-'}</td>
                     <td>{post.reportsCount}</td>
                     <td>{post.status}</td>
                     <td>
@@ -176,6 +184,7 @@ export default function ModerationPanel() {
                         ? new Date(post.reportedAt).toLocaleString()
                         : '-'}
                     </td>
+                    <td>{new Date(post.createdAt).toLocaleString()}</td>
                     <td className="row">
                       <button
                         type="button"
@@ -257,7 +266,7 @@ export default function ModerationPanel() {
               Grund für das Ausblenden von <strong>{hideTarget.title}</strong>
             </p>
             <div className="field">
-              <label htmlFor="hideReason">Grund (optional)</label>
+              <label htmlFor="hideReason">Grund (erforderlich)</label>
               <textarea
                 id="hideReason"
                 rows={3}
