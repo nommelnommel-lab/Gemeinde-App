@@ -40,6 +40,10 @@ type ListOptions = {
   reportedOnly?: boolean;
 };
 
+type AdminListOptions = ListOptions & {
+  tenantId: string;
+};
+
 @Injectable()
 export class PostsService {
   private readonly repository = new TenantFileRepository<PostEntity>(
@@ -257,7 +261,7 @@ export class PostsService {
     return { post: normalized, alreadyReported };
   }
 
-  async getAll(options: ListOptions): Promise<PostEntity[]> {
+  async getAll(options: AdminListOptions): Promise<PostEntity[]> {
     const posts = await this.repository.getAll(options.tenantId);
     const normalized = posts.map((post) =>
       this.normalizePost(options.tenantId, post),
