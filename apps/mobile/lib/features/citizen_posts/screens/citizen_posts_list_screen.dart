@@ -167,22 +167,25 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
   }
 
   Future<void> _openDetail(CitizenPost post) async {
-    await AppRouterScope.of(context).push(
+    final result = await AppRouterScope.of(context).push<bool>(
       CitizenPostDetailScreen(
         post: post,
         postsService: widget.postsService,
       ),
     );
+    if (result == true) {
+      _load();
+    }
   }
 
   Future<void> _openCreate() async {
-    final result = await AppRouterScope.of(context).push<bool>(
+    final result = await AppRouterScope.of(context).push<CitizenPost?>(
       CitizenPostFormScreen(
         type: widget.type,
         postsService: widget.postsService,
       ),
     );
-    if (result == true) {
+    if (result != null) {
       _load();
     }
   }

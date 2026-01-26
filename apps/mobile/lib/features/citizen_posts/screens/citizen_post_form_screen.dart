@@ -8,10 +8,12 @@ class CitizenPostFormScreen extends StatefulWidget {
     super.key,
     required this.type,
     required this.postsService,
+    this.post,
   });
 
   final CitizenPostType type;
   final CitizenPostsService postsService;
+  final CitizenPost? post;
 
   @override
   State<CitizenPostFormScreen> createState() => _CitizenPostFormScreenState();
@@ -50,6 +52,7 @@ class _CitizenPostFormScreenState extends State<CitizenPostFormScreen> {
     _timeRangeController = TextEditingController();
     _ageRangeController = TextEditingController();
     _roomsController = TextEditingController();
+    _seedFromPost();
   }
 
   @override
@@ -70,8 +73,15 @@ class _CitizenPostFormScreenState extends State<CitizenPostFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = _isEditing;
     return Scaffold(
-      appBar: AppBar(title: Text('Neuer Beitrag · ${widget.type.label}')),
+      appBar: AppBar(
+        title: Text(
+          isEditing
+              ? 'Beitrag bearbeiten · ${widget.type.label}'
+              : 'Neuer Beitrag · ${widget.type.label}',
+        ),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -102,13 +112,19 @@ class _CitizenPostFormScreenState extends State<CitizenPostFormScreen> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Beitrag veröffentlichen'),
+                  : Text(
+                      isEditing
+                          ? 'Änderungen speichern'
+                          : 'Beitrag veröffentlichen',
+                    ),
             ),
           ],
         ),
       ),
     );
   }
+
+  bool get _isEditing => widget.post != null;
 
   List<Widget> _buildCategoryFields(BuildContext context) {
     switch (widget.type) {
@@ -287,6 +303,48 @@ class _CitizenPostFormScreenState extends State<CitizenPostFormScreen> {
     }
   }
 
+  void _seedFromPost() {
+    final post = widget.post;
+    if (post == null) {
+      return;
+    }
+    _titleController.text = post.title;
+    _bodyController.text = post.body;
+    final metadata = post.metadata;
+    _priceController.text = metadata['price']?.toString() ?? '';
+    _locationController.text = metadata['location']?.toString() ?? '';
+    _contactController.text = metadata['contact']?.toString() ?? '';
+    _helpTypeController.text = metadata['helpType']?.toString() ?? '';
+    _timeRangeController.text = metadata['timeRange']?.toString() ?? '';
+    _ageRangeController.text = metadata['ageRange']?.toString() ?? '';
+    _roomsController.text = metadata['rooms']?.toString() ?? '';
+    _imageController.text = metadata['image']?.toString() ?? '';
+    final images = metadata['images'];
+    if (images is List) {
+      _imagesController.text = images.join(', ');
+    } else {
+      _imagesController.text = '';
+    }
+    _dateTime = _parseDateTime(metadata['dateTime'] ?? metadata['date']);
+    _dateOnly = _parseDateTime(metadata['date']);
+    _apartmentType = (metadata['type']?.toString().trim().isNotEmpty ?? false)
+        ? metadata['type'].toString()
+        : _apartmentType;
+    _lostFoundType = (metadata['type']?.toString().trim().isNotEmpty ?? false)
+        ? metadata['type'].toString()
+        : _lostFoundType;
+  }
+
+  DateTime? _parseDateTime(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    return DateTime.tryParse(value.toString());
+  }
+
   Widget _buildDateTimeField(
     BuildContext context, {
     required String label,
@@ -446,16 +504,28 @@ class _CitizenPostFormScreenState extends State<CitizenPostFormScreen> {
     );
 
     try {
-      await widget.postsService.createPost(input);
+      final post = _isEditing
+          ? await widget.postsService.updatePost(widget.post!.id, input)
+          : await widget.postsService.createPost(input);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Beitrag wurde erstellt.')),
+        SnackBar(
+          content: Text(
+            _isEditing ? 'Beitrag wurde aktualisiert.' : 'Beitrag wurde erstellt.',
+          ),
+        ),
       );
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop(post);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Beitrag konnte nicht erstellt werden.')),
+        SnackBar(
+          content: Text(
+            _isEditing
+                ? 'Beitrag konnte nicht aktualisiert werden.'
+                : 'Beitrag konnte nicht erstellt werden.',
+          ),
+        ),
       );
     } finally {
       if (mounted) {
