@@ -32,3 +32,20 @@ To seed the full Hilders demo dataset (profile, forms, tourism):
 ```bash
 TENANT=hilders-demo npm --prefix apps/api run seed:hilders
 ```
+
+## Seed demo tenant data (hilders-demo)
+
+The demo seed uses the API and requires these environment variables:
+
+* `BASE_URL` (default: `http://localhost:3000`)
+* `SITE_KEY` (or `X_SITE_KEY`)
+* `ADMIN_KEY` (or `X_ADMIN_KEY`)
+
+Run the seed script:
+
+```bash
+BASE_URL=http://localhost:3000 \
+SITE_KEY=HD-2026-9f3c1a2b-KEY \
+ADMIN_KEY=HD-ADMIN-TEST-KEY \
+npm --prefix apps/api run seed:hilders-demo
+```
