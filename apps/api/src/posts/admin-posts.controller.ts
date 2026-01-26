@@ -19,7 +19,7 @@ type HidePayload = {
   reason?: string;
 };
 
-@Controller('api/admin/posts')
+@Controller('admin/posts')
 @UseGuards(AdminGuard)
 export class AdminPostsController {
   constructor(private readonly postsService: PostsService) {}
