@@ -54,12 +54,16 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
     try {
       final authStore = AuthScope.of(context);
       final authorUserId = authStore.user?.id;
-      final posts = await widget.postsService.getPosts(
-        type: widget.type,
-        authorUserId: authorUserId,
-      );
+      final posts = await widget.postsService.getPosts(type: widget.type);
+      final visiblePosts = _onlyMine && authorUserId != null
+          ? posts
+              .where(
+                (post) => post.authorUserId == authorUserId,
+              )
+              .toList()
+          : posts;
       if (mounted) {
-        setState(() => _posts = posts);
+        setState(() => _posts = visiblePosts);
       }
     } catch (_) {
       if (mounted) {

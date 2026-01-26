@@ -27,6 +27,8 @@ class _WarningFormScreenState extends State<WarningFormScreen> {
   DateTime? _validUntil;
   bool _saving = false;
 
+  bool get _isEditing => widget.warning != null;
+
   @override
   void initState() {
     super.initState();
@@ -45,10 +47,9 @@ class _WarningFormScreenState extends State<WarningFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.warning != null;
     return AppScaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Warnung bearbeiten' : 'Warnung erstellen'),
+        title: Text(_isEditing ? 'Warnung bearbeiten' : 'Warnung erstellen'),
       ),
       body: Form(
         key: _formKey,
@@ -115,7 +116,8 @@ class _WarningFormScreenState extends State<WarningFormScreen> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _saving ? null : _handleSave,
-              child: Text(isEditing ? 'Änderungen speichern' : 'Warnung speichern'),
+              child:
+                  Text(_isEditing ? 'Änderungen speichern' : 'Warnung speichern'),
             ),
           ],
         ),
@@ -156,7 +158,7 @@ class _WarningFormScreenState extends State<WarningFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isEditing ? 'Warnung aktualisiert.' : 'Warnung erstellt.',
+              _isEditing ? 'Warnung aktualisiert.' : 'Warnung erstellt.',
             ),
           ),
         );
