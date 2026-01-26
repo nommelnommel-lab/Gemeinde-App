@@ -6,11 +6,15 @@ import { MunicipalityClubsService } from './clubs/municipality-clubs.service';
 import { MunicipalityEventsController } from './events/municipality-events.controller';
 import { MunicipalityEventsService } from './events/municipality-events.service';
 import { MunicipalityFeedController } from './feed/municipality-feed.controller';
+import { MunicipalityFormsController } from './forms/municipality-forms.controller';
+import { MunicipalityFormsService } from './forms/municipality-forms.service';
 import { MunicipalityImportController } from './import/municipality-import.controller';
 import { MunicipalityPostsController } from './posts/municipality-posts.controller';
 import { MunicipalityPostsService } from './posts/municipality-posts.service';
 import { MunicipalityPlacesController } from './places/municipality-places.controller';
 import { MunicipalityPlacesService } from './places/municipality-places.service';
+import { MunicipalityProfileController } from './profile/municipality-profile.controller';
+import { MunicipalityProfileService } from './profile/municipality-profile.service';
 import { MunicipalityServicesController } from './services/municipality-services.controller';
 import { MunicipalityServicesService } from './services/municipality-services.service';
 import { TenantSettingsController } from './tenant-settings/tenant-settings.controller';
@@ -22,6 +26,8 @@ import { MunicipalityWastePickupsService } from './waste-pickups/municipality-wa
   imports: [AuthSharedModule],
   controllers: [
     TenantSettingsController,
+    MunicipalityProfileController,
+    MunicipalityFormsController,
     MunicipalityEventsController,
     MunicipalityPostsController,
     MunicipalityPlacesController,
@@ -33,6 +39,8 @@ import { MunicipalityWastePickupsService } from './waste-pickups/municipality-wa
   ],
   providers: [
     TenantSettingsService,
+    MunicipalityProfileService,
+    MunicipalityFormsService,
     MunicipalityEventsService,
     MunicipalityPostsService,
     MunicipalityPlacesService,
