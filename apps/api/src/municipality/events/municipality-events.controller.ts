@@ -12,10 +12,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { Roles } from '../../auth/roles.decorator';
-import { RolesGuard } from '../../auth/roles.guard';
-import { UserRole } from '../../auth/user-roles';
+import { AdminGuard } from '../../admin/admin.guard';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityEventsService } from './municipality-events.service';
 import {
@@ -72,8 +69,7 @@ export class MunicipalityEventsController {
   }
 
   @Get('api/admin/events')
-  @UseGuards(new JwtAuthGuard(), new RolesGuard())
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async getAdminEvents(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -92,8 +88,7 @@ export class MunicipalityEventsController {
   }
 
   @Post('api/admin/events')
-  @UseGuards(new JwtAuthGuard(), new RolesGuard())
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async createEvent(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -105,8 +100,7 @@ export class MunicipalityEventsController {
   }
 
   @Patch('api/admin/events/:id')
-  @UseGuards(new JwtAuthGuard(), new RolesGuard())
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async updateEvent(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -119,8 +113,7 @@ export class MunicipalityEventsController {
   }
 
   @Delete('api/admin/events/:id')
-  @UseGuards(new JwtAuthGuard(), new RolesGuard())
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async deleteEvent(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -135,6 +128,7 @@ export class MunicipalityEventsController {
     const title = this.requireString(payload.title, 'title');
     const description = this.requireString(payload.description, 'description');
     const location = this.requireString(payload.location, 'location');
+    const category = this.optionalString(payload.category);
     const startAt = this.requireDate(payload.startAt, 'startAt');
     const endAt = payload.endAt ? this.requireDate(payload.endAt, 'endAt') : undefined;
 
@@ -146,6 +140,7 @@ export class MunicipalityEventsController {
       title,
       description,
       location,
+      category,
       startAt,
       endAt,
       status: payload.status ? this.parseStatus(payload.status) : undefined,
@@ -162,6 +157,9 @@ export class MunicipalityEventsController {
     }
     if (payload.location !== undefined) {
       patch.location = this.requireString(payload.location, 'location');
+    }
+    if (payload.category !== undefined) {
+      patch.category = this.optionalString(payload.category);
     }
     if (payload.startAt !== undefined) {
       patch.startAt = this.requireDate(payload.startAt, 'startAt');
@@ -209,6 +207,17 @@ export class MunicipalityEventsController {
       throw new BadRequestException(`${field} ist erforderlich`);
     }
     return value.trim();
+  }
+
+  private optionalString(value: string | undefined) {
+    if (value === undefined) {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      throw new BadRequestException('category darf nicht leer sein');
+    }
+    return trimmed;
   }
 
   private parseStatus(value: string): EventStatus {

@@ -5,6 +5,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -15,6 +16,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UserRole } from '../auth/user-roles';
 import { Category, ContentType } from '../content/content.types';
+import { requireTenant } from '../tenant/tenant-auth';
 import { PostsService } from './posts.service';
 import { PostEntity, PostType } from './posts.types';
 
@@ -34,25 +36,37 @@ export class PostsController {
 
   @Get()
   async getPosts(
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @Query('type') type?: string,
     @Query('limit') limit?: string,
   ): Promise<PostEntity[]> {
+    const tenantId = requireTenant(headers);
     const parsedType = type ? this.parseType(type) : undefined;
     const parsedLimit = limit ? this.parseLimit(limit) : undefined;
-    return this.postsService.getAll({ type: parsedType, limit: parsedLimit });
+    return this.postsService.getAll({
+      tenantId,
+      type: parsedType,
+      limit: parsedLimit,
+    });
   }
 
   @Get(':id')
-  async getPost(@Param('id') id: string): Promise<PostEntity> {
-    return this.postsService.getById(id);
+  async getPost(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Param('id') id: string,
+  ): Promise<PostEntity> {
+    const tenantId = requireTenant(headers);
+    return this.postsService.getById(tenantId, id);
   }
 
   @Post()
   @UseGuards(new JwtAuthGuard())
   async createPost(
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @Body() payload: PostPayload,
     @Req() request: { user?: { sub?: string; role?: UserRole } },
   ): Promise<PostEntity> {
+    const tenantId = requireTenant(headers);
     const data = this.validatePayload(payload);
     const authorId = request.user?.sub;
     if (!authorId) {
@@ -62,6 +76,7 @@ export class PostsController {
       this.requireStaffOrAdmin(request.user?.role);
     }
     return this.postsService.create({
+      tenantId,
       ...data,
       authorId,
       category: this.categoryForType(data.type),
@@ -71,14 +86,17 @@ export class PostsController {
   @Patch(':id')
   @UseGuards(new JwtAuthGuard())
   async updatePost(
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @Param('id') id: string,
     @Body() payload: PostPayload,
     @Req() request: { user?: { sub?: string; role?: UserRole } },
   ): Promise<PostEntity> {
+    const tenantId = requireTenant(headers);
     const data = this.validatePayload(payload);
-    const post = await this.postsService.getById(id);
+    const post = await this.postsService.getById(tenantId, id);
     this.assertCanEdit(post, request.user);
     return this.postsService.update(id, {
+      tenantId,
       ...data,
       category: this.categoryForType(data.type),
     });
@@ -87,12 +105,14 @@ export class PostsController {
   @Delete(':id')
   @UseGuards(new JwtAuthGuard())
   async deletePost(
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @Param('id') id: string,
     @Req() request: { user?: { sub?: string; role?: UserRole } },
   ) {
-    const post = await this.postsService.getById(id);
+    const tenantId = requireTenant(headers);
+    const post = await this.postsService.getById(tenantId, id);
     this.assertCanEdit(post, request.user);
-    await this.postsService.remove(id);
+    await this.postsService.remove(id, tenantId);
     return { ok: true };
   }
 

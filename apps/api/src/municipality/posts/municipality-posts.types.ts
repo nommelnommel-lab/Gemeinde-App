@@ -8,6 +8,7 @@ export type MunicipalityPost = {
   type: PostType;
   title: string;
   body: string;
+  category?: string;
   priority?: PostPriority;
   publishedAt: string;
   endsAt?: string;
@@ -20,6 +21,7 @@ export type MunicipalityPostInput = {
   type: PostType;
   title: string;
   body: string;
+  category?: string;
   priority?: PostPriority;
   publishedAt: string;
   endsAt?: string;
@@ -30,6 +32,7 @@ export type MunicipalityPostPatch = {
   type?: PostType;
   title?: string;
   body?: string;
+  category?: string;
   priority?: PostPriority;
   publishedAt?: string;
   endsAt?: string;

@@ -6,6 +6,8 @@ import ResidentsPanel from '../../components/ResidentsPanel';
 import ImportPanel from '../../components/ImportPanel';
 import CodesPanel from '../../components/CodesPanel';
 import RolesPanel from '../../components/RolesPanel';
+import ContentPanel from '../../components/ContentPanel';
+import ModerationPanel from '../../components/ModerationPanel';
 import { clearSession, loadSession } from '../../lib/storage';
 
 const tabs = [
@@ -13,6 +15,8 @@ const tabs = [
   { id: 'import', label: 'Import' },
   { id: 'codes', label: 'Codes' },
   { id: 'roles', label: 'Rollen' },
+  { id: 'content', label: 'Inhalte' },
+  { id: 'moderation', label: 'Moderation' },
 ] as const;
 
 type TabId = (typeof tabs)[number]['id'];
@@ -20,6 +24,9 @@ type TabId = (typeof tabs)[number]['id'];
 export default function DashboardPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>('residents');
+  const [healthStatus, setHealthStatus] = useState<'ok' | 'down' | 'unknown'>(
+    'unknown',
+  );
 
   useEffect(() => {
     const session = loadSession();
@@ -28,6 +35,31 @@ export default function DashboardPage() {
     }
   }, [router]);
 
+  useEffect(() => {
+    const checkHealth = async () => {
+      const session = loadSession();
+      if (!session) {
+        return;
+      }
+      try {
+        const response = await fetch(
+          new URL('/health', session.apiBaseUrl).toString(),
+          {
+            headers: {
+              'X-TENANT': session.tenant,
+              'X-SITE-KEY': session.siteKey,
+              'X-ADMIN-KEY': session.adminKey,
+            },
+          },
+        );
+        setHealthStatus(response.ok ? 'ok' : 'down');
+      } catch {
+        setHealthStatus('down');
+      }
+    };
+    checkHealth();
+  }, []);
+
   const handleLogout = () => {
     clearSession();
     router.replace('/login');
@@ -35,6 +67,11 @@ export default function DashboardPage() {
 
   return (
     <div className="stack">
+      {healthStatus === 'down' && (
+        <div className="notice error">
+          Backend nicht erreichbar. Bitte API Base URL prüfen.
+        </div>
+      )}
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <div className="tabs">
           {tabs.map((tab) => (
@@ -56,6 +93,8 @@ export default function DashboardPage() {
       {activeTab === 'import' && <ImportPanel />}
       {activeTab === 'codes' && <CodesPanel />}
       {activeTab === 'roles' && <RolesPanel />}
+      {activeTab === 'content' && <ContentPanel />}
+      {activeTab === 'moderation' && <ModerationPanel />}
     </div>
   );
 }

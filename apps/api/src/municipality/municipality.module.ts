@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AdminGuard } from '../admin/admin.guard';
 import { AuthSharedModule } from '../auth/auth-shared.module';
 import { MunicipalityClubsController } from './clubs/municipality-clubs.controller';
 import { MunicipalityClubsService } from './clubs/municipality-clubs.service';
@@ -38,6 +39,7 @@ import { MunicipalityWastePickupsService } from './waste-pickups/municipality-wa
     MunicipalityServicesService,
     MunicipalityClubsService,
     MunicipalityWastePickupsService,
+    AdminGuard,
   ],
 })
 export class MunicipalityModule {}

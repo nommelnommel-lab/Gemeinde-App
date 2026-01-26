@@ -6,6 +6,7 @@ import { ContentType } from '../content/content.types';
 import { PostEntity, PostType } from './posts.types';
 
 type PostInput = {
+  tenantId: string;
   type: PostType;
   title: string;
   body: string;
@@ -18,8 +19,11 @@ type PostInput = {
 };
 
 type ListOptions = {
+  tenantId: string;
   type?: PostType;
   limit?: number;
+  includeHidden?: boolean;
+  reportedOnly?: boolean;
 };
 
 @Injectable()
@@ -32,11 +36,27 @@ export class PostsService implements OnModuleInit {
     await this.loadPosts();
   }
 
-  async getAll(options: ListOptions = {}): Promise<PostEntity[]> {
-    const { type, limit } = options;
-    const filtered = type
-      ? this.posts.filter((post) => post.type === type)
-      : [...this.posts];
+  async getAll(options: ListOptions): Promise<PostEntity[]> {
+    const { tenantId, type, limit, includeHidden, reportedOnly } = options;
+    const filtered = this.posts.filter((post) => {
+      if (post.tenantId !== tenantId) {
+        return false;
+      }
+      if (!includeHidden && post.status === 'HIDDEN') {
+        return false;
+      }
+      if (type && post.type !== type) {
+        return false;
+      }
+      if (
+        reportedOnly &&
+        (!post.reportsCount || post.reportsCount <= 0) &&
+        !post.reportedAt
+      ) {
+        return false;
+      }
+      return true;
+    });
     const sorted = filtered.sort(
       (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
     );
@@ -46,8 +66,10 @@ export class PostsService implements OnModuleInit {
     return sorted;
   }
 
-  async getById(id: string): Promise<PostEntity> {
-    const post = this.posts.find((item) => item.id === id);
+  async getById(tenantId: string, id: string): Promise<PostEntity> {
+    const post = this.posts.find(
+      (item) => item.id === id && item.tenantId === tenantId,
+    );
     if (!post) {
       throw new NotFoundException('Post nicht gefunden');
     }
@@ -58,6 +80,7 @@ export class PostsService implements OnModuleInit {
     const now = new Date().toISOString();
     const post: PostEntity = {
       id: randomUUID(),
+      tenantId: input.tenantId,
       type: input.type,
       category: input.category,
       authorId: input.authorId,
@@ -67,6 +90,8 @@ export class PostsService implements OnModuleInit {
       date: input.date,
       severity: input.severity,
       validUntil: input.validUntil,
+      status: 'PUBLISHED',
+      reportsCount: 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -77,7 +102,9 @@ export class PostsService implements OnModuleInit {
   }
 
   async update(id: string, input: PostInput): Promise<PostEntity> {
-    const index = this.posts.findIndex((item) => item.id === id);
+    const index = this.posts.findIndex(
+      (item) => item.id === id && item.tenantId === input.tenantId,
+    );
     if (index === -1) {
       throw new NotFoundException('Post nicht gefunden');
     }
@@ -100,14 +127,74 @@ export class PostsService implements OnModuleInit {
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
-    const index = this.posts.findIndex((item) => item.id === id);
+  async remove(id: string, tenantId: string): Promise<void> {
+    const index = this.posts.findIndex(
+      (item) => item.id === id && item.tenantId === tenantId,
+    );
     if (index === -1) {
       throw new NotFoundException('Post nicht gefunden');
     }
 
     this.posts.splice(index, 1);
     await this.persist();
+  }
+
+  async hidePost(
+    tenantId: string,
+    id: string,
+    reason?: string,
+  ): Promise<PostEntity> {
+    const index = this.posts.findIndex(
+      (item) => item.id === id && item.tenantId === tenantId,
+    );
+    if (index === -1) {
+      throw new NotFoundException('Post nicht gefunden');
+    }
+    const updated: PostEntity = {
+      ...this.posts[index],
+      status: 'HIDDEN',
+      hiddenReason: reason?.trim() || undefined,
+      updatedAt: new Date().toISOString(),
+    };
+    this.posts[index] = updated;
+    await this.persist();
+    return updated;
+  }
+
+  async unhidePost(tenantId: string, id: string): Promise<PostEntity> {
+    const index = this.posts.findIndex(
+      (item) => item.id === id && item.tenantId === tenantId,
+    );
+    if (index === -1) {
+      throw new NotFoundException('Post nicht gefunden');
+    }
+    const updated: PostEntity = {
+      ...this.posts[index],
+      status: 'PUBLISHED',
+      hiddenReason: undefined,
+      updatedAt: new Date().toISOString(),
+    };
+    this.posts[index] = updated;
+    await this.persist();
+    return updated;
+  }
+
+  async resetReports(tenantId: string, id: string): Promise<PostEntity> {
+    const index = this.posts.findIndex(
+      (item) => item.id === id && item.tenantId === tenantId,
+    );
+    if (index === -1) {
+      throw new NotFoundException('Post nicht gefunden');
+    }
+    const updated: PostEntity = {
+      ...this.posts[index],
+      reportsCount: 0,
+      reportedAt: undefined,
+      updatedAt: new Date().toISOString(),
+    };
+    this.posts[index] = updated;
+    await this.persist();
+    return updated;
   }
 
   private async ensureDataFile() {
@@ -124,7 +211,13 @@ export class PostsService implements OnModuleInit {
   private async loadPosts() {
     const file = await fs.readFile(this.dataFilePath, 'utf8');
     const parsed = JSON.parse(file);
-    this.posts = Array.isArray(parsed) ? (parsed as PostEntity[]) : [];
+    const raw = Array.isArray(parsed) ? (parsed as PostEntity[]) : [];
+    this.posts = raw.map((post) => ({
+      ...post,
+      tenantId: post.tenantId ?? 'demo',
+      status: post.status ?? 'PUBLISHED',
+      reportsCount: post.reportsCount ?? 0,
+    }));
   }
 
   private async persist() {
@@ -142,33 +235,42 @@ export class PostsService implements OnModuleInit {
     return [
       {
         id: randomUUID(),
+        tenantId: 'demo',
         type: ContentType.OFFICIAL_EVENT,
         authorId: 'system',
         title: 'Ernte-Dank Gottesdienst',
         body: 'Wir feiern gemeinsam mit Musik und anschließendem Imbiss.',
         location: 'Kirche St. Markus',
         date: '2024-10-06T09:00:00.000Z',
+        status: 'PUBLISHED',
+        reportsCount: 0,
         createdAt: now,
         updatedAt: now,
       },
       {
         id: randomUUID(),
+        tenantId: 'demo',
         type: ContentType.OFFICIAL_NEWS,
         authorId: 'system',
         title: 'Neue Öffnungszeiten im Pfarrbüro',
         body: 'Das Pfarrbüro ist ab Oktober dienstags und donnerstags geöffnet.',
         validUntil: '2024-12-01T00:00:00.000Z',
+        status: 'PUBLISHED',
+        reportsCount: 0,
         createdAt: now,
         updatedAt: now,
       },
       {
         id: randomUUID(),
+        tenantId: 'demo',
         type: ContentType.OFFICIAL_WARNING,
         authorId: 'system',
         title: 'Sturmböen am Wochenende',
         body: 'Bitte achtet auf lose Gegenstände im Außenbereich.',
         severity: 'medium',
         validUntil: '2024-09-23T18:00:00.000Z',
+        status: 'PUBLISHED',
+        reportsCount: 0,
         createdAt: now,
         updatedAt: now,
       },

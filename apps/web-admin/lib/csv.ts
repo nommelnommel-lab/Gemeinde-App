@@ -11,7 +11,7 @@ const escapeCsvValue = (value: string, delimiter: string) => {
 export const buildCsv = (
   headers: string[],
   rows: string[][],
-  delimiter = ';',
+  delimiter = ',',
 ) => {
   const lines = [headers, ...rows].map((row) =>
     row.map((value) => escapeCsvValue(value ?? '', delimiter)).join(delimiter),

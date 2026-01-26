@@ -139,7 +139,7 @@ export default function CodesPanel() {
     });
   }, [results, residents]);
 
-  const buildFilename = () => {
+  const buildFilename = (variant: 'comma' | 'semicolon') => {
     const sessionTenant = loadSession()?.tenant?.trim();
     const tenant = sessionTenant || 'tenant';
     const now = new Date();
@@ -147,10 +147,10 @@ export default function CodesPanel() {
     const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
       now.getDate(),
     )}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-    return `activation-codes-${tenant}-${timestamp}.csv`;
+    return `activation-codes-${tenant}-${timestamp}-${variant}.csv`;
   };
 
-  const exportCsv = () => {
+  const exportCsv = (delimiter: ',' | ';') => {
     const csv = buildCsv(
       [
         'residentId',
@@ -168,8 +168,12 @@ export default function CodesPanel() {
         entry.activationCode,
         entry.expiresAt,
       ]),
+      delimiter,
     );
-    downloadCsv(buildFilename(), csv);
+    downloadCsv(
+      buildFilename(delimiter === ',' ? 'comma' : 'semicolon'),
+      csv,
+    );
   };
 
   const copyCsv = async () => {
@@ -190,6 +194,7 @@ export default function CodesPanel() {
         entry.activationCode,
         entry.expiresAt,
       ]),
+      ',',
     );
     try {
       await navigator.clipboard.writeText(csv);
@@ -292,8 +297,20 @@ export default function CodesPanel() {
             </div>
           )}
           <div className="row">
-            <button type="button" onClick={exportCsv} disabled={codes.length === 0}>
-              Export CSV
+            <button
+              type="button"
+              onClick={() => exportCsv(',')}
+              disabled={codes.length === 0}
+            >
+              Export CSV (Komma)
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => exportCsv(';')}
+              disabled={codes.length === 0}
+            >
+              Export CSV (Semikolon)
             </button>
             <button
               type="button"
