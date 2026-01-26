@@ -5,3 +5,7 @@ String normalizeActivationCode(String input) {
       .replaceAll(RegExp(r'[\u2010-\u2015\u2212]'), '-')
       .toUpperCase();
 }
+
+String normalizeTouristCode(String input) {
+  return normalizeActivationCode(input);
+}

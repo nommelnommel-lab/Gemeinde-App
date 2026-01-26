@@ -59,7 +59,14 @@ export class AccessTokenService {
       if (!payload || typeof payload !== 'object') {
         throw new UnauthorizedException('Access token ungültig');
       }
-      return payload as JwtAccessPayload;
+      const parsed = payload as JwtAccessPayload;
+      if (parsed.expiresAt) {
+        const expiresAt = Date.parse(parsed.expiresAt);
+        if (!Number.isNaN(expiresAt) && expiresAt <= Date.now()) {
+          throw new UnauthorizedException('Access token ungültig');
+        }
+      }
+      return parsed;
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;

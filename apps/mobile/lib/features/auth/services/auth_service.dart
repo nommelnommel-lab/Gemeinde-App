@@ -93,6 +93,24 @@ class AuthService {
     });
   }
 
+  Future<AuthResponse> redeemTourist({
+    required String code,
+    required String deviceId,
+  }) async {
+    final normalizedCode = normalizeTouristCode(code);
+    return _wrapAuthCall(() async {
+      final response = await _apiClient.postJson(
+        '/api/tourist/redeem',
+        {
+          'code': normalizedCode,
+          'deviceId': deviceId,
+        },
+        allowAuthRetry: false,
+      );
+      return AuthResponse.fromJson(response);
+    });
+  }
+
   Future<T> _wrapAuthCall<T>(Future<T> Function() action) async {
     try {
       return await action();

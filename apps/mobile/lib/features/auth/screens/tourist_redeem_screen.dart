@@ -4,26 +4,22 @@ import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/auth/auth_store.dart';
 import '../../../shared/di/app_services_scope.dart';
-import '../../../shared/navigation/app_router.dart';
-import 'tourist_redeem_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class TouristRedeemScreen extends StatefulWidget {
+  const TouristRedeemScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<TouristRedeemScreen> createState() => _TouristRedeemScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+class _TouristRedeemScreenState extends State<TouristRedeemScreen> {
+  final _codeController = TextEditingController();
   bool _submitting = false;
   String? _error;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
@@ -32,28 +28,19 @@ class _LoginScreenState extends State<LoginScreen> {
     final authStore = AuthScope.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(title: const Text('Tourist-Zugang')),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           const Text(
-            'Login',
+            'Tourist-Zugang',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
           TextField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
+            controller: _codeController,
             decoration: const InputDecoration(
-              labelText: 'E-Mail',
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _passwordController,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'Passwort',
+              labelText: 'Tourist-Code',
             ),
           ),
           const SizedBox(height: 16),
@@ -65,14 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 8),
           FilledButton(
             onPressed: _submitting ? null : () => _submit(authStore),
-            child: Text(_submitting ? 'Bitte warten...' : 'Login'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: () {
-              AppRouterScope.of(context).push(const TouristRedeemScreen());
-            },
-            child: const Text('Tourist-Zugang'),
+            child: Text(_submitting ? 'Bitte warten...' : 'Code einlösen'),
           ),
         ],
       ),
@@ -86,9 +66,10 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await authStore.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+      final deviceId = await authStore.getOrCreateDeviceId();
+      await authStore.redeemTourist(
+        code: _codeController.text,
+        deviceId: deviceId,
       );
       final permissions =
           await AppServicesScope.of(context).permissionsService.getPermissions();

@@ -49,6 +49,12 @@ export const verifyAccessToken = (
   }
   try {
     const payload = jwt.verify(token, getJwtSecret()) as JwtAccessPayload;
+    if (payload.expiresAt) {
+      const expiresAt = Date.parse(payload.expiresAt);
+      if (!Number.isNaN(expiresAt) && expiresAt <= Date.now()) {
+        return null;
+      }
+    }
     return {
       ...payload,
       role: normalizeUserRole(payload.role),

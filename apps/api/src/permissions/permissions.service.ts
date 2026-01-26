@@ -44,6 +44,21 @@ const userCreatePermissions = {
   skillExchange: true,
 };
 
+const touristCreatePermissions = {
+  marketplace: false,
+  help: false,
+  movingClearance: false,
+  cafeMeetup: false,
+  kidsMeetup: false,
+  apartmentSearch: false,
+  lostFound: false,
+  rideSharing: false,
+  jobsLocal: false,
+  volunteering: false,
+  giveaway: false,
+  skillExchange: false,
+};
+
 @Injectable()
 export class PermissionsService {
   getPermissions(
@@ -52,20 +67,26 @@ export class PermissionsService {
     const payload = verifyAccessToken(headers);
     const role = payload?.role ?? UserRole.USER;
 
-    const canCreateOfficial = role === UserRole.STAFF || role === UserRole.ADMIN;
-    const canModerateUserContent = role !== UserRole.USER;
+    const isTourist = role === UserRole.TOURIST;
+    const canCreateOfficial =
+      role === UserRole.STAFF || role === UserRole.ADMIN;
+    const canModerateUserContent =
+      role === UserRole.STAFF || role === UserRole.ADMIN;
     const isAdmin = role === UserRole.ADMIN;
+    const canCreateUserContent = isTourist
+      ? touristCreatePermissions
+      : userCreatePermissions;
 
     return {
       role,
       isAdmin,
       canCreate: {
-        ...userCreatePermissions,
+        ...canCreateUserContent,
         officialNews: canCreateOfficial,
         officialWarnings: canCreateOfficial,
         officialEvents: canCreateOfficial,
       },
-      canModerateUserContent,
+      canModerateUserContent: isTourist ? false : canModerateUserContent,
       canManageResidents: isAdmin,
       canGenerateActivationCodes: isAdmin,
       canManageRoles: isAdmin,
