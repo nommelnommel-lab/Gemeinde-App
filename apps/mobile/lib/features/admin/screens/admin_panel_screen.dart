@@ -45,12 +45,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   Widget build(BuildContext context) {
     final permissions =
         AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
-    final adminKey = AppServicesScope.of(context)
-        .adminKeyStore
-        .getAdminKey(AppServicesScope.of(context).tenantStore.resolveTenantId());
-    final hasAdminKey = adminKey != null && adminKey.trim().isNotEmpty;
-    final isAdmin =
-        kDebugMode && permissions.canManageResidents && hasAdminKey;
+    final isAdmin = kDebugMode && permissions.canManageResidents;
 
     return Scaffold(
       appBar: AppBar(
@@ -73,15 +68,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   message:
                       'Der Admin-Bereich ist nur in Debug-Builds verfügbar.',
                 )
-              else if (!hasAdminKey)
-                _InfoBanner(
-                  message:
-                      'Kein Admin Key gesetzt. Bitte im Mehr-Tab hinterlegen.',
-                )
               else if (!permissions.canManageResidents)
                 const _InfoBanner(
                   message:
-                      'Admin Key ist gesetzt, aber keine Admin-Berechtigung.',
+                      'Keine Admin-Berechtigung verfügbar.',
                 ),
               const SizedBox(height: 8),
               TextField(

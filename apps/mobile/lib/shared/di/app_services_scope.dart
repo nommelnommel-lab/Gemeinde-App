@@ -9,8 +9,6 @@ import '../../features/posts/services/posts_service.dart';
 import '../../features/start/services/feed_service.dart';
 import '../../features/verwaltung/services/tenant_config_service.dart';
 import '../../features/warnings/services/warnings_service.dart';
-import '../../features/tourism/services/tourism_service.dart';
-import '../auth/admin_key_store.dart';
 import '../auth/permissions_service.dart';
 import '../tenant/tenant_store.dart';
 
@@ -27,7 +25,6 @@ class AppServices {
     required this.warningsService,
     required this.tourismService,
     required this.permissionsService,
-    required this.adminKeyStore,
     required this.tenantStore,
   });
 
@@ -42,7 +39,6 @@ class AppServices {
   final WarningsService warningsService;
   final TourismService tourismService;
   final PermissionsService permissionsService;
-  final AdminKeyStore adminKeyStore;
   final TenantStore tenantStore;
 }
 
