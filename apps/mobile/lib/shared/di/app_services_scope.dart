@@ -7,6 +7,7 @@ import '../../features/citizen_posts/services/citizen_posts_service.dart';
 import '../../features/news/services/news_service.dart';
 import '../../features/posts/services/posts_service.dart';
 import '../../features/start/services/feed_service.dart';
+import '../../features/tourism/services/tourism_service.dart';
 import '../../features/verwaltung/services/tenant_config_service.dart';
 import '../../features/warnings/services/warnings_service.dart';
 import '../auth/permissions_service.dart';
