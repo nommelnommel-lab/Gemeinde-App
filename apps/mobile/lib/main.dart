@@ -32,7 +32,10 @@ import 'shared/theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  final tenantStore = TenantStore(prefs);
+  final tenantStore = TenantStore(
+    prefs,
+    defaultTenantId: AppConfig.defaultTenantId,
+  );
   await tenantStore.getTenantId();
   runApp(
     GemeindeApp(

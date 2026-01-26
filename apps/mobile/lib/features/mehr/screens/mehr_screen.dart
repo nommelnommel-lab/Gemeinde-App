@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../config/app_config.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/di/app_services_scope.dart';
@@ -53,6 +54,28 @@ class _MehrScreenState extends State<MehrScreen> {
 
     return ListView(
       children: [
+        if (AppConfig.demoMode)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                child: Text(
+                  'DEMO',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.6,
+                      ),
+                ),
+              ),
+            ),
+          ),
         if (authStore.isAuthenticated)
           ListTile(
             leading: const Icon(Icons.account_circle_outlined),
