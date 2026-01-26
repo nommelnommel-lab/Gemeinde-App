@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../config/app_config.dart';
+import '../../config/demo_config.dart';
 import '../../features/auth/models/auth_models.dart';
 import '../../features/auth/services/auth_service.dart';
 
@@ -19,6 +21,7 @@ class AuthStore extends ChangeNotifier {
   static const _accessTokenKey = 'accessToken';
   static const _expiresAtKey = 'accessTokenExpiresAt';
   static const _deviceIdKey = 'touristDeviceId';
+  static const _demoTouristKey = 'demoTouristBootstrapped';
 
   final FlutterSecureStorage _secureStorage;
   final AuthService _authService;
@@ -65,6 +68,29 @@ class AuthStore extends ChangeNotifier {
         _isLoading = false;
         notifyListeners();
         return;
+      }
+      if (AppConfig.demoMode) {
+        final bootstrapped =
+            await _secureStorage.read(key: _demoTouristKey);
+        if (bootstrapped != 'true') {
+          try {
+            final deviceId = await getOrCreateDeviceId();
+            final response = await _authService.redeemTourist(
+              code: DemoConfig.touristCode,
+              deviceId: deviceId,
+            );
+            await _applyAuthResponse(response);
+            await _secureStorage.write(
+              key: _demoTouristKey,
+              value: 'true',
+            );
+            _isLoading = false;
+            notifyListeners();
+            return;
+          } catch (error) {
+            _lastError = error.toString();
+          }
+        }
       }
       await _clearSession();
       _isLoading = false;
