@@ -5,8 +5,10 @@ import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/app_states.dart';
+import '../../../shared/widgets/app_chip.dart';
 import '../../auth/screens/login_screen.dart';
 import '../models/event.dart';
 import '../services/events_service.dart';
@@ -135,18 +137,31 @@ class _EventsScreenState extends State<EventsScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final event = _events[index];
-        return Card(
-          child: ListTile(
-            title: Text(
-              event.title.isEmpty ? 'Unbenanntes Event' : event.title,
-            ),
-            subtitle: Text(
-              '${_formatDate(event.date)} · ${_displayLocation(event.location)}',
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              _openEventDetail(event);
-            },
+        return AppCard(
+          onTap: () => _openEventDetail(event),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                event.title.isEmpty ? 'Unbenanntes Event' : event.title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  AppChip(
+                    label: _formatDate(event.date),
+                    icon: Icons.event,
+                  ),
+                  AppChip(
+                    label: _displayLocation(event.location),
+                    icon: Icons.place_outlined,
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },

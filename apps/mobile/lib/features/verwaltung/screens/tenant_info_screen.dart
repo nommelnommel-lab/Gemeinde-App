@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/utils/external_links.dart';
+import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_section_header.dart';
 import '../../../shared/widgets/app_states.dart';
 import '../models/tenant_config.dart';
 import '../services/tenant_config_service.dart';
@@ -89,22 +91,21 @@ class _TenantInfoScreenState extends State<TenantInfoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  config.name,
-                  style: theme.textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(config.address.isNotEmpty
+        AppSectionHeader(
+          title: config.name,
+          subtitle: 'Öffnungszeiten & Kontakt',
+        ),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                config.address.isNotEmpty
                     ? config.address
-                    : 'Keine Adresse hinterlegt'),
-              ],
-            ),
+                    : 'Keine Adresse hinterlegt',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),
@@ -187,7 +188,8 @@ class _InfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
+      padding: const EdgeInsets.all(0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

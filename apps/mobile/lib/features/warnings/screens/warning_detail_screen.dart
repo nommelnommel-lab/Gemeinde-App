@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_banner.dart';
+import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_section_header.dart';
 import '../models/warning_item.dart';
 import '../services/warnings_service.dart';
 import '../utils/warning_formatters.dart';
@@ -61,41 +64,45 @@ class _WarningDetailScreenState extends State<WarningDetailScreen> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text(
-              _warning.title,
-              style: theme.textTheme.headlineSmall,
+            AppSectionHeader(
+              title: _warning.title,
+              subtitle: formatDateTime(_warning.publishedAt),
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                _severityIcon(_warning.severity),
-                const SizedBox(width: 8),
-                Text(
-                  _warning.severity.label,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ],
+            AppBanner(
+              title: _warning.severity.label,
+              description: _warning.source ?? 'Hinweis aus der Gemeinde',
+              severity: _bannerSeverity(_warning.severity),
             ),
             const SizedBox(height: 16),
-            _InfoRow(
-              label: 'Veröffentlicht',
-              value: formatDateTime(_warning.publishedAt),
+            AppSectionHeader(title: 'Details'),
+            AppCard(
+              child: Column(
+                children: [
+                  _InfoRow(
+                    label: 'Veröffentlicht',
+                    value: formatDateTime(_warning.publishedAt),
+                  ),
+                  if (_warning.validUntil != null)
+                    _InfoRow(
+                      label: 'Gültig bis',
+                      value: formatDateTime(_warning.validUntil!),
+                    ),
+                  if (_warning.source != null)
+                    _InfoRow(
+                      label: 'Quelle',
+                      value: _warning.source!,
+                    ),
+                ],
+              ),
             ),
-            if (_warning.validUntil != null)
-              _InfoRow(
-                label: 'Gültig bis',
-                value: formatDateTime(_warning.validUntil!),
-              ),
-            if (_warning.source != null)
-              _InfoRow(
-                label: 'Quelle',
-                value: _warning.source!,
-              ),
             const SizedBox(height: 16),
-            Text(
-              _warning.body,
-              style: theme.textTheme.bodyLarge,
+            const AppSectionHeader(title: 'Hinweistext'),
+            AppCard(
+              child: Text(
+                _warning.body,
+                style: theme.textTheme.bodyLarge,
+              ),
             ),
           ],
         ),
@@ -103,14 +110,14 @@ class _WarningDetailScreenState extends State<WarningDetailScreen> {
     );
   }
 
-  Widget _severityIcon(WarningSeverity severity) {
+  AppBannerSeverity _bannerSeverity(WarningSeverity severity) {
     switch (severity) {
       case WarningSeverity.info:
-        return const Icon(Icons.info_outline, color: Colors.blue);
+        return AppBannerSeverity.info;
       case WarningSeverity.warning:
-        return const Icon(Icons.warning_amber, color: Colors.orange);
+        return AppBannerSeverity.warning;
       case WarningSeverity.critical:
-        return const Icon(Icons.report, color: Colors.red);
+        return AppBannerSeverity.critical;
     }
   }
 

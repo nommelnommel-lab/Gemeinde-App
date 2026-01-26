@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_chip.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_section_header.dart';
 import '../models/news_item.dart';
 import '../services/news_service.dart';
 import 'news_form_screen.dart';
@@ -61,50 +64,55 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _item.title,
-                style: Theme.of(context).textTheme.headlineSmall,
+              AppSectionHeader(
+                title: _item.title,
+                subtitle: _formatDate(_item.publishedAt),
               ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 12,
                 runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Chip(label: Text(_item.category)),
-                  Text(
-                    _formatDate(_item.publishedAt),
-                    style: Theme.of(context).textTheme.bodySmall,
+                  AppChip(label: _item.category, icon: Icons.local_offer),
+                  AppChip(
+                    label: _formatDate(_item.publishedAt),
+                    icon: Icons.calendar_today_outlined,
                   ),
                 ],
               ),
               if (_item.imageUrl != null &&
                   _item.imageUrl!.trim().isNotEmpty) ...[
                 const SizedBox(height: 16),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    _item.imageUrl!,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) {
-                        return child;
-                      }
-                      return const SizedBox(
-                        height: 180,
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const SizedBox.shrink();
-                    },
+                AppCard(
+                  padding: EdgeInsets.zero,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      _item.imageUrl!,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) {
+                          return child;
+                        }
+                        return const SizedBox(
+                          height: 180,
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const SizedBox.shrink();
+                      },
+                    ),
                   ),
                 ),
               ],
               const SizedBox(height: 16),
-              Text(
-                _item.body,
-                style: Theme.of(context).textTheme.bodyLarge,
+              AppSectionHeader(title: 'Meldung'),
+              AppCard(
+                child: Text(
+                  _item.body,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
               ),
             ],
           ),

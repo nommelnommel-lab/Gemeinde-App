@@ -254,7 +254,9 @@ export default function ModerationPanel() {
           </div>
           <div className="field">
             <label>API</label>
-            <span className="badge">
+            <span
+              className={`badge health-pill ${apiStatus === 'ok' ? 'success' : apiStatus === 'down' ? 'error' : ''}`}
+            >
               {apiStatus === 'checking'
                 ? 'prüfe...'
                 : apiStatus === 'ok'

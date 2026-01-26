@@ -5,6 +5,11 @@ import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../../shared/tenant/tenant_settings_scope.dart';
+import '../../../shared/widgets/app_banner.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_chip.dart';
+import '../../../shared/widgets/app_section_header.dart';
+import '../../../shared/widgets/app_states.dart';
 import '../../events/models/event.dart';
 import '../../events/screens/event_detail_screen.dart';
 import '../../events/services/events_service.dart';
@@ -89,7 +94,6 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final settingsStore = TenantSettingsScope.of(context);
     final showEvents = settingsStore.isFeatureEnabled('events');
     final showNews = settingsStore.isFeatureEnabled('posts');
@@ -120,12 +124,64 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
       showWarnings: showWarnings,
       filter: resolvedFilter,
     );
+    final criticalWarning = _criticalWarningItem();
 
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const AppSectionHeader(
+            title: 'Aktuelles',
+            subtitle: 'Neuigkeiten, Events und Hinweise aus der Gemeinde.',
+          ),
+          if (criticalWarning != null) ...[
+            AppBanner(
+              title: criticalWarning.title,
+              description: _previewText(criticalWarning.body),
+              severity: AppBannerSeverity.critical,
+              onTap: () => _handleTap(criticalWarning),
+            ),
+            const SizedBox(height: 12),
+          ],
+          _FeedFilters(
+            selected: resolvedFilter,
+            availableFilters: _availableFilters(
+              showEvents: showEvents,
+              showNews: showNews,
+              showWarnings: showWarnings,
+            ),
+            onSelected: (filter) {
+              setState(() => _selectedFilter = filter);
+            },
+          ),
+          const SizedBox(height: 12),
+          if (_loading)
+            const Center(child: CircularProgressIndicator())
+          else if (_error != null)
+            _ErrorView(error: _error!, onRetry: _load)
+          else if (filteredItems.isEmpty)
+            const EmptyState(
+              title: 'Keine aktuellen Beiträge',
+              message: 'Zurzeit sind keine passenden Beiträge verfügbar.',
+              icon: Icons.article_outlined,
+            )
+          else
+            ...filteredItems.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _FeedListTile(
+                  item: item,
+                  formattedDate: _formatDate(item.date),
+                  onTap: () => _handleTap(item),
+                ),
+              ),
+            ),
+          const SizedBox(height: 24),
+          const AppSectionHeader(
+            title: 'Gemeinde & Verwaltung',
+            subtitle: 'Services, Formulare und Angebote entdecken.',
+          ),
           if (showGemeindeApp)
             _StartCard(
               title: 'GemeindeApp',
@@ -144,38 +200,6 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
               onTap: verwaltungIndex == null
                   ? null
                   : () => widget.onSelectTab(verwaltungIndex),
-            ),
-          const SizedBox(height: 24),
-          Text(
-            'Nachbarschaft',
-            style: theme.textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          _FeedFilters(
-            selected: resolvedFilter,
-            availableFilters: _availableFilters(
-              showEvents: showEvents,
-              showNews: showNews,
-              showWarnings: showWarnings,
-            ),
-            onSelected: (filter) {
-              setState(() => _selectedFilter = filter);
-            },
-          ),
-          const SizedBox(height: 12),
-          if (_loading)
-            const Center(child: CircularProgressIndicator())
-          else if (_error != null)
-            _ErrorView(error: _error!, onRetry: _load)
-          else if (filteredItems.isEmpty)
-            const Text('Zurzeit sind keine passenden Beiträge verfügbar.')
-          else
-            ...filteredItems.map(
-              (item) => _FeedListTile(
-                item: item,
-                formattedDate: _formatDate(item.date),
-                onTap: () => _handleTap(item),
-              ),
             ),
         ],
       ),
@@ -330,6 +354,25 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     return createdAt ?? publishedAt ?? DateTime.now();
   }
 
+  String _previewText(String body) {
+    const maxLength = 80;
+    final cleaned = body.trim();
+    if (cleaned.length <= maxLength) {
+      return cleaned;
+    }
+    return '${cleaned.substring(0, maxLength)}…';
+  }
+
+  _FeedItem? _criticalWarningItem() {
+    for (final item in _items) {
+      if (item.type == _FeedItemType.warning &&
+          item.warning?.severity == WarningSeverity.critical) {
+        return item;
+      }
+    }
+    return null;
+  }
+
   Future<void> _handleTap(_FeedItem item) async {
     final permissions =
         AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
@@ -425,39 +468,35 @@ class _StartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                child: Icon(icon, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right),
-            ],
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+            child: Icon(icon, size: 28),
           ),
-        ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right),
+        ],
       ),
     );
   }
@@ -485,29 +524,34 @@ class _FeedFilters extends StatelessWidget {
   Widget build(BuildContext context) {
     final filters = availableFilters;
 
-    return Wrap(
-      spacing: 8,
-      children: filters.map((filter) {
-        final label = _labelForFilter(filter);
-        return ChoiceChip(
-          label: Text(label),
-          selected: filter == selected,
-          onSelected: (_) => onSelected(filter),
-        );
-      }).toList(),
+    return SegmentedButton<_FeedFilter>(
+      segments: filters
+          .map(
+            (filter) => ButtonSegment<_FeedFilter>(
+              value: filter,
+              label: Text(_labelForFilter(filter)),
+            ),
+          )
+          .toList(),
+      selected: <_FeedFilter>{selected},
+      onSelectionChanged: (selection) {
+        if (selection.isNotEmpty) {
+          onSelected(selection.first);
+        }
+      },
     );
   }
 
   String _labelForFilter(_FeedFilter filter) {
     switch (filter) {
       case _FeedFilter.all:
-        return 'Alle';
+        return 'Aktuelles';
       case _FeedFilter.events:
         return 'Events';
       case _FeedFilter.news:
         return 'News';
       case _FeedFilter.warnings:
-        return 'Warnungen';
+        return 'Hinweise';
     }
   }
 }
@@ -526,18 +570,70 @@ class _FeedListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    return Card(
-      child: ListTile(
-        leading: Icon(_iconForType(item.type)),
-        title: Text(item.title.isEmpty ? _fallbackTitle(item.type) : item.title),
-        subtitle: Text(
-          _subtitle(item, formattedDate),
-          style: theme.textTheme.bodySmall,
-        ),
-        isThreeLine: true,
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
+    return AppCard(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceVariant,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _iconForType(item.type),
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title.isEmpty
+                          ? _fallbackTitle(item.type)
+                          : item.title,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _detailLine(item),
+                      style: theme.textTheme.bodyMedium,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              AppChip(
+                label: _labelForType(item.type),
+                icon: _iconForType(item.type),
+              ),
+              AppChip(
+                label: formattedDate,
+                icon: Icons.calendar_today_outlined,
+              ),
+              if (item.type == _FeedItemType.event && item.location != null)
+                AppChip(
+                  label: _displayLocation(item.location ?? ''),
+                  icon: Icons.place_outlined,
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -562,15 +658,6 @@ class _FeedListTile extends StatelessWidget {
       case _FeedItemType.warning:
         return 'Warnung';
     }
-  }
-
-  String _subtitle(_FeedItem item, String formattedDate) {
-    final label = _labelForType(item.type);
-    final detail = _detailLine(item);
-    if (detail.isEmpty) {
-      return '$label · $formattedDate';
-    }
-    return '$label · $formattedDate\n$detail';
   }
 
   String _labelForType(_FeedItemType type) {
@@ -622,10 +709,9 @@ class _ErrorView extends StatelessWidget {
         normalized.contains('http 403') ||
         normalized.contains('sitzung abgelaufen');
     return Center(
-      child: Card(
-        margin: const EdgeInsets.all(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: AppCard(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

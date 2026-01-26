@@ -117,7 +117,7 @@ export default function DashboardPage() {
         </div>
         <div className="row" style={{ gap: '0.75rem', alignItems: 'center' }}>
           <span
-            className={`badge ${healthStatus.state === 'ok' ? 'success' : healthStatus.state === 'down' ? 'error' : ''}`}
+            className={`badge health-pill ${healthStatus.state === 'ok' ? 'success' : healthStatus.state === 'down' ? 'error' : ''}`}
             title="API Health"
           >
             {healthLabel}

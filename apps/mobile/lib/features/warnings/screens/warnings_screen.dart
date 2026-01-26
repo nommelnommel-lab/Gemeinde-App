@@ -4,6 +4,7 @@ import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/app_states.dart';
 import '../../auth/screens/login_screen.dart';
@@ -104,14 +105,13 @@ class _WarningsScreenState extends State<WarningsScreen> {
               )
             else
               ...sorted.map(
-                (warning) => Card(
-                  child: ListTile(
-                    leading: _severityIcon(warning.severity),
-                    title: Text(warning.title),
-                    subtitle: Text(
-                      '${warning.severity.label} · ${formatDateTime(warning.publishedAt)}',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
+                (warning) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: AppBanner(
+                    title: warning.title,
+                    description:
+                        '${warning.severity.label} · ${formatDateTime(warning.publishedAt)}',
+                    severity: _bannerSeverity(warning.severity),
                     onTap: () async {
                       final updated =
                           await AppRouterScope.of(context).push<bool>(
@@ -222,14 +222,14 @@ class _WarningsScreenState extends State<WarningsScreen> {
         text.contains('bahnhof');
   }
 
-  Widget _severityIcon(WarningSeverity severity) {
+  AppBannerSeverity _bannerSeverity(WarningSeverity severity) {
     switch (severity) {
       case WarningSeverity.info:
-        return const Icon(Icons.info_outline, color: Colors.blue);
+        return AppBannerSeverity.info;
       case WarningSeverity.warning:
-        return const Icon(Icons.warning_amber, color: Colors.orange);
+        return AppBannerSeverity.warning;
       case WarningSeverity.critical:
-        return const Icon(Icons.report, color: Colors.red);
+        return AppBannerSeverity.critical;
     }
   }
 

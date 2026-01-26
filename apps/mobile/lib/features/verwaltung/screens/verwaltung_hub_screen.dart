@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_section_header.dart';
 import '../../../shared/widgets/coming_soon_screen.dart';
 import 'tenant_info_screen.dart';
 
@@ -50,22 +52,33 @@ class VerwaltungHubScreen extends StatelessWidget {
       ),
     ];
 
-    return GridView.builder(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.05,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return _VerwaltungTile(
-          item: item,
-          onTap: item.onTap,
-        );
-      },
+      children: [
+        const AppSectionHeader(
+          title: 'Formulare & Verwaltung',
+          subtitle: 'Schneller Zugriff auf Services der Gemeinde.',
+        ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.05,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return _VerwaltungTile(
+              item: item,
+              onTap: item.onTap,
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -105,25 +118,20 @@ class _VerwaltungTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(item.icon, size: 32),
-              const SizedBox(height: 12),
-              Text(
-                item.title,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(item.icon, size: 32),
+          const SizedBox(height: 12),
+          Text(
+            item.title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-        ),
+        ],
       ),
     );
   }

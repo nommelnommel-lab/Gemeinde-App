@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_chip.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_section_header.dart';
 import '../models/citizen_post.dart';
 import '../services/citizen_posts_service.dart';
 import 'citizen_post_form_screen.dart';
@@ -80,29 +83,47 @@ class _CitizenPostDetailScreenState extends State<CitizenPostDetailScreen> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text(
-              _post.title,
-              style: Theme.of(context).textTheme.headlineSmall,
+            AppSectionHeader(
+              title: _post.title,
+              subtitle: 'Erstellt am ${_formatDate(_post.createdAt.toIso8601String())}',
             ),
             const SizedBox(height: 12),
-            Text(_post.body),
-            const SizedBox(height: 16),
-            Text(
-              'Erstellt am ${_formatDate(_post.createdAt.toIso8601String())}',
-              style: Theme.of(context).textTheme.bodySmall,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                AppChip(label: _post.type.label, icon: Icons.local_offer),
+                AppChip(
+                  label: _formatDate(_post.createdAt.toIso8601String()),
+                  icon: Icons.calendar_today_outlined,
+                ),
+              ],
             ),
+            const SizedBox(height: 12),
+            AppCard(
+              child: Text(
+                _post.body,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ),
+            const SizedBox(height: 16),
             if (items.isNotEmpty) ...[
               const SizedBox(height: 20),
-              Text(
-                'Details',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              const AppSectionHeader(title: 'Details'),
               const SizedBox(height: 8),
-              ...items.map(
-                (entry) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(entry.label),
-                  subtitle: Text(entry.value),
+              AppCard(
+                padding: const EdgeInsets.all(0),
+                child: Column(
+                  children: items
+                      .map(
+                        (entry) => ListTile(
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                          title: Text(entry.label),
+                          subtitle: Text(entry.value),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ],
