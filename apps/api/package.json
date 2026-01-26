@@ -12,6 +12,7 @@
     "test:admin-guard": "ts-node scripts/test-admin-guard.ts",
     "test:admin-flow": "node ./scripts/test-admin-flow.mjs",
     "test:activation-flow": "node ./scripts/test-activation-flow.mjs",
+    "test:citizen-posts": "node ./scripts/test-citizen-posts.mjs",
     "test:role-permissions": "node ./scripts/test-role-permissions.mjs"
   },
   "dependencies": {

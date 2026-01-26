@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../../shared/tenant/tenant_settings_scope.dart';
-import '../../../shared/widgets/placeholder_screen.dart';
+import '../../citizen_posts/models/citizen_post.dart';
+import '../../citizen_posts/screens/citizen_posts_list_screen.dart';
 import '../../events/screens/events_screen.dart';
 import '../../news/screens/news_screen.dart';
 
@@ -12,6 +14,7 @@ class GemeindeAppHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settingsStore = TenantSettingsScope.of(context);
+    final services = AppServicesScope.of(context);
     final items = <_HubItem>[];
 
     if (settingsStore.isFeatureEnabled('events')) {
@@ -32,30 +35,46 @@ class GemeindeAppHubScreen extends StatelessWidget {
         _HubItem(
           title: 'Online Flohmarkt',
           icon: Icons.storefront,
-          onTap: () => _openPlaceholder(
+          onTap: () => _openCitizenList(
             context,
-            title: 'Online Flohmarkt',
-            description: 'Hier entsteht der digitale Flohmarkt der Gemeinde.',
+            CitizenPostType.marketplace,
+            services,
           ),
         ),
         _HubItem(
           title: 'Umzug/Entrümpelung',
           icon: Icons.local_shipping,
-          onTap: () => _openPlaceholder(
+          onTap: () => _openCitizenList(
             context,
-            title: 'Umzug/Entrümpelung',
-            description:
-                'Hier kannst du künftig Hilfe bei Umzug und Entrümpelung finden.',
+            CitizenPostType.movingClearance,
+            services,
           ),
         ),
         _HubItem(
           title: 'Senioren Hilfe',
           icon: Icons.volunteer_activism,
-          onTap: () => _openPlaceholder(
+          onTap: () => _openCitizenList(
             context,
-            title: 'Senioren Hilfe',
-            description:
-                'Unterstützungsangebote für Seniorinnen und Senioren.',
+            CitizenPostType.help,
+            services,
+          ),
+        ),
+        _HubItem(
+          title: 'Wohnungssuche',
+          icon: Icons.home_work_outlined,
+          onTap: () => _openCitizenList(
+            context,
+            CitizenPostType.apartmentSearch,
+            services,
+          ),
+        ),
+        _HubItem(
+          title: 'Fundbüro',
+          icon: Icons.search,
+          onTap: () => _openCitizenList(
+            context,
+            CitizenPostType.lostFound,
+            services,
           ),
         ),
       ]);
@@ -65,11 +84,10 @@ class GemeindeAppHubScreen extends StatelessWidget {
         _HubItem(
           title: 'Café Treff',
           icon: Icons.local_cafe,
-          onTap: () => _openPlaceholder(
+          onTap: () => _openCitizenList(
             context,
-            title: 'Café Treff',
-            description:
-                'Hier findest du bald Treffpunkte und Termine für den Café Treff.',
+            CitizenPostType.cafeMeetup,
+            services,
           ),
         ),
       );
@@ -79,11 +97,10 @@ class GemeindeAppHubScreen extends StatelessWidget {
         _HubItem(
           title: 'Kinderspielen (3j-5j)',
           icon: Icons.child_friendly,
-          onTap: () => _openPlaceholder(
+          onTap: () => _openCitizenList(
             context,
-            title: 'Kinderspielen (3j-5j)',
-            description:
-                'Spiel- und Betreuungsangebote für Kinder von 3 bis 5 Jahren.',
+            CitizenPostType.kidsMeetup,
+            services,
           ),
         ),
       );
@@ -124,13 +141,16 @@ class GemeindeAppHubScreen extends StatelessWidget {
     );
   }
 
-  void _openPlaceholder(
-    BuildContext context, {
-    required String title,
-    required String description,
-  }) {
+  void _openCitizenList(
+    BuildContext context,
+    CitizenPostType type,
+    AppServices services,
+  ) {
     AppRouterScope.of(context).push(
-      PlaceholderScreen(title: title, description: description),
+      CitizenPostsListScreen(
+        type: type,
+        postsService: services.citizenPostsService,
+      ),
     );
   }
 }
