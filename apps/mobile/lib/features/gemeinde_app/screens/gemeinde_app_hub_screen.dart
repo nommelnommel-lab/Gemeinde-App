@@ -32,7 +32,7 @@ class GemeindeAppHubScreen extends StatelessWidget {
     if (settingsStore.isFeatureEnabled('services')) {
       items.addAll([
         _HubItem(
-          title: 'Online Flohmarkt',
+          title: 'Beiträge & Markt',
           icon: Icons.storefront,
           onTap: () => _openCitizenList(
             context,
@@ -48,7 +48,7 @@ class GemeindeAppHubScreen extends StatelessWidget {
           ),
         ),
         _HubItem(
-          title: 'Senioren Hilfe',
+          title: 'Hilfe & Ehrenamt',
           icon: Icons.volunteer_activism,
           onTap: () => _openCitizenList(
             context,
@@ -56,16 +56,16 @@ class GemeindeAppHubScreen extends StatelessWidget {
           ),
         ),
         _HubItem(
-          title: 'Wohnungssuche',
-          icon: Icons.home_work_outlined,
+          title: 'Mobilität',
+          icon: Icons.directions_car,
           onTap: () => _openCitizenList(
             context,
             CitizenPostType.apartmentSearch,
           ),
         ),
         _HubItem(
-          title: 'Fundbüro',
-          icon: Icons.search,
+          title: 'Wohnen & Alltag',
+          icon: Icons.home,
           onTap: () => _openCitizenList(
             context,
             CitizenPostType.lostFound,
@@ -73,6 +73,7 @@ class GemeindeAppHubScreen extends StatelessWidget {
         ),
       ]);
     }
+    final communityTypes = <CitizenPostType>[];
     if (settingsStore.isFeatureEnabled('places')) {
       items.add(
         _HubItem(
@@ -86,10 +87,13 @@ class GemeindeAppHubScreen extends StatelessWidget {
       );
     }
     if (settingsStore.isFeatureEnabled('clubs')) {
+      communityTypes.add(CitizenPostType.kidsMeetup);
+    }
+    if (communityTypes.isNotEmpty) {
       items.add(
         _HubItem(
-          title: 'Kinderspielen (3j-5j)',
-          icon: Icons.child_friendly,
+          title: 'Treffen & Gemeinschaft',
+          icon: Icons.local_cafe,
           onTap: () => _openCitizenList(
             context,
             CitizenPostType.kidsMeetup,
@@ -140,7 +144,8 @@ class GemeindeAppHubScreen extends StatelessWidget {
     final services = AppServicesScope.of(context);
     AppRouterScope.of(context).push(
       CitizenPostsListScreen(
-        type: type,
+        title: title,
+        types: types,
         postsService: services.citizenPostsService,
       ),
     );

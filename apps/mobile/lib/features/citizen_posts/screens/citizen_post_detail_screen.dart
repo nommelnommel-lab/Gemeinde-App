@@ -245,6 +245,7 @@ class _CitizenPostDetailScreenState extends State<CitizenPostDetailScreen> {
         add('Ort', metadata['location']);
         add('Bild', metadata['image']);
         break;
+      case CitizenPostType.userPost:
       case CitizenPostType.rideSharing:
         add('Details', metadata['details']);
         break;

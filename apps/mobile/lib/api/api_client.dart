@@ -361,9 +361,15 @@ class ApiClient {
     }
   }
 
-  Future<dynamic> fetchPosts({required String type}) {
+  Future<dynamic> fetchPosts({required String type, String? query}) {
+    final queryParameters = <String, String>{'type': type};
+    final trimmed = query?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      queryParameters['q'] = trimmed;
+    }
+    final queryString = Uri(queryParameters: queryParameters).query;
     return getJsonFlexible(
-      '/posts?type=$type',
+      '/posts?$queryString',
       includeAuth: true,
     );
   }
