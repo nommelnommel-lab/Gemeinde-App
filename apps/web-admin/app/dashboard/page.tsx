@@ -10,7 +10,7 @@ import RolesPanel from '../../components/RolesPanel';
 import ContentPanel from '../../components/ContentPanel';
 import ModerationPanel from '../../components/ModerationPanel';
 import TourismPanel from '../../components/TourismPanel';
-import { fetchHealthStatus } from '../../lib/api';
+import { apiFetch, fetchHealthStatus } from '../../lib/api';
 import { clearSession, loadSession } from '../../lib/storage';
 
 const tabs = [
@@ -35,6 +35,15 @@ export default function DashboardPage() {
     message?: string;
   }>({ state: 'unknown' });
   const [healthChecking, setHealthChecking] = useState(false);
+  const [demoResetStatus, setDemoResetStatus] = useState<{
+    tone: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [demoResetting, setDemoResetting] = useState(false);
+
+  const isDemoTenant =
+    process.env.NEXT_PUBLIC_TENANT === 'hilders-demo' ||
+    process.env.NEXT_PUBLIC_DEFAULT_TENANT === 'hilders-demo';
 
   useEffect(() => {
     const session = loadSession();
@@ -74,9 +83,41 @@ export default function DashboardPage() {
     checkHealth();
   }, []);
 
+  useEffect(() => {
+    if (!demoResetStatus) {
+      return undefined;
+    }
+    const timeout = window.setTimeout(() => {
+      setDemoResetStatus(null);
+    }, 4000);
+    return () => window.clearTimeout(timeout);
+  }, [demoResetStatus]);
+
   const handleLogout = () => {
     clearSession();
     router.replace('/login');
+  };
+
+  const handleDemoReset = async () => {
+    setDemoResetting(true);
+    setDemoResetStatus(null);
+    try {
+      await apiFetch('/api/admin/demo/reset', { method: 'POST' });
+      setDemoResetStatus({
+        tone: 'success',
+        message: 'Demo-Daten wurden neu befüllt.',
+      });
+    } catch (error) {
+      setDemoResetStatus({
+        tone: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Demo-Reset fehlgeschlagen.',
+      });
+    } finally {
+      setDemoResetting(false);
+    }
   };
 
   const healthLabel =
@@ -88,6 +129,33 @@ export default function DashboardPage() {
 
   return (
     <div className="stack">
+      {isDemoTenant && (
+        <div className="card stack" style={{ gap: '12px' }}>
+          <div>
+            <strong>Demo</strong>
+            <p style={{ margin: '4px 0 0', color: 'var(--color-muted)' }}>
+              Setzt die Demo-Datenbank zurück und erstellt Beispieldaten neu.
+            </p>
+          </div>
+          {demoResetStatus && (
+            <div className={`notice ${demoResetStatus.tone}`}>
+              {demoResetStatus.message}
+            </div>
+          )}
+          <div className="row" style={{ gap: '12px' }}>
+            <button
+              type="button"
+              className="secondary"
+              onClick={handleDemoReset}
+              disabled={demoResetting}
+            >
+              {demoResetting
+                ? 'Demo-Daten werden neu befüllt…'
+                : 'Demo-Daten neu befüllen'}
+            </button>
+          </div>
+        </div>
+      )}
       {healthStatus.state === 'down' && (
         <div className="notice error">
           <div>
