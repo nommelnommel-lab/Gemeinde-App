@@ -7,6 +7,9 @@ npm --prefix apps/api run seed:hilders
 
 # Demo Seed
 npm --prefix apps/api run seed:demo
+
+# Hilders Demo Seed (inkl. Verwaltung)
+npm --prefix apps/api run seed:hilders-demo
 ```
 
 ## Mobile Demo-Flow
