@@ -5,7 +5,6 @@ import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/auth/auth_store.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
-import 'tourist_redeem_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -66,13 +65,6 @@ class _LoginScreenState extends State<LoginScreen> {
           FilledButton(
             onPressed: _submitting ? null : () => _submit(authStore),
             child: Text(_submitting ? 'Bitte warten...' : 'Login'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: () {
-              AppRouterScope.of(context).push(const TouristRedeemScreen());
-            },
-            child: const Text('Tourist-Zugang'),
           ),
         ],
       ),
