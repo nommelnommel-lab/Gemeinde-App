@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../lib/api';
+import { ApiError, apiFetch } from '../lib/api';
 import ErrorNotice from './ErrorNotice';
 import LoadingState from './LoadingState';
 
@@ -12,9 +12,12 @@ type ModerationPost = {
   title: string;
   body: string;
   authorUserId?: string;
+  residentId?: string;
+  metadata?: Record<string, unknown>;
   status: 'PUBLISHED' | 'HIDDEN';
   reportsCount: number;
   reportedAt?: string;
+  hiddenAt?: string;
   hiddenReason?: string;
   createdAt: string;
   updatedAt: string;
@@ -40,12 +43,20 @@ const typeOptions = [
 
 export default function ModerationPanel() {
   const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [reportedOnly, setReportedOnly] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [reportedPosts, setReportedPosts] = useState<ModerationPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [detailPost, setDetailPost] = useState<ModerationPost | null>(null);
   const [hideTarget, setHideTarget] = useState<ModerationPost | null>(null);
   const [hideReason, setHideReason] = useState('');
+  const [message, setMessage] = useState('');
+  const [connectionError, setConnectionError] = useState(false);
+  const [apiStatus, setApiStatus] = useState<'checking' | 'ok' | 'down'>(
+    'checking',
+  );
 
   const loadReported = async () => {
     setLoading(true);
@@ -55,12 +66,25 @@ export default function ModerationPanel() {
       if (typeFilter) {
         params.set('type', typeFilter);
       }
+      if (statusFilter) {
+        params.set('status', statusFilter);
+      }
+      params.set('reportedOnly', reportedOnly ? 'true' : 'false');
+      if (searchTerm.trim()) {
+        params.set('query', searchTerm.trim());
+      }
       const data = await apiFetch<ModerationPost[]>(
         `/api/admin/posts/reported${params.toString() ? `?${params.toString()}` : ''}`,
       );
       setReportedPosts(data ?? []);
+      setConnectionError(false);
+      setApiStatus('ok');
     } catch (err) {
       setError(err);
+      if (err instanceof ApiError && err.status === 0) {
+        setConnectionError(true);
+        setApiStatus('down');
+      }
     } finally {
       setLoading(false);
     }
@@ -68,7 +92,26 @@ export default function ModerationPanel() {
 
   useEffect(() => {
     loadReported();
-  }, [typeFilter]);
+  }, [typeFilter, statusFilter, reportedOnly, searchTerm]);
+
+  const checkHealth = async () => {
+    setApiStatus('checking');
+    try {
+      await apiFetch('/health');
+      setApiStatus('ok');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        setApiStatus('down');
+        setConnectionError(true);
+        return;
+      }
+      setApiStatus('down');
+    }
+  };
+
+  useEffect(() => {
+    checkHealth();
+  }, []);
 
   const handleHide = async () => {
     if (!hideTarget) {
@@ -87,6 +130,7 @@ export default function ModerationPanel() {
       });
       setHideTarget(null);
       setHideReason('');
+      setMessage('Beitrag ausgeblendet.');
       await loadReported();
     } catch (err) {
       setError(err);
@@ -100,19 +144,7 @@ export default function ModerationPanel() {
     setError(null);
     try {
       await apiFetch(`/api/admin/posts/${id}/unhide`, { method: 'PATCH' });
-      await loadReported();
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetReports = async (id: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      await apiFetch(`/api/admin/posts/${id}/reset-reports`, { method: 'PATCH' });
+      setMessage('Beitrag eingeblendet.');
       await loadReported();
     } catch (err) {
       setError(err);
@@ -128,6 +160,43 @@ export default function ModerationPanel() {
       ),
     [reportedPosts],
   );
+
+  const filteredPosts = useMemo(() => {
+    const normalizedQuery = searchTerm.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return sortedPosts;
+    }
+    return sortedPosts.filter((post) =>
+      post.title.toLowerCase().includes(normalizedQuery),
+    );
+  }, [sortedPosts, searchTerm]);
+
+  const resolveAuthor = (post: ModerationPost) => {
+    if (post.residentId) {
+      return post.residentId;
+    }
+    if (post.authorUserId) {
+      return post.authorUserId;
+    }
+    const metadataResident =
+      post.metadata && typeof post.metadata === 'object'
+        ? (post.metadata as { residentId?: string }).residentId
+        : undefined;
+    return metadataResident ?? '-';
+  };
+
+  const handleRetry = async () => {
+    await checkHealth();
+    await loadReported();
+  };
+
+  useEffect(() => {
+    if (!message) {
+      return undefined;
+    }
+    const timeout = window.setTimeout(() => setMessage(''), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [message]);
 
   return (
     <div className="stack">
@@ -147,44 +216,90 @@ export default function ModerationPanel() {
               ))}
             </select>
           </div>
-          <button type="button" onClick={loadReported}>
-            Aktualisieren
-          </button>
+          <div className="field">
+            <label htmlFor="statusFilter">Status</label>
+            <select
+              id="statusFilter"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              <option value="">Alle Status</option>
+              <option value="PUBLISHED">PUBLISHED</option>
+              <option value="HIDDEN">HIDDEN</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="reportedOnly">Nur gemeldet</label>
+            <input
+              id="reportedOnly"
+              type="checkbox"
+              checked={reportedOnly}
+              onChange={(event) => setReportedOnly(event.target.checked)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="searchTerm">Titel enthält</label>
+            <input
+              id="searchTerm"
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label>&nbsp;</label>
+            <button type="button" onClick={loadReported}>
+              Aktualisieren
+            </button>
+          </div>
+          <div className="field">
+            <label>API</label>
+            <span className="badge">
+              {apiStatus === 'checking'
+                ? 'prüfe...'
+                : apiStatus === 'ok'
+                  ? 'ok'
+                  : 'down'}
+            </span>
+          </div>
         </div>
-        {error && <ErrorNotice error={error} />}
+        {connectionError && (
+          <div className="notice error">
+            Backend nicht erreichbar.{' '}
+            <button type="button" onClick={handleRetry}>
+              Erneut versuchen
+            </button>
+          </div>
+        )}
+        {message && <div className="notice success">{message}</div>}
+        {error && !connectionError && <ErrorNotice error={error} />}
         {loading ? (
           <LoadingState />
-        ) : sortedPosts.length === 0 ? (
+        ) : filteredPosts.length === 0 ? (
           <p>Keine gemeldeten Beiträge gefunden.</p>
         ) : (
           <div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Titel</th>
+                  <th>Erstellt</th>
                   <th>Typ</th>
+                  <th>Titel</th>
                   <th>Autor</th>
                   <th>Reports</th>
                   <th>Status</th>
-                  <th>Gemeldet</th>
-                  <th>Erstellt</th>
                   <th>Aktionen</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedPosts.map((post) => (
+                {filteredPosts.map((post) => (
                   <tr key={post.id}>
-                    <td>{post.title}</td>
+                    <td>{new Date(post.createdAt).toLocaleString()}</td>
                     <td>{post.type}</td>
-                    <td>{post.authorUserId ?? '-'}</td>
+                    <td>{post.title}</td>
+                    <td>{resolveAuthor(post)}</td>
                     <td>{post.reportsCount}</td>
                     <td>{post.status}</td>
-                    <td>
-                      {post.reportedAt
-                        ? new Date(post.reportedAt).toLocaleString()
-                        : '-'}
-                    </td>
-                    <td>{new Date(post.createdAt).toLocaleString()}</td>
                     <td className="row">
                       <button
                         type="button"
@@ -213,13 +328,6 @@ export default function ModerationPanel() {
                           Ausblenden
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => handleResetReports(post.id)}
-                      >
-                        Reports zurücksetzen
-                      </button>
                     </td>
                   </tr>
                 ))}
@@ -239,10 +347,23 @@ export default function ModerationPanel() {
             <p>{detailPost.body}</p>
             <div className="details">
               <div>Typ: {detailPost.type}</div>
+              <div>Erstellt: {new Date(detailPost.createdAt).toLocaleString()}</div>
               <div>Status: {detailPost.status}</div>
               <div>Reports: {detailPost.reportsCount}</div>
+              <div>
+                Gemeldet:{' '}
+                {detailPost.reportedAt
+                  ? new Date(detailPost.reportedAt).toLocaleString()
+                  : '-'}
+              </div>
               {detailPost.hiddenReason && (
                 <div>Grund: {detailPost.hiddenReason}</div>
+              )}
+              {detailPost.metadata && (
+                <div>
+                  Metadaten:
+                  <pre>{JSON.stringify(detailPost.metadata, null, 2)}</pre>
+                </div>
               )}
             </div>
             <div className="row">
