@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/auth/app_permissions.dart';
+import '../../../shared/navigation/app_router.dart';
 import '../models/citizen_post.dart';
 import '../services/citizen_posts_service.dart';
 
@@ -73,6 +75,37 @@ class _CitizenPostFormScreenState extends State<CitizenPostFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final permissions =
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final canCreate = permissions.role != 'TOURIST' &&
+        _canCreateType(widget.type, permissions.canCreate);
+    if (!canCreate) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Beitrag')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.lock_outline, size: 36),
+                const SizedBox(height: 12),
+                Text(
+                  'Sie haben keinen Zugriff auf das Erstellen oder Bearbeiten von Beiträgen.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => AppRouterScope.of(context).pop(),
+                  child: const Text('Zurück'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     final isEditing = _isEditing;
     return Scaffold(
       appBar: AppBar(
@@ -472,6 +505,37 @@ class _CitizenPostFormScreenState extends State<CitizenPostFormScreen> {
       return message;
     }
     return null;
+  }
+
+  bool _canCreateType(CitizenPostType type, CreatePermissions create) {
+    switch (type) {
+      case CitizenPostType.marketplace:
+        return create.marketplace;
+      case CitizenPostType.movingClearance:
+        return create.movingClearance;
+      case CitizenPostType.help:
+        return create.help;
+      case CitizenPostType.cafeMeetup:
+        return create.cafeMeetup;
+      case CitizenPostType.kidsMeetup:
+        return create.kidsMeetup;
+      case CitizenPostType.apartmentSearch:
+        return create.apartmentSearch;
+      case CitizenPostType.lostFound:
+        return create.lostFound;
+      case CitizenPostType.rideSharing:
+        return create.rideSharing;
+      case CitizenPostType.jobsLocal:
+        return create.jobsLocal;
+      case CitizenPostType.volunteering:
+        return create.volunteering;
+      case CitizenPostType.giveaway:
+        return create.giveaway;
+      case CitizenPostType.skillExchange:
+        return create.skillExchange;
+      case CitizenPostType.userPost:
+        return false;
+    }
   }
 
   String _formatDate(DateTime date) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/auth/auth_scope.dart';
+import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_chip.dart';
@@ -43,6 +44,9 @@ class _CitizenPostDetailScreenState extends State<CitizenPostDetailScreen> {
     final items = _buildMetadataItems(_post);
     final authStore = AuthScope.of(context);
     final isAuthenticated = authStore.isAuthenticated;
+    final permissions =
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final isTourist = permissions.role == 'TOURIST';
     final userId = authStore.user?.id;
     final isAuthor = userId != null &&
         userId.isNotEmpty &&
@@ -56,7 +60,7 @@ class _CitizenPostDetailScreenState extends State<CitizenPostDetailScreen> {
         appBar: AppBar(
           title: Text(_post.title),
           actions: [
-            if (isAuthenticated)
+            if (isAuthenticated && !isTourist)
               IconButton(
                 onPressed:
                     _reported || _isReporting ? null : () => _report(context),
@@ -65,13 +69,13 @@ class _CitizenPostDetailScreenState extends State<CitizenPostDetailScreen> {
                 ),
                 tooltip: _reported ? 'Gemeldet' : 'Melden',
               ),
-            if (isAuthor)
+            if (isAuthor && !isTourist)
               IconButton(
                 onPressed: _openEdit,
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: 'Bearbeiten',
               ),
-            if (isAuthor)
+            if (isAuthor && !isTourist)
               IconButton(
                 onPressed: _isDeleting ? null : _confirmDelete,
                 icon: const Icon(Icons.delete_outline),

@@ -67,6 +67,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 label: 'Tourismus',
               ),
             ),
+            if (showVerwaltung)
+              _NavItem(
+                title: 'Verwaltung',
+                screen: const VerwaltungHubScreen(),
+                destination: const NavigationDestination(
+                  icon: Icon(Icons.admin_panel_settings_outlined),
+                  label: 'Verwaltung',
+                ),
+              ),
             _NavItem(
               title: 'Mehr',
               screen: const MehrScreen(),
