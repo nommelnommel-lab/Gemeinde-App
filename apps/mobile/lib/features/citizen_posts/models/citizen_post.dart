@@ -144,6 +144,10 @@ class CitizenPost {
     );
     final createdAtValue = json['createdAt'] ?? json['created_at'];
     final updatedAtValue = json['updatedAt'] ?? json['updated_at'];
+    final authorUserId = json['authorUserId'] ??
+        json['authorId'] ??
+        json['author_user_id'] ??
+        json['author_userId'];
     return CitizenPost(
       id: (json['id'] ?? '').toString(),
       type: typeValue ?? CitizenPostType.marketplace,

@@ -103,7 +103,7 @@ class _NewsScreenState extends State<NewsScreen> {
             else if (_error != null)
               _ErrorView(error: _error!, onRetry: _load)
             else if (_filteredNews.isEmpty)
-              const Text('Keine News gefunden.')
+              Text(_emptyMessage())
             else
               ..._filteredNews.map(
                 (item) => Card(
@@ -172,6 +172,13 @@ class _NewsScreenState extends State<NewsScreen> {
     final categories = _news.map((item) => item.category).toSet().toList()
       ..sort();
     return ['Alle', ...categories];
+  }
+
+  String _emptyMessage() {
+    if (_selectedCategory != 'Alle') {
+      return 'Keine News in der Kategorie $_selectedCategory.';
+    }
+    return 'Keine News gefunden.';
   }
 
   String _formatDate(DateTime date) {

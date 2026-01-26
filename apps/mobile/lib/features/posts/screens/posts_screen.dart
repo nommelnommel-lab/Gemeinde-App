@@ -66,7 +66,7 @@ class _PostsScreenState extends State<PostsScreen> {
             else if (_error != null)
               _ErrorView(error: _error!, onRetry: _load)
             else if (_posts.isEmpty)
-              const Text('Noch keine Beiträge vorhanden.')
+              Text('Noch keine Beiträge in ${widget.type.label}.')
             else
               ..._posts.map(
                 (post) => Card(

@@ -75,6 +75,9 @@ export default function RolesPanel() {
 
   return (
     <div className="stack">
+      <div className="notice">
+        Rollen steuern Staff-Mode und Rechte in der App.
+      </div>
       <div className="row">
         <div className="field">
           <label htmlFor="userSearch">Suche (E-Mail oder ID)</label>

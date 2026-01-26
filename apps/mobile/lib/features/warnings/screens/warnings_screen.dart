@@ -52,8 +52,11 @@ class _WarningsScreenState extends State<WarningsScreen> {
     try {
       final warnings = await _warningsService.getWarnings();
       setState(() => _warnings = warnings);
-    } catch (e) {
-      setState(() => _error = e.toString());
+    } catch (_) {
+      setState(
+        () => _error =
+            'Warnungen konnten nicht geladen werden. Bitte später erneut versuchen.',
+      );
     } finally {
       setState(() => _loading = false);
     }
@@ -90,7 +93,7 @@ class _WarningsScreenState extends State<WarningsScreen> {
             else if (_error != null)
               _WarningsErrorView(error: _error!, onRetry: _load)
             else if (sorted.isEmpty)
-              const Text('Aktuell liegen keine Warnungen vor.')
+              Text(_emptyMessage(_selectedFilter))
             else
               ...sorted.map(
                 (warning) => Card(
@@ -160,6 +163,25 @@ class _WarningsScreenState extends State<WarningsScreen> {
         return warnings
             .where((warning) => warning.severity == WarningSeverity.critical)
             .toList();
+    }
+  }
+
+  String _emptyMessage(WarningFilter filter) {
+    switch (filter) {
+      case WarningFilter.all:
+        return 'Aktuell liegen keine Warnungen vor.';
+      case WarningFilter.today:
+        return 'Heute liegen keine Warnungen vor.';
+      case WarningFilter.weather:
+        return 'Keine Warnungen in der Kategorie Unwetter.';
+      case WarningFilter.traffic:
+        return 'Keine Warnungen in der Kategorie Verkehr.';
+      case WarningFilter.info:
+        return 'Keine Warnungen mit Info-Schweregrad.';
+      case WarningFilter.warning:
+        return 'Keine Warnungen mit Warnung-Schweregrad.';
+      case WarningFilter.critical:
+        return 'Keine Warnungen mit Kritisch-Schweregrad.';
     }
   }
 
