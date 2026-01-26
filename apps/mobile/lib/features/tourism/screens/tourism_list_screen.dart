@@ -23,6 +23,8 @@ class TourismListScreen extends StatefulWidget {
 }
 
 class _TourismListScreenState extends State<TourismListScreen> {
+  static const _emptyHint =
+      'Einträge können von der Verwaltung im Web-Admin ergänzt werden.';
   late final TourismService _tourismService;
   bool _initialized = false;
 
@@ -100,8 +102,9 @@ class _TourismListScreenState extends State<TourismListScreen> {
       return _buildStateList(
         EmptyState(
           icon: Icons.map_outlined,
-          title: 'Keine Einträge verfügbar',
+          title: 'Noch keine Einträge',
           message: 'Für diese Kategorie sind aktuell keine Inhalte vorhanden.',
+          hint: _emptyHint,
         ),
       );
     }

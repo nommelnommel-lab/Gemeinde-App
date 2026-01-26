@@ -52,33 +52,44 @@ class VerwaltungHubScreen extends StatelessWidget {
       ),
     ];
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const AppSectionHeader(
-          title: 'Formulare & Verwaltung',
-          subtitle: 'Schneller Zugriff auf Services der Gemeinde.',
-        ),
-        const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.05,
-          ),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return _VerwaltungTile(
-              item: item,
-              onTap: item.onTap,
-            );
-          },
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth < 360 ? 1 : 2;
+        return CustomScrollView(
+          slivers: [
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              sliver: SliverToBoxAdapter(
+                child: AppSectionHeader(
+                  title: 'Formulare & Verwaltung',
+                  subtitle: 'Schneller Zugriff auf Services der Gemeinde.',
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.05,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = items[index];
+                    return _VerwaltungTile(
+                      item: item,
+                      onTap: item.onTap,
+                    );
+                  },
+                  childCount: items.length,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -130,6 +141,8 @@ class _VerwaltungTile extends StatelessWidget {
             item.title,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

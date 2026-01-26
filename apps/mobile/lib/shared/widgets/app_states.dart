@@ -30,12 +30,14 @@ class EmptyState extends StatelessWidget {
     required this.title,
     required this.message,
     this.icon = Icons.inbox_outlined,
+    this.hint,
     this.action,
   });
 
   final String title;
   final String message;
   final IconData icon;
+  final String? hint;
   final Widget? action;
 
   @override
@@ -63,6 +65,14 @@ class EmptyState extends StatelessWidget {
                 message,
                 textAlign: TextAlign.center,
               ),
+              if (hint != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  hint!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               if (action != null) ...[
                 const SizedBox(height: 16),
                 action!,

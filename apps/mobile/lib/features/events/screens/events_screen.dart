@@ -23,6 +23,8 @@ class EventsScreen extends StatefulWidget {
 }
 
 class _EventsScreenState extends State<EventsScreen> {
+  static const _emptyHint =
+      'Einträge können von der Verwaltung im Web-Admin ergänzt werden.';
   late final EventsService _eventsService;
   bool _initialized = false;
 
@@ -124,8 +126,9 @@ class _EventsScreenState extends State<EventsScreen> {
       return _buildStateList(
         const EmptyState(
           icon: Icons.event_busy,
-          title: 'Keine Events geplant',
-          message: 'Keine Events in den nächsten 4 Wochen.',
+          title: 'Noch keine Einträge',
+          message: 'Aktuell sind keine Events geplant.',
+          hint: _emptyHint,
         ),
       );
     }

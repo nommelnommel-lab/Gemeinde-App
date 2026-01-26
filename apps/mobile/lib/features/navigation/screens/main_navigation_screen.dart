@@ -174,6 +174,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) {
+          if (index != _selectedIndex) {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
           setState(() => _selectedIndex = index);
         },
         destinations: items.map((item) => item.destination).toList(),
