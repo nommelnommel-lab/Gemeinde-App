@@ -87,7 +87,7 @@ class _MehrScreenState extends State<MehrScreen> {
             subtitle: const Text('Nur lesen, keine Bearbeitung möglich'),
             trailing: TextButton(
               onPressed: authStore.isLoading ? null : _logout,
-              child: const Text('Zurücksetzen'),
+              child: const Text('Tourist-Zugang zurücksetzen'),
             ),
           ),
         if (authStore.isAuthenticated && isTourist)

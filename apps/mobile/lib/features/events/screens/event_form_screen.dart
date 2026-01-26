@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../models/event.dart';
 import '../models/event_input.dart';
@@ -53,6 +54,37 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final permissions =
+        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final canEdit = permissions.role != 'TOURIST' &&
+        permissions.canCreate.officialEvents;
+    if (!canEdit) {
+      return AppScaffold(
+        appBar: AppBar(title: const Text('Event')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.lock_outline, size: 36),
+                const SizedBox(height: 12),
+                Text(
+                  'Sie haben keinen Zugriff auf das Erstellen oder Bearbeiten von Events.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => AppRouterScope.of(context).pop(),
+                  child: const Text('Zurück'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     final isEdit = widget.event != null;
     final saveLabel = isEdit ? 'Aktualisieren' : 'Erstellen';
 
