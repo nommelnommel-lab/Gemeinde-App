@@ -1,4 +1,4 @@
-import { TourismItemType } from '../src/tourism/tourism.types';
+import { TourismItemType } from './tourism.types';
 
 export const tourismSeedItems: Array<{
   type: TourismItemType;

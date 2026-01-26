@@ -49,5 +49,6 @@ import { MunicipalityWastePickupsService } from './waste-pickups/municipality-wa
     MunicipalityWastePickupsService,
     AdminGuard,
   ],
+  exports: [MunicipalityPostsService],
 })
 export class MunicipalityModule {}
