@@ -23,6 +23,8 @@ class NewsScreen extends StatefulWidget {
 }
 
 class _NewsScreenState extends State<NewsScreen> {
+  static const _emptyHint =
+      'Einträge können von der Verwaltung im Web-Admin ergänzt werden.';
   late final NewsService _newsService;
   bool _initialized = false;
   bool _canManageContent = false;
@@ -120,8 +122,9 @@ class _NewsScreenState extends State<NewsScreen> {
             else if (_filteredNews.isEmpty)
               EmptyState(
                 icon: Icons.article_outlined,
-                title: 'Keine News gefunden',
+                title: 'Noch keine Einträge',
                 message: _emptyMessage(),
+                hint: _emptyHint,
               )
             else
               ..._filteredNews.map(
@@ -220,9 +223,9 @@ class _NewsScreenState extends State<NewsScreen> {
 
   String _emptyMessage() {
     if (_selectedCategory != 'Alle') {
-      return 'Keine News in der Kategorie $_selectedCategory.';
+      return 'Für die Kategorie $_selectedCategory gibt es aktuell keine News.';
     }
-    return 'Keine News gefunden.';
+    return 'Aktuell gibt es keine News.';
   }
 
   String _formatDate(DateTime date) {

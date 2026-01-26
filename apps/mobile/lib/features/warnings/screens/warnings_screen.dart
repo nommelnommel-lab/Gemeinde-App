@@ -22,6 +22,8 @@ class WarningsScreen extends StatefulWidget {
 }
 
 class _WarningsScreenState extends State<WarningsScreen> {
+  static const _emptyHint =
+      'Einträge können von der Verwaltung im Web-Admin ergänzt werden.';
   late final WarningsService _warningsService;
   bool _initialized = false;
   bool _loading = true;
@@ -100,8 +102,9 @@ class _WarningsScreenState extends State<WarningsScreen> {
             else if (sorted.isEmpty)
               EmptyState(
                 icon: Icons.warning_amber_outlined,
-                title: 'Keine Warnungen',
+                title: 'Noch keine Einträge',
                 message: _emptyMessage(_selectedFilter),
+                hint: _emptyHint,
               )
             else
               ...sorted.map(

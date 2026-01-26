@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_section_header.dart';
 import '../../../shared/tenant/tenant_settings_scope.dart';
 import '../../citizen_posts/models/citizen_post.dart';
 import '../../citizen_posts/screens/citizen_posts_list_screen.dart';
@@ -128,18 +129,40 @@ class GemeindeAppHubScreen extends StatelessWidget {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.1,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return _HubTile(item: item);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth < 360 ? 1 : 2;
+        return CustomScrollView(
+          slivers: [
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              sliver: SliverToBoxAdapter(
+                child: AppSectionHeader(
+                  title: 'GemeindeApp',
+                  subtitle: 'Services und Beiträge aus deiner Gemeinde.',
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.1,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = items[index];
+                    return _HubTile(item: item);
+                  },
+                  childCount: items.length,
+                ),
+              ),
+            ),
+          ],
+        );
       },
     );
   }
@@ -194,6 +217,8 @@ class _HubTile extends StatelessWidget {
                 item.title,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -33,6 +33,8 @@ class CitizenPostsListScreen extends StatefulWidget {
 }
 
 class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
+  static const _emptyHint =
+      'Einträge können von der Verwaltung im Web-Admin ergänzt werden.';
   bool _initialized = false;
   bool _loading = true;
   String? _error;
@@ -197,8 +199,9 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
             else if (_posts.isEmpty)
               EmptyState(
                 icon: Icons.forum_outlined,
-                title: 'Keine Beiträge',
+                title: 'Noch keine Einträge',
                 message: _emptyMessage(),
+                hint: _emptyHint,
               )
             else
               ..._posts.map(
