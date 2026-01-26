@@ -153,7 +153,10 @@ class CitizenPost {
       type: typeValue ?? CitizenPostType.marketplace,
       title: (json['title'] ?? '').toString(),
       body: (json['body'] ?? '').toString(),
-      authorUserId: authorUserId?.toString(),
+      authorUserId: json['authorUserId']?.toString() ??
+          json['authorId']?.toString() ??
+          json['userId']?.toString() ??
+          json['createdBy']?.toString(),
       metadata: _parseMetadata(json['metadata']),
       createdAt: _parseDate(createdAtValue) ?? DateTime.now(),
       updatedAt: _parseDate(updatedAtValue) ?? DateTime.now(),

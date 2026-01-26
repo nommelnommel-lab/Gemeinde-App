@@ -244,6 +244,45 @@ const run = async () => {
     throw new Error(`reportsCount expected 1, got ${refreshed?.reportsCount}`);
   }
 
+  await requireOk(`/api/admin/posts/${created.id}/hide`, {
+    method: 'PATCH',
+    headers: headersAdmin(),
+    body: { reason: 'test-hide' },
+  });
+
+  const listAfterHide = await requireOk('/posts?type=marketplace', {
+    method: 'GET',
+    headers: headersPublic(),
+  });
+  if (Array.isArray(listAfterHide) && listAfterHide.some((item) => item.id === created.id)) {
+    throw new Error('Hidden post should not be visible to public list.');
+  }
+
+  const listAfterHideAuth = await requireOk('/posts?type=marketplace', {
+    method: 'GET',
+    headers: headersAuth(accessToken),
+  });
+  if (Array.isArray(listAfterHideAuth) && listAfterHideAuth.some((item) => item.id === created.id)) {
+    throw new Error('Hidden post should not be visible in author list.');
+  }
+
+  const hiddenForAuthor = await requireOk(`/posts/${created.id}`, {
+    method: 'GET',
+    headers: headersAuth(accessToken),
+  });
+  if (hiddenForAuthor?.status !== 'HIDDEN') {
+    throw new Error('Hidden post should be readable by author.');
+  }
+
+  const updateAttempt = await requestJson(`/posts/${created.id}`, {
+    method: 'PATCH',
+    headers: headersAuth(accessToken),
+    body: { title: 'Neue Überschrift' },
+  });
+  if (updateAttempt.response.ok) {
+    throw new Error('Author should not be able to edit a hidden post.');
+  }
+
   // eslint-disable-next-line no-console
   console.info('DONE ✅');
 };

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/auth/auth_scope.dart';
+import '../../../shared/navigation/app_router.dart';
 import '../models/citizen_post.dart';
 import '../services/citizen_posts_service.dart';
+import 'citizen_post_form_screen.dart';
 
 class CitizenPostDetailScreen extends StatefulWidget {
   const CitizenPostDetailScreen({
@@ -20,92 +23,151 @@ class CitizenPostDetailScreen extends StatefulWidget {
 
 class _CitizenPostDetailScreenState extends State<CitizenPostDetailScreen> {
   late CitizenPost _post;
-  bool _loading = false;
-  String? _error;
-  bool _reporting = false;
+  bool _reported = false;
+  bool _isReporting = false;
+  bool _isDeleting = false;
+  bool _didChange = false;
 
   @override
   void initState() {
     super.initState();
     _post = widget.post;
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final post = await widget.postsService.getPost(_post.id);
-      if (mounted) {
-        setState(() => _post = post);
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _error = 'Beitrag konnte nicht geladen werden.');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_post.title),
-        actions: [
-          IconButton(
-            onPressed: _reporting ? null : () => _report(context),
-            icon: const Icon(Icons.flag_outlined),
-            tooltip: 'Melden',
-          ),
-        ],
+    final items = _buildMetadataItems(_post);
+    final authStore = AuthScope.of(context);
+    final isAuthenticated = authStore.isAuthenticated;
+    final userId = authStore.user?.id;
+    final isAuthor = userId != null &&
+        userId.isNotEmpty &&
+        userId == _post.authorUserId;
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pop(_didChange);
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_post.title),
+          actions: [
+            if (isAuthenticated)
+              IconButton(
+                onPressed:
+                    _reported || _isReporting ? null : () => _report(context),
+                icon: Icon(
+                  _reported ? Icons.flag : Icons.flag_outlined,
+                ),
+                tooltip: _reported ? 'Gemeldet' : 'Melden',
+              ),
+            if (isAuthor)
+              IconButton(
+                onPressed: _openEdit,
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Bearbeiten',
+              ),
+            if (isAuthor)
+              IconButton(
+                onPressed: _isDeleting ? null : _confirmDelete,
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Löschen',
+              ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              _post.title,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 12),
+            Text(_post.body),
+            const SizedBox(height: 16),
+            Text(
+              'Erstellt am ${_formatDate(_post.createdAt.toIso8601String())}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (items.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                'Details',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              ...items.map(
+                (entry) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(entry.label),
+                  subtitle: Text(entry.value),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
-      body: _buildBody(context),
     );
   }
 
-  Widget _buildBody(BuildContext context) {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final items = _buildMetadataItems(_post);
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        if (_error != null) ...[
-          _ErrorView(error: _error!, onRetry: _load),
-          const SizedBox(height: 16),
-        ],
-        Text(
-          _post.title,
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 12),
-        Text(_post.body),
-        if (items.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          Text(
-            'Details',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          ...items.map(
-            (entry) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(entry.label),
-              subtitle: Text(entry.value),
-            ),
-          ),
-        ],
-      ],
+  Future<void> _openEdit() async {
+    final result = await AppRouterScope.of(context).push<CitizenPost?>(
+      CitizenPostFormScreen(
+        type: _post.type,
+        postsService: widget.postsService,
+        post: _post,
+      ),
     );
+    if (result != null && mounted) {
+      setState(() {
+        _post = result;
+        _didChange = true;
+      });
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Beitrag löschen'),
+            content: const Text(
+              'Möchtest du diesen Beitrag wirklich löschen?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Abbrechen'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Löschen'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirm || _isDeleting) {
+      return;
+    }
+    setState(() => _isDeleting = true);
+    try {
+      await widget.postsService.deletePost(_post.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Beitrag wurde gelöscht.')),
+      );
+      AppRouterScope.of(context).pop(true);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Beitrag konnte nicht gelöscht werden.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+      }
+    }
   }
 
   List<_MetadataEntry> _buildMetadataItems(CitizenPost post) {
@@ -200,21 +262,22 @@ class _CitizenPostDetailScreenState extends State<CitizenPostDetailScreen> {
   }
 
   Future<void> _report(BuildContext context) async {
-    setState(() => _reporting = true);
+    setState(() => _isReporting = true);
     try {
       await widget.postsService.reportPost(_post.id);
       if (!context.mounted) return;
+      setState(() => _reported = true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Beitrag wurde gemeldet.')),
+        const SnackBar(content: Text('Gemeldet')),
       );
-    } catch (error) {
+    } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Melden fehlgeschlagen: $error')),
+        const SnackBar(content: Text('Beitrag konnte nicht gemeldet werden.')),
       );
     } finally {
       if (mounted) {
-        setState(() => _reporting = false);
+        setState(() => _isReporting = false);
       }
     }
   }

@@ -6,65 +6,38 @@ class CitizenPostsService {
 
   final ApiClient _apiClient;
 
-  static const String postsEndpoint = '/posts';
-  static String postByIdEndpoint(String id) => '/posts/$id';
-  static String reportPostEndpoint(String id) => '/posts/$id/report';
-
-  Future<List<CitizenPost>> getPosts({
-    required CitizenPostType type,
-    bool onlyMine = false,
-    String? authorUserId,
-  }) async {
-    final authorQuery = onlyMine ? '&author=me' : '';
-    final response = await _apiClient.getJsonFlexible(
-      '${postsEndpoint}?type=${type.apiValue}$authorQuery',
-      includeAuth: true,
-    );
+  Future<List<CitizenPost>> getPosts({required CitizenPostType type}) async {
+    final response = await _apiClient.fetchPosts(type: type.apiValue);
     final payload = _extractList(response);
     final posts = payload
         .whereType<Map<String, dynamic>>()
         .map(CitizenPost.fromJson)
         .toList();
-    if (onlyMine && authorUserId != null && authorUserId.isNotEmpty) {
-      return posts
-          .where((post) => post.authorUserId == authorUserId)
-          .toList();
-    }
+    posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return posts;
   }
 
-  Future<CitizenPost> getPost(String id) async {
-    final response = await _apiClient.getJsonFlexible(
-      postByIdEndpoint(id),
-      includeAuth: true,
-    );
-    final payload = _extractMap(response);
+  Future<CitizenPost> createPost(CitizenPostInput input) async {
+    final data = await _apiClient.createPost(input.toJson());
+    final payload = _extractMap(data);
     return CitizenPost.fromJson(payload);
   }
 
-  Future<CitizenPost> createPost(CitizenPostInput input) async {
-    final data = await _apiClient.postJson(
-      postsEndpoint,
-      input.toJson(),
-      includeAuth: true,
-    );
+  Future<CitizenPost> updatePost(
+    String id,
+    CitizenPostInput input,
+  ) async {
+    final data = await _apiClient.updatePost(id, input.toJson());
     final payload = _extractMap(data);
     return CitizenPost.fromJson(payload);
   }
 
   Future<void> deletePost(String id) async {
-    await _apiClient.deleteJson(
-      postByIdEndpoint(id),
-      includeAuth: true,
-    );
+    await _apiClient.deletePost(id);
   }
 
   Future<void> reportPost(String id) async {
-    await _apiClient.postJson(
-      reportPostEndpoint(id),
-      const {},
-      includeAuth: true,
-    );
+    await _apiClient.reportPost(id);
   }
 
   List<dynamic> _extractList(dynamic data) {

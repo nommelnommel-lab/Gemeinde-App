@@ -13,7 +13,7 @@ import { AdminGuard } from '../admin/admin.guard';
 import { ContentType } from '../content/content.types';
 import { requireTenant } from '../tenant/tenant-auth';
 import { PostsService } from './posts.service';
-import { PostEntity, PostType } from './posts.types';
+import { PostEntity, PostStatus, PostType } from './posts.types';
 
 type HidePayload = {
   reason?: string;
@@ -28,14 +28,21 @@ export class AdminPostsController {
   async getReportedPosts(
     @Headers() headers: Record<string, string | string[] | undefined>,
     @Query('type') type?: string,
+    @Query('status') status?: string,
+    @Query('reportedOnly') reportedOnly?: string,
+    @Query('query') query?: string,
   ): Promise<PostEntity[]> {
     const tenantId = requireTenant(headers);
     const parsedType = type ? this.parseType(type) : undefined;
+    const parsedStatus = status ? this.parseStatus(status) : undefined;
+    const parsedReportedOnly = this.parseBoolean(reportedOnly) ?? true;
     return this.postsService.getAll({
       tenantId,
       type: parsedType,
+      status: parsedStatus,
       includeHidden: true,
-      reportedOnly: true,
+      reportedOnly: parsedReportedOnly,
+      query,
     });
   }
 
@@ -100,5 +107,27 @@ export class AdminPostsController {
       throw new BadRequestException('type ist ungültig');
     }
     return mapped;
+  }
+
+  private parseStatus(value: string): PostStatus {
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'PUBLISHED' || normalized === 'HIDDEN') {
+      return normalized;
+    }
+    throw new BadRequestException('status ist ungültig');
+  }
+
+  private parseBoolean(value?: string) {
+    if (!value) {
+      return undefined;
+    }
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'y'].includes(normalized)) {
+      return true;
+    }
+    if (['false', '0', 'no', 'n'].includes(normalized)) {
+      return false;
+    }
+    throw new BadRequestException('reportedOnly ist ungültig');
   }
 }
