@@ -56,7 +56,6 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
       final authorUserId = authStore.user?.id;
       final posts = await widget.postsService.getPosts(
         type: widget.type,
-        onlyMine: _onlyMine,
         authorUserId: authorUserId,
       );
       if (mounted) {
