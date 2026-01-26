@@ -19,6 +19,8 @@ import { MunicipalityServicesController } from './services/municipality-services
 import { MunicipalityServicesService } from './services/municipality-services.service';
 import { TenantSettingsController } from './tenant-settings/tenant-settings.controller';
 import { TenantSettingsService } from './tenant-settings/tenant-settings.service';
+import { MunicipalityVerwaltungController } from './verwaltung/municipality-verwaltung.controller';
+import { MunicipalityVerwaltungService } from './verwaltung/municipality-verwaltung.service';
 import { MunicipalityWastePickupsController } from './waste-pickups/municipality-waste-pickups.controller';
 import { MunicipalityWastePickupsService } from './waste-pickups/municipality-waste-pickups.service';
 
@@ -32,6 +34,7 @@ import { MunicipalityWastePickupsService } from './waste-pickups/municipality-wa
     MunicipalityPostsController,
     MunicipalityPlacesController,
     MunicipalityServicesController,
+    MunicipalityVerwaltungController,
     MunicipalityClubsController,
     MunicipalityWastePickupsController,
     MunicipalityFeedController,
@@ -45,6 +48,7 @@ import { MunicipalityWastePickupsService } from './waste-pickups/municipality-wa
     MunicipalityPostsService,
     MunicipalityPlacesService,
     MunicipalityServicesService,
+    MunicipalityVerwaltungService,
     MunicipalityClubsService,
     MunicipalityWastePickupsService,
     AdminGuard,

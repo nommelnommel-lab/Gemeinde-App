@@ -4,7 +4,9 @@ import '../../../shared/navigation/app_router.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_section_header.dart';
 import '../../../shared/widgets/coming_soon_screen.dart';
+import '../models/verwaltung_item.dart';
 import 'tenant_info_screen.dart';
+import 'verwaltung_items_screen.dart';
 
 class VerwaltungHubScreen extends StatelessWidget {
   const VerwaltungHubScreen({super.key});
@@ -14,22 +16,18 @@ class VerwaltungHubScreen extends StatelessWidget {
     final items = [
       _VerwaltungItem(
         title: 'Formulare',
-        description: 'Formulare und Anträge folgen hier.',
+        description: 'Formulare und Anträge der Gemeinde.',
         icon: Icons.description_outlined,
-        onTap: () => _openComingSoon(
-          context,
-          itemTitle: 'Formulare',
-          itemDescription: 'Formulare und Anträge folgen hier.',
+        onTap: () => AppRouterScope.of(context).push(
+          const VerwaltungItemsScreen(kind: VerwaltungItemKind.form),
         ),
       ),
       _VerwaltungItem(
-        title: 'Rathaus Infos',
-        description: 'Informationen rund um das Rathaus folgen hier.',
-        icon: Icons.account_balance_outlined,
-        onTap: () => _openComingSoon(
-          context,
-          itemTitle: 'Rathaus Infos',
-          itemDescription: 'Informationen rund um das Rathaus folgen hier.',
+        title: 'Wichtige Links',
+        description: 'Schneller Zugriff auf wichtige Services.',
+        icon: Icons.link_outlined,
+        onTap: () => AppRouterScope.of(context).push(
+          const VerwaltungItemsScreen(kind: VerwaltungItemKind.link),
         ),
       ),
       _VerwaltungItem(

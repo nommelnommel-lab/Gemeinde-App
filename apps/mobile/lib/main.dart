@@ -15,6 +15,7 @@ import 'features/tourism/services/tourism_service.dart';
 import 'features/auth/services/auth_service.dart';
 import 'features/admin/services/admin_service.dart';
 import 'features/verwaltung/services/tenant_config_service.dart';
+import 'features/verwaltung/services/verwaltung_service.dart';
 import 'features/warnings/services/warnings_service.dart';
 import 'shared/auth/auth_bootstrap.dart';
 import 'shared/auth/auth_scope.dart';
@@ -95,6 +96,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
       warningsService: WarningsService(_apiClient),
       tourismService: TourismService(_apiClient),
       permissionsService: PermissionsService(_apiClient),
+      verwaltungService: VerwaltungService(_apiClient),
       tenantStore: widget.tenantStore,
     );
     _tenantSettingsStore = TenantSettingsStore(
