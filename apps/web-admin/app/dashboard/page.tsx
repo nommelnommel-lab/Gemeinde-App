@@ -25,9 +25,11 @@ type TabId = (typeof tabs)[number]['id'];
 export default function DashboardPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>('residents');
-  const [healthStatus, setHealthStatus] = useState<'ok' | 'down' | 'unknown'>(
-    'unknown',
-  );
+  const [healthStatus, setHealthStatus] = useState<{
+    state: 'ok' | 'down' | 'unknown';
+    status?: number;
+    message?: string;
+  }>({ state: 'unknown' });
 
   useEffect(() => {
     const session = loadSession();
@@ -49,9 +51,17 @@ export default function DashboardPage() {
             headers: buildAdminHeaders(session),
           },
         );
-        setHealthStatus(response.ok ? 'ok' : 'down');
+        setHealthStatus({
+          state: response.ok ? 'ok' : 'down',
+          status: response.status,
+          message: response.statusText,
+        });
       } catch {
-        setHealthStatus('down');
+        setHealthStatus({
+          state: 'down',
+          status: 0,
+          message: 'Backend nicht erreichbar',
+        });
       }
     };
     checkHealth();
@@ -64,9 +74,11 @@ export default function DashboardPage() {
 
   return (
     <div className="stack">
-      {healthStatus === 'down' && (
+      {healthStatus.state === 'down' && (
         <div className="notice error">
-          Backend nicht erreichbar. Bitte API Base URL prüfen.
+          Backend nicht erreichbar. Bitte API Base URL prüfen. (HTTP{' '}
+          {healthStatus.status ?? '–'}:{' '}
+          {healthStatus.message ?? 'Unbekannter Fehler'})
         </div>
       )}
       <div className="row" style={{ justifyContent: 'space-between' }}>

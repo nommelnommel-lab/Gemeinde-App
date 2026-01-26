@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/citizen_post.dart';
 import '../services/citizen_posts_service.dart';
 
-class CitizenPostDetailScreen extends StatelessWidget {
+class CitizenPostDetailScreen extends StatefulWidget {
   const CitizenPostDetailScreen({
     super.key,
     required this.post,
@@ -14,45 +14,97 @@ class CitizenPostDetailScreen extends StatelessWidget {
   final CitizenPostsService postsService;
 
   @override
+  State<CitizenPostDetailScreen> createState() =>
+      _CitizenPostDetailScreenState();
+}
+
+class _CitizenPostDetailScreenState extends State<CitizenPostDetailScreen> {
+  late CitizenPost _post;
+  bool _loading = false;
+  String? _error;
+  bool _reporting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _post = widget.post;
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final post = await widget.postsService.getPost(_post.id);
+      if (mounted) {
+        setState(() => _post = post);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Beitrag konnte nicht geladen werden.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final items = _buildMetadataItems(post);
     return Scaffold(
       appBar: AppBar(
-        title: Text(post.title),
+        title: Text(_post.title),
         actions: [
           IconButton(
-            onPressed: () => _report(context),
+            onPressed: _reporting ? null : () => _report(context),
             icon: const Icon(Icons.flag_outlined),
             tooltip: 'Melden',
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            post.title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 12),
-          Text(post.body),
-          if (items.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Text(
-              'Details',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            ...items.map(
-              (entry) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(entry.label),
-                subtitle: Text(entry.value),
-              ),
-            ),
-          ],
+      body: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final items = _buildMetadataItems(_post);
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (_error != null) ...[
+          _ErrorView(error: _error!, onRetry: _load),
+          const SizedBox(height: 16),
         ],
-      ),
+        Text(
+          _post.title,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 12),
+        Text(_post.body),
+        if (items.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          Text(
+            'Details',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          ...items.map(
+            (entry) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(entry.label),
+              subtitle: Text(entry.value),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -148,11 +200,23 @@ class CitizenPostDetailScreen extends StatelessWidget {
   }
 
   Future<void> _report(BuildContext context) async {
-    await postsService.reportPost(post.id);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Beitrag wurde gemeldet.')),
-    );
+    setState(() => _reporting = true);
+    try {
+      await widget.postsService.reportPost(_post.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Beitrag wurde gemeldet.')),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Melden fehlgeschlagen: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _reporting = false);
+      }
+    }
   }
 }
 
@@ -161,4 +225,35 @@ class _MetadataEntry {
 
   final String label;
   final String value;
+}
+
+class _ErrorView extends StatelessWidget {
+  const _ErrorView({required this.error, required this.onRetry});
+
+  final String error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Text(
+              'Etwas ist schiefgelaufen',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            Text(error, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: onRetry,
+              child: const Text('Erneut versuchen'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

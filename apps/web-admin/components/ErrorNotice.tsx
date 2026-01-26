@@ -17,11 +17,13 @@ export default function ErrorNotice({ error, title }: ErrorNoticeProps) {
   const details = error instanceof ApiError ? error.details : null;
   const status = error instanceof ApiError ? error.status : null;
   const shouldRelogin = status === 401 || status === 403;
+  const messageWithStatus =
+    status !== null ? `HTTP ${status}: ${message}` : message;
 
   return (
     <div className="notice error">
       <strong>{resolvedTitle}</strong>
-      <div>{message}</div>
+      <div>{messageWithStatus}</div>
       {shouldRelogin && (
         <div className="row" style={{ marginTop: '0.5rem' }}>
           <button

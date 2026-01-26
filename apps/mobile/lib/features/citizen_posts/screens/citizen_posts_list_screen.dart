@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/auth/app_permissions.dart';
+import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/navigation/app_router.dart';
 import '../../auth/screens/login_screen.dart';
 import '../models/citizen_post.dart';
@@ -23,13 +24,19 @@ class CitizenPostsListScreen extends StatefulWidget {
 }
 
 class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
+  bool _initialized = false;
   bool _loading = true;
   String? _error;
+  bool _onlyMine = false;
   List<CitizenPost> _posts = const [];
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) {
+      return;
+    }
+    _initialized = true;
     _load();
   }
 
@@ -40,7 +47,13 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
     });
 
     try {
-      final posts = await widget.postsService.getPosts(type: widget.type);
+      final authStore = AuthScope.of(context);
+      final authorUserId = authStore.user?.id;
+      final posts = await widget.postsService.getPosts(
+        type: widget.type,
+        onlyMine: _onlyMine,
+        authorUserId: authorUserId,
+      );
       if (mounted) {
         setState(() => _posts = posts);
       }
@@ -59,6 +72,9 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
   Widget build(BuildContext context) {
     final permissions = AppPermissionsScope.maybePermissionsOf(context);
     final canCreate = _canCreate(permissions);
+    final authStore = AuthScope.of(context);
+    final canFilterMine =
+        authStore.isAuthenticated && authStore.user?.id != null;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.type.label)),
@@ -67,12 +83,26 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (canFilterMine)
+              Card(
+                child: SwitchListTile(
+                  title: const Text('Nur meine'),
+                  subtitle:
+                      const Text('Nur eigene Beiträge anzeigen.'),
+                  value: _onlyMine,
+                  onChanged: (value) {
+                    setState(() => _onlyMine = value);
+                    _load();
+                  },
+                ),
+              ),
+            if (canFilterMine) const SizedBox(height: 12),
             if (_loading)
               const Center(child: CircularProgressIndicator())
             else if (_error != null)
               _ErrorView(error: _error!, onRetry: _load)
             else if (_posts.isEmpty)
-              const Text('Noch keine Beiträge vorhanden.')
+              Text(_emptyMessage())
             else
               ..._posts.map(
                 (post) => Card(
@@ -93,6 +123,14 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
             )
           : null,
     );
+  }
+
+  String _emptyMessage() {
+    final label = widget.type.label;
+    if (_onlyMine) {
+      return 'Du hast noch keine Beiträge in $label.';
+    }
+    return 'Noch keine Beiträge in $label.';
   }
 
   String _subtitle(CitizenPost post) {

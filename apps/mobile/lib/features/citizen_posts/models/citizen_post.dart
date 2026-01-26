@@ -125,6 +125,7 @@ class CitizenPost {
     required this.body,
     required this.createdAt,
     required this.updatedAt,
+    this.authorUserId,
     this.metadata = const <String, dynamic>{},
   });
 
@@ -132,6 +133,7 @@ class CitizenPost {
   final CitizenPostType type;
   final String title;
   final String body;
+  final String? authorUserId;
   final Map<String, dynamic> metadata;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -142,11 +144,16 @@ class CitizenPost {
     );
     final createdAtValue = json['createdAt'] ?? json['created_at'];
     final updatedAtValue = json['updatedAt'] ?? json['updated_at'];
+    final authorUserId = json['authorUserId'] ??
+        json['authorId'] ??
+        json['author_user_id'] ??
+        json['author_userId'];
     return CitizenPost(
       id: (json['id'] ?? '').toString(),
       type: typeValue ?? CitizenPostType.marketplace,
       title: (json['title'] ?? '').toString(),
       body: (json['body'] ?? '').toString(),
+      authorUserId: authorUserId?.toString(),
       metadata: _parseMetadata(json['metadata']),
       createdAt: _parseDate(createdAtValue) ?? DateTime.now(),
       updatedAt: _parseDate(updatedAtValue) ?? DateTime.now(),

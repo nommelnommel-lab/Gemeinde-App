@@ -24,11 +24,40 @@ class PostDetailScreen extends StatefulWidget {
 
 class _PostDetailScreenState extends State<PostDetailScreen> {
   late Post _post;
+  bool _loading = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     _post = widget.post;
+    _load();
+  }
+
+  Future<void> _load() async {
+    final postsService = widget.postsService;
+    if (postsService == null) {
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final refreshed = await postsService.getPost(_post.id);
+      if (mounted) {
+        setState(() => _post = refreshed);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Beitrag konnte nicht geladen werden.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   @override
@@ -45,58 +74,66 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (_error != null) ...[
+          _ErrorView(error: _error!, onRetry: _load),
+          const SizedBox(height: 16),
+        ],
+        Text(
+          _post.title,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
+            Chip(label: Text(_post.type.label)),
             Text(
-              _post.title,
-              style: Theme.of(context).textTheme.headlineSmall,
+              _formatDate(_displayDate(_post)),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Chip(label: Text(_post.type.label)),
-                Text(
-                  _formatDate(_displayDate(_post)),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                if (_post.type == PostType.warning && _post.severity != null)
-                  Chip(label: Text(_post.severity!)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (_post.type == PostType.event && _post.date != null)
-              _InfoRow(
-                label: 'Termin',
-                value: formatDateTime(_post.date!),
-              ),
-            if (_post.location != null && _post.location!.trim().isNotEmpty)
-              _InfoRow(
-                label: 'Ort',
-                value: _post.location!,
-              ),
-            if (_post.validUntil != null)
-              _InfoRow(
-                label: 'Gültig bis',
-                value: formatDateTime(_post.validUntil!),
-              ),
-            _InfoRow(
-              label: 'Erstellt',
-              value: formatDateTime(_post.createdAt),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _post.body,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+            if (_post.type == PostType.warning && _post.severity != null)
+              Chip(label: Text(_post.severity!)),
           ],
         ),
-      ),
+        const SizedBox(height: 16),
+        if (_post.type == PostType.event && _post.date != null)
+          _InfoRow(
+            label: 'Termin',
+            value: formatDateTime(_post.date!),
+          ),
+        if (_post.location != null && _post.location!.trim().isNotEmpty)
+          _InfoRow(
+            label: 'Ort',
+            value: _post.location!,
+          ),
+        if (_post.validUntil != null)
+          _InfoRow(
+            label: 'Gültig bis',
+            value: formatDateTime(_post.validUntil!),
+          ),
+        _InfoRow(
+          label: 'Erstellt',
+          value: formatDateTime(_post.createdAt),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          _post.body,
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+      ],
     );
   }
 
@@ -115,10 +152,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
 
     if (result == true) {
-      final updated = await postsService.getPost(_post.id);
-      if (mounted) {
-        setState(() => _post = updated);
-      }
+      await _load();
     }
   }
 

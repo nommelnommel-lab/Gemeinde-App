@@ -10,16 +10,36 @@ class CitizenPostsService {
   static String postByIdEndpoint(String id) => '/posts/$id';
   static String reportPostEndpoint(String id) => '/posts/$id/report';
 
-  Future<List<CitizenPost>> getPosts({required CitizenPostType type}) async {
+  Future<List<CitizenPost>> getPosts({
+    required CitizenPostType type,
+    bool onlyMine = false,
+    String? authorUserId,
+  }) async {
+    final authorQuery = onlyMine ? '&author=me' : '';
     final response = await _apiClient.getJsonFlexible(
-      '${postsEndpoint}?type=${type.apiValue}',
+      '${postsEndpoint}?type=${type.apiValue}$authorQuery',
       includeAuth: true,
     );
     final payload = _extractList(response);
-    return payload
+    final posts = payload
         .whereType<Map<String, dynamic>>()
         .map(CitizenPost.fromJson)
         .toList();
+    if (onlyMine && authorUserId != null && authorUserId.isNotEmpty) {
+      return posts
+          .where((post) => post.authorUserId == authorUserId)
+          .toList();
+    }
+    return posts;
+  }
+
+  Future<CitizenPost> getPost(String id) async {
+    final response = await _apiClient.getJsonFlexible(
+      postByIdEndpoint(id),
+      includeAuth: true,
+    );
+    final payload = _extractMap(response);
+    return CitizenPost.fromJson(payload);
   }
 
   Future<CitizenPost> createPost(CitizenPostInput input) async {

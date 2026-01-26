@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ErrorNotice from '../../components/ErrorNotice';
 import LoadingState from '../../components/LoadingState';
-import { buildAdminHeaders } from '../../lib/api';
+import { ApiError, buildAdminHeaders } from '../../lib/api';
 import {
   AdminSession,
   getDefaultSession,
@@ -39,13 +39,37 @@ export default function LoginPage() {
         },
       );
       if (!response.ok) {
-        throw new Error('Admin-Berechtigung konnte nicht bestätigt werden.');
+        const text = await response.text();
+        let message = 'Admin-Berechtigung konnte nicht bestätigt werden.';
+        if (text) {
+          try {
+            const parsed = JSON.parse(text);
+            if (parsed && typeof parsed.message === 'string') {
+              message = parsed.message;
+            } else {
+              message = text;
+            }
+          } catch {
+            message = text;
+          }
+        }
+        throw new ApiError(message, response.status, text);
       }
 
       saveSession(session);
       router.replace('/dashboard');
     } catch (err) {
-      setError(err);
+      if (err instanceof ApiError) {
+        setError(err);
+      } else {
+        setError(
+          new ApiError(
+            'Backend nicht erreichbar. Bitte API Base URL prüfen.',
+            0,
+            err,
+          ),
+        );
+      }
     } finally {
       setLoading(false);
     }
