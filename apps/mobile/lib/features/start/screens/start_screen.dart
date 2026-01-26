@@ -98,26 +98,6 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     final showEvents = settingsStore.isFeatureEnabled('events');
     final showNews = settingsStore.isFeatureEnabled('posts');
     final showWarnings = settingsStore.isFeatureEnabled('warnings');
-    final permissions =
-        AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
-    final isTourist = permissions.role == 'TOURIST';
-    final showGemeindeApp = showEvents ||
-        showNews ||
-        settingsStore.isFeatureEnabled('services') ||
-        settingsStore.isFeatureEnabled('places') ||
-        settingsStore.isFeatureEnabled('clubs');
-    final showVerwaltung = settingsStore.isFeatureEnabled('services') ||
-        settingsStore.isFeatureEnabled('places') ||
-        settingsStore.isFeatureEnabled('waste');
-    final resolvedGemeindeApp = isTourist ? false : showGemeindeApp;
-    final resolvedVerwaltung = isTourist ? false : showVerwaltung;
-    int nextIndex = 1;
-    if (showWarnings) {
-      nextIndex += 1;
-    }
-    final gemeindeAppIndex = resolvedGemeindeApp ? nextIndex++ : null;
-    final verwaltungIndex = resolvedVerwaltung ? nextIndex++ : null;
-
     final resolvedFilter = _resolveFilter(
       showEvents: showEvents,
       showNews: showNews,
@@ -181,32 +161,6 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
                   onTap: () => _handleTap(item),
                 ),
               ),
-            ),
-          const SizedBox(height: 24),
-          if (resolvedGemeindeApp || resolvedVerwaltung)
-            const AppSectionHeader(
-              title: 'Gemeinde & Verwaltung',
-              subtitle: 'Services, Formulare und Angebote entdecken.',
-            ),
-          if (resolvedGemeindeApp)
-            _StartCard(
-              title: 'GemeindeApp',
-              subtitle: 'Angebote und Veranstaltungen entdecken',
-              icon: Icons.groups,
-              onTap: gemeindeAppIndex == null
-                  ? null
-                  : () => widget.onSelectTab(gemeindeAppIndex),
-            ),
-          if (resolvedGemeindeApp && resolvedVerwaltung)
-            const SizedBox(height: 16),
-          if (resolvedVerwaltung)
-            _StartCard(
-              title: 'Verwaltung',
-              subtitle: 'Formulare und Infos aus der Gemeinde',
-              icon: Icons.admin_panel_settings,
-              onTap: verwaltungIndex == null
-                  ? null
-                  : () => widget.onSelectTab(verwaltungIndex),
             ),
         ],
       ),
