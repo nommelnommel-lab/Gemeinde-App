@@ -109,7 +109,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           border: Border.all(color: Colors.deepOrange.shade200),
                         ),
                         child: const Text(
-                          'Staff mode',
+                          'Staff-Modus',
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: Colors.deepOrange,
                             fontWeight: FontWeight.w600,

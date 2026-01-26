@@ -5,6 +5,8 @@ import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_states.dart';
 import '../../auth/screens/login_screen.dart';
 import '../models/event.dart';
 import '../services/events_service.dart';
@@ -67,7 +69,7 @@ class _EventsScreenState extends State<EventsScreen> {
     final isAuthenticated = AuthScope.of(context).isAuthenticated;
     final canEdit = isAuthenticated && permissions.canCreate.officialEvents;
 
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(
         title: const Text('Events'),
         leading: IconButton(
@@ -79,9 +81,10 @@ class _EventsScreenState extends State<EventsScreen> {
           ? FloatingActionButton.extended(
               onPressed: _openCreateEvent,
               icon: const Icon(Icons.add),
-              label: const Text('Add'),
+              label: const Text('Hinzufügen'),
             )
           : null,
+      padBody: false,
       body: RefreshIndicator(
         onRefresh: _load,
         child: _buildBody(),
@@ -91,45 +94,43 @@ class _EventsScreenState extends State<EventsScreen> {
 
   Widget _buildBody() {
     if (_loading) {
-      return const _LoadingSkeleton();
+      return _buildStateList(const LoadingState(message: 'Events werden geladen...'));
     }
 
     if (_error != null) {
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _ErrorView(error: _error!, onRetry: _load),
-        ],
+      final normalized = _error!.toLowerCase();
+      final isAuthError = normalized.contains('http 401') ||
+          normalized.contains('http 403') ||
+          normalized.contains('sitzung abgelaufen');
+      return _buildStateList(
+        ErrorState(
+          message: _error!,
+          onRetry: _load,
+          secondaryAction: isAuthError
+              ? OutlinedButton(
+                  onPressed: () {
+                    AppRouterScope.of(context).push(const LoginScreen());
+                  },
+                  child: const Text('Anmelden'),
+                )
+              : null,
+        ),
       );
     }
 
     if (_events.isEmpty) {
-      return ListView(
-        padding: const EdgeInsets.all(24),
-        children: const [
-          SizedBox(height: 80),
-          Icon(Icons.event_busy, size: 64, color: Colors.black54),
-          SizedBox(height: 16),
-          Center(
-            child: Text(
-              'Keine Events in den nächsten 4 Wochen.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-          ),
-          SizedBox(height: 8),
-          Center(
-            child: Text(
-              'Schau später noch einmal vorbei.',
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
+      return _buildStateList(
+        const EmptyState(
+          icon: Icons.event_busy,
+          title: 'Keine Events geplant',
+          message: 'Keine Events in den nächsten 4 Wochen.',
+        ),
       );
     }
 
     return ListView.separated(
       padding: const EdgeInsets.all(16),
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: _events.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
@@ -189,96 +190,15 @@ class _EventsScreenState extends State<EventsScreen> {
       await _load();
     }
   }
-}
 
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.error, required this.onRetry});
-
-  final String error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final normalized = error.toLowerCase();
-    final isAuthError = normalized.contains('http 401') ||
-        normalized.contains('http 403') ||
-        normalized.contains('sitzung abgelaufen');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Etwas ist schiefgelaufen',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            Text(error, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                FilledButton(
-                  onPressed: onRetry,
-                  child: const Text('Erneut versuchen'),
-                ),
-                if (isAuthError)
-                  OutlinedButton(
-                    onPressed: () {
-                      AppRouterScope.of(context).push(const LoginScreen());
-                    },
-                    child: const Text('Anmelden'),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LoadingSkeleton extends StatelessWidget {
-  const _LoadingSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: 5,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 16,
-                  width: 180,
-                  decoration: BoxDecoration(
-                    color: Colors.black12,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  height: 12,
-                  width: 140,
-                  decoration: BoxDecoration(
-                    color: Colors.black12,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  Widget _buildStateList(Widget child) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        const SizedBox(height: 80),
+        child,
+      ],
     );
   }
 }

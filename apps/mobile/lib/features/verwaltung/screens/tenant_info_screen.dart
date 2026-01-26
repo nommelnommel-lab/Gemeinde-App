@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/di/app_services_scope.dart';
+import '../../../shared/utils/external_links.dart';
+import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_states.dart';
 import '../models/tenant_config.dart';
 import '../services/tenant_config_service.dart';
 
@@ -52,31 +55,19 @@ class _TenantInfoScreenState extends State<TenantInfoScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final body = _loading && _config == null
-        ? _StatusCard(
-            title: 'Daten werden geladen',
-            description: 'Bitte einen Moment Geduld.',
-            trailing: const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: CircularProgressIndicator(),
-            ),
-          )
+        ? const LoadingState(message: 'Daten werden geladen...')
         : _error != null && _config == null
-            ? _StatusCard(
-                title: 'Daten konnten nicht geladen werden',
-                description: _error ?? 'Unbekannter Fehler',
-                trailing: FilledButton(
-                  onPressed: _load,
-                  child: const Text('Erneut versuchen'),
-                ),
-              )
+            ? ErrorState(message: _error ?? 'Unbekannter Fehler', onRetry: _load)
             : _buildContent(theme);
 
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(title: const Text('Öffnungszeiten & Kontakt')),
+      padBody: false,
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [body],
         ),
       ),
@@ -134,6 +125,7 @@ class _TenantInfoScreenState extends State<TenantInfoScreen> {
               ListTile(
                 leading: const Icon(Icons.public_outlined),
                 title: Text(config.website!),
+                onTap: () => openExternalLink(context, config.website!),
               ),
             if (config.phone == null &&
                 config.email == null &&
@@ -209,43 +201,6 @@ class _InfoSection extends StatelessWidget {
           const SizedBox(height: 8),
           ...children,
         ],
-      ),
-    );
-  }
-}
-
-class _StatusCard extends StatelessWidget {
-  const _StatusCard({
-    required this.title,
-    required this.description,
-    required this.trailing,
-  });
-
-  final String title;
-  final String description;
-  final Widget trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(description, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              trailing,
-            ],
-          ),
-        ),
       ),
     );
   }

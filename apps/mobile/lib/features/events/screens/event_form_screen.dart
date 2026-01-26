@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../models/event.dart';
 import '../models/event_input.dart';
 import '../services/events_service.dart';
@@ -55,18 +56,17 @@ class _EventFormScreenState extends State<EventFormScreen> {
     final isEdit = widget.event != null;
     final saveLabel = isEdit ? 'Aktualisieren' : 'Erstellen';
 
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(title: Text(isEdit ? 'Event bearbeiten' : 'Neues Event')),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Titel'),
-                textInputAction: TextInputAction.next,
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            TextFormField(
+              controller: _titleController,
+              decoration: const InputDecoration(labelText: 'Titel'),
+              textInputAction: TextInputAction.next,
                 validator: (value) {
                   final trimmed = value?.trim() ?? '';
                   if (trimmed.isEmpty) {

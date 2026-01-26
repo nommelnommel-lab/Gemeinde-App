@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../models/news_item.dart';
 import '../services/news_service.dart';
 import 'news_form_screen.dart';
@@ -36,7 +37,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: _handleWillPop,
-      child: Scaffold(
+      child: AppScaffold(
         appBar: AppBar(
           title: Text(_item.title),
           actions: widget.canEdit
@@ -54,6 +55,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                 ]
               : null,
         ),
+        padBody: false,
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(

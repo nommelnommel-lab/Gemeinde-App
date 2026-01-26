@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../models/event.dart';
 import '../services/events_service.dart';
 import 'event_form_screen.dart';
@@ -51,7 +52,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
     return WillPopScope(
       onWillPop: _handleWillPop,
-      child: Scaffold(
+      child: AppScaffold(
         appBar: AppBar(
           title: Text(title.isEmpty ? 'Event' : title),
           leadingWidth: 96,
@@ -75,7 +76,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 ]
               : null,
         ),
-        body: Padding(
+        padBody: false,
+        body: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

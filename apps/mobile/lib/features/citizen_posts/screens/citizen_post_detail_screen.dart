@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../models/citizen_post.dart';
 import '../services/citizen_posts_service.dart';
 import 'citizen_post_form_screen.dart';
@@ -48,7 +49,7 @@ class _CitizenPostDetailScreenState extends State<CitizenPostDetailScreen> {
         Navigator.of(context).pop(_didChange);
         return false;
       },
-      child: Scaffold(
+      child: AppScaffold(
         appBar: AppBar(
           title: Text(_post.title),
           actions: [
@@ -75,6 +76,7 @@ class _CitizenPostDetailScreenState extends State<CitizenPostDetailScreen> {
               ),
           ],
         ),
+        padBody: false,
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [

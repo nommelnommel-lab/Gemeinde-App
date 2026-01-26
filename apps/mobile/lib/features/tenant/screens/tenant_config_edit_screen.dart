@@ -134,6 +134,15 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
               controller: _websiteController,
               decoration: const InputDecoration(labelText: 'Website'),
               keyboardType: TextInputType.url,
+              validator: (value) {
+                final trimmed = value?.trim() ?? '';
+                if (trimmed.isEmpty) return null;
+                final parsed = Uri.tryParse(trimmed);
+                if (parsed == null) {
+                  return 'Bitte eine gültige URL eingeben.';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 24),
             _buildSectionTitle('Öffnungszeiten'),
@@ -254,6 +263,9 @@ class _TenantConfigEditScreenState extends State<TenantConfigEditScreen> {
     try {
       final updated = await _tenantService.updateTenantConfig(config);
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gemeinde-Infos gespeichert.')),
+      );
       Navigator.of(context).pop(updated);
     } on ApiException catch (e) {
       if (!mounted) return;

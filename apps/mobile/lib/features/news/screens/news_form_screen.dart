@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/app_scaffold.dart';
 import '../models/news_item.dart';
 import '../services/news_service.dart';
 
@@ -70,6 +71,13 @@ class _NewsFormScreenState extends State<NewsFormScreen> {
       if (!mounted) {
         return;
       }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isEditing ? 'News aktualisiert.' : 'News erstellt.',
+          ),
+        ),
+      );
       Navigator.of(context).pop(item);
     } catch (error) {
       if (!mounted) {
@@ -89,7 +97,7 @@ class _NewsFormScreenState extends State<NewsFormScreen> {
   Widget build(BuildContext context) {
     final categories = widget.newsService.availableCategories;
 
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'News bearbeiten' : 'News erstellen'),
         actions: [
@@ -102,7 +110,7 @@ class _NewsFormScreenState extends State<NewsFormScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.zero,
           children: [
             TextFormField(
               controller: _titleController,
