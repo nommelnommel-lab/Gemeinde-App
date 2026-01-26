@@ -206,6 +206,16 @@ $env:ADMIN_KEY="<admin-key>"
 npm --prefix apps/api run test:role-permissions
 ```
 
+## Test-Skript für Bürger-Posts
+```powershell
+$env:BASE_URL="http://localhost:3000"
+$env:TENANT="hilders"
+$env:SITE_KEY="<site-key>"
+$env:ADMIN_KEY="<admin-key>"
+$env:DEBUG="1"
+npm --prefix apps/api run test:citizen-posts
+```
+
 ## Ports
 - API: `3000`
 - PostgreSQL: `5432`

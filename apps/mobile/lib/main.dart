@@ -6,6 +6,7 @@ import 'api/api_client.dart';
 import 'api/health_service.dart';
 import 'config/app_config.dart';
 import 'features/events/services/events_service.dart';
+import 'features/citizen_posts/services/citizen_posts_service.dart';
 import 'features/news/services/news_service.dart';
 import 'features/navigation/screens/main_navigation_screen.dart';
 import 'features/posts/services/posts_service.dart';
@@ -86,6 +87,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
     _authStore.addListener(_handleAuthChange);
     _services = AppServices(
       adminService: AdminService(_apiClient),
+      citizenPostsService: CitizenPostsService(_apiClient),
       eventsService: EventsService(_apiClient),
       feedService: FeedService(_apiClient),
       newsService: NewsService(_apiClient),

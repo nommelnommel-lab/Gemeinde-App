@@ -14,39 +14,54 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { verifyAccessToken } from '../auth/jwt.utils';
 import { UserRole } from '../auth/user-roles';
 import { Category, ContentType } from '../content/content.types';
+import { PermissionsService } from '../permissions/permissions.service';
 import { requireTenant } from '../tenant/tenant-auth';
 import { PostsService } from './posts.service';
-import { PostEntity, PostType } from './posts.types';
+import { PostEntity, PostStatus, PostType } from './posts.types';
 
 type PostPayload = {
   type?: PostType;
   title?: string;
   body?: string;
+  metadata?: Record<string, unknown>;
   location?: string;
   date?: string;
   severity?: 'low' | 'medium' | 'high';
   validUntil?: string;
+  status?: PostStatus;
 };
 
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
 
   @Get()
   async getPosts(
     @Headers() headers: Record<string, string | string[] | undefined>,
     @Query('type') type?: string,
+    @Query('q') query?: string,
     @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ): Promise<PostEntity[]> {
     const tenantId = requireTenant(headers);
     const parsedType = type ? this.parseType(type) : undefined;
     const parsedLimit = limit ? this.parseLimit(limit) : undefined;
-    return this.postsService.getAll({
-      tenantId,
+    const parsedOffset = offset ? this.parseOffset(offset) : undefined;
+    const user = verifyAccessToken(headers);
+    const includeHidden =
+      user?.role === UserRole.STAFF || user?.role === UserRole.ADMIN;
+    return this.postsService.list(tenantId, {
       type: parsedType,
       limit: parsedLimit,
+      offset: parsedOffset,
+      query,
+      includeHidden,
     });
   }
 
@@ -56,7 +71,10 @@ export class PostsController {
     @Param('id') id: string,
   ): Promise<PostEntity> {
     const tenantId = requireTenant(headers);
-    return this.postsService.getById(tenantId, id);
+    const user = verifyAccessToken(headers);
+    const includeHidden =
+      user?.role === UserRole.STAFF || user?.role === UserRole.ADMIN;
+    return this.postsService.getById(tenantId, id, { includeHidden });
   }
 
   @Post()
@@ -74,11 +92,13 @@ export class PostsController {
     }
     if (this.isOfficial(data.type)) {
       this.requireStaffOrAdmin(request.user?.role);
+    } else {
+      this.requireCreatePermission(headers, data.type);
     }
     return this.postsService.create({
       tenantId,
       ...data,
-      authorId,
+      authorUserId: authorId,
       category: this.categoryForType(data.type),
     });
   }
@@ -92,13 +112,17 @@ export class PostsController {
     @Req() request: { user?: { sub?: string; role?: UserRole } },
   ): Promise<PostEntity> {
     const tenantId = requireTenant(headers);
-    const data = this.validatePayload(payload);
-    const post = await this.postsService.getById(tenantId, id);
+    const post = await this.postsService.getById(tenantId, id, {
+      includeHidden: true,
+    });
     this.assertCanEdit(post, request.user);
-    return this.postsService.update(id, {
-      tenantId,
-      ...data,
-      category: this.categoryForType(data.type),
+    const patch = this.validatePatch(payload, post, request.user?.role);
+    if (patch.type && !this.isOfficial(patch.type)) {
+      this.requireCreatePermission(headers, patch.type);
+    }
+    return this.postsService.update(tenantId, id, {
+      ...patch,
+      category: patch.type ? this.categoryForType(patch.type) : post.category,
     });
   }
 
@@ -110,9 +134,27 @@ export class PostsController {
     @Req() request: { user?: { sub?: string; role?: UserRole } },
   ) {
     const tenantId = requireTenant(headers);
-    const post = await this.postsService.getById(tenantId, id);
+    const post = await this.postsService.getById(tenantId, id, {
+      includeHidden: true,
+    });
     this.assertCanEdit(post, request.user);
-    await this.postsService.remove(id, tenantId);
+    const role = request.user?.role;
+    const reason =
+      role === UserRole.STAFF || role === UserRole.ADMIN
+        ? 'hidden_by_staff'
+        : 'deleted_by_author';
+    await this.postsService.hide(tenantId, id, reason);
+    return { ok: true };
+  }
+
+  @Post(':id/report')
+  @UseGuards(new JwtAuthGuard())
+  async reportPost(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Param('id') id: string,
+  ) {
+    const tenantId = requireTenant(headers);
+    await this.postsService.report(tenantId, id);
     return { ok: true };
   }
 
@@ -120,6 +162,7 @@ export class PostsController {
     const type = this.requireType(payload.type);
     const title = this.requireString(payload.title, 'title');
     const body = this.requireString(payload.body, 'body');
+    const metadata = this.validateMetadata(type, payload.metadata);
     const location = payload.location?.trim() || undefined;
     const date = payload.date?.trim();
     const validUntil = payload.validUntil?.trim();
@@ -154,10 +197,71 @@ export class PostsController {
       type,
       title,
       body,
+      metadata,
       location,
       date,
       severity,
       validUntil,
+    };
+  }
+
+  private validatePatch(
+    payload: PostPayload,
+    existing: PostEntity,
+    role?: UserRole,
+  ) {
+    const patch: Partial<PostPayload> = {};
+    if (payload.type !== undefined) {
+      patch.type = this.parseType(payload.type);
+    }
+    if (payload.title !== undefined) {
+      patch.title = this.requireString(payload.title, 'title');
+    }
+    if (payload.body !== undefined) {
+      patch.body = this.requireString(payload.body, 'body');
+    }
+    if (payload.location !== undefined) {
+      patch.location = payload.location?.trim() || undefined;
+    }
+    if (payload.date !== undefined) {
+      patch.date = payload.date?.trim();
+    }
+    if (payload.validUntil !== undefined) {
+      patch.validUntil = payload.validUntil?.trim();
+    }
+    if (payload.severity !== undefined) {
+      this.requireSeverity(payload.severity);
+      patch.severity = payload.severity;
+    }
+    if (payload.status !== undefined) {
+      if (role !== UserRole.STAFF && role !== UserRole.ADMIN) {
+        throw new ForbiddenException('Keine Berechtigung');
+      }
+      patch.status = this.parsePostStatus(payload.status);
+    }
+
+    const resolvedType = patch.type ?? existing.type;
+    const metadataInput =
+      payload.metadata !== undefined ? payload.metadata : existing.metadata;
+    const mergedMetadata = this.validateMetadata(resolvedType, metadataInput);
+
+    if (resolvedType === ContentType.OFFICIAL_EVENT) {
+      const effectiveDate = patch.date ?? existing.date;
+      if (!effectiveDate) {
+        throw new BadRequestException('date ist erforderlich');
+      }
+    }
+
+    if (resolvedType === ContentType.OFFICIAL_WARNING) {
+      const effectiveSeverity = patch.severity ?? existing.severity;
+      if (!effectiveSeverity) {
+        throw new BadRequestException('severity ist erforderlich');
+      }
+    }
+
+    return {
+      ...patch,
+      metadata: mergedMetadata,
     };
   }
 
@@ -210,10 +314,79 @@ export class PostsController {
     return mapped;
   }
 
+  private parsePostStatus(value: string | PostStatus): PostStatus {
+    const normalized = value.toString().trim().toUpperCase();
+    if (normalized === 'PUBLISHED' || normalized === 'HIDDEN') {
+      return normalized as PostStatus;
+    }
+    throw new BadRequestException('status ist ungültig');
+  }
+
+  private requireCreatePermission(
+    headers: Record<string, string | string[] | undefined>,
+    type: PostType,
+  ) {
+    const permissions = this.permissionsService.getPermissions(headers);
+    const { canCreate } = permissions;
+    if (
+      type === ContentType.MARKETPLACE_LISTING &&
+      canCreate.marketplace
+    ) {
+      return;
+    }
+    if (
+      (type === ContentType.HELP_REQUEST ||
+        type === ContentType.HELP_OFFER) &&
+      canCreate.help
+    ) {
+      return;
+    }
+    if (type === ContentType.MOVING_CLEARANCE && canCreate.movingClearance) {
+      return;
+    }
+    if (type === ContentType.CAFE_MEETUP && canCreate.cafeMeetup) {
+      return;
+    }
+    if (type === ContentType.KIDS_MEETUP && canCreate.kidsMeetup) {
+      return;
+    }
+    if (type === ContentType.APARTMENT_SEARCH && canCreate.apartmentSearch) {
+      return;
+    }
+    if (type === ContentType.LOST_FOUND && canCreate.lostFound) {
+      return;
+    }
+    if (type === ContentType.RIDE_SHARING && canCreate.rideSharing) {
+      return;
+    }
+    if (type === ContentType.JOBS_LOCAL && canCreate.jobsLocal) {
+      return;
+    }
+    if (type === ContentType.VOLUNTEERING && canCreate.volunteering) {
+      return;
+    }
+    if (type === ContentType.GIVEAWAY && canCreate.giveaway) {
+      return;
+    }
+    if (type === ContentType.SKILL_EXCHANGE && canCreate.skillExchange) {
+      return;
+    }
+
+    throw new ForbiddenException('Keine Berechtigung');
+  }
+
   private parseLimit(value: string): number {
     const parsed = Number.parseInt(value, 10);
     if (!Number.isFinite(parsed) || parsed <= 0) {
       throw new BadRequestException('limit muss eine positive Zahl sein');
+    }
+    return parsed;
+  }
+
+  private parseOffset(value: string): number {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new BadRequestException('offset muss eine positive Zahl sein');
     }
     return parsed;
   }
@@ -286,9 +459,57 @@ export class PostsController {
     if (user.role === UserRole.STAFF || user.role === UserRole.ADMIN) {
       return;
     }
-    if (post.authorId && post.authorId === user.sub) {
+    if (post.authorUserId && post.authorUserId === user.sub) {
       return;
     }
     throw new ForbiddenException('Keine Berechtigung');
+  }
+
+  private validateMetadata(
+    type: PostType,
+    metadata: Record<string, unknown> | undefined,
+  ) {
+    if (metadata !== undefined && (typeof metadata !== 'object' || Array.isArray(metadata))) {
+      throw new BadRequestException('metadata ist ungültig');
+    }
+    const resolved = metadata ?? {};
+
+    if (type === ContentType.CAFE_MEETUP || type === ContentType.KIDS_MEETUP) {
+      this.requireMetadataDate(resolved, 'dateTime');
+      this.requireMetadataString(resolved, 'location');
+    }
+    if (type === ContentType.LOST_FOUND) {
+      this.requireMetadataString(resolved, 'type');
+      this.requireMetadataDate(resolved, 'date');
+      this.requireMetadataString(resolved, 'location');
+    }
+    if (type === ContentType.APARTMENT_SEARCH) {
+      this.requireMetadataString(resolved, 'type');
+      this.requireMetadataString(resolved, 'contact');
+    }
+
+    return resolved;
+  }
+
+  private requireMetadataString(
+    metadata: Record<string, unknown>,
+    key: string,
+  ) {
+    const value = metadata[key];
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new BadRequestException(`${key} ist erforderlich`);
+    }
+    return value.trim();
+  }
+
+  private requireMetadataDate(
+    metadata: Record<string, unknown>,
+    key: string,
+  ) {
+    const value = this.requireMetadataString(metadata, key);
+    if (Number.isNaN(Date.parse(value))) {
+      throw new BadRequestException(`${key} muss ein gültiger ISO-8601-String sein`);
+    }
+    return value;
   }
 }
