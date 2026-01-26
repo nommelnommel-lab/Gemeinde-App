@@ -10,6 +10,7 @@
     "start:dev": "nest start --watch",
     "seed:tenant": "ts-node scripts/seed-tenant.ts",
     "seed:hilders": "ts-node scripts/seed-hilders.ts",
+    "seed:tourism:hilders": "ts-node scripts/seed-tourism-hilders.ts",
     "test:admin-guard": "ts-node scripts/test-admin-guard.ts",
     "test:admin-flow": "node ./scripts/test-admin-flow.mjs",
     "test:activation-flow": "node ./scripts/test-activation-flow.mjs",
