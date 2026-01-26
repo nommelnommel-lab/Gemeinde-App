@@ -11,6 +11,7 @@ import 'features/news/services/news_service.dart';
 import 'features/navigation/screens/main_navigation_screen.dart';
 import 'features/posts/services/posts_service.dart';
 import 'features/start/services/feed_service.dart';
+import 'features/tourism/services/tourism_service.dart';
 import 'features/auth/services/auth_service.dart';
 import 'features/admin/services/admin_service.dart';
 import 'features/verwaltung/services/tenant_config_service.dart';
@@ -95,6 +96,7 @@ class _GemeindeAppState extends State<GemeindeApp> {
       healthService: HealthService(_apiClient),
       tenantConfigService: TenantConfigService(_apiClient),
       warningsService: WarningsService(_apiClient),
+      tourismService: TourismService(_apiClient),
       permissionsService: PermissionsService(_apiClient),
       adminKeyStore: widget.adminKeyStore,
       tenantStore: widget.tenantStore,
