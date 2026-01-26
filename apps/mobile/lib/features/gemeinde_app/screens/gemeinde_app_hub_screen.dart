@@ -14,7 +14,6 @@ class GemeindeAppHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settingsStore = TenantSettingsScope.of(context);
-    final services = AppServicesScope.of(context);
     final items = <_HubItem>[];
 
     if (settingsStore.isFeatureEnabled('events')) {
@@ -37,14 +36,15 @@ class GemeindeAppHubScreen extends StatelessWidget {
           icon: Icons.storefront,
           onTap: () => _openCitizenList(
             context,
-            title: 'Beiträge & Markt',
-            types: const [
-              CitizenPostType.userPost,
-              CitizenPostType.marketplace,
-              CitizenPostType.giveaway,
-              CitizenPostType.skillExchange,
-            ],
-            services: services,
+            CitizenPostType.marketplace,
+          ),
+        ),
+        _HubItem(
+          title: 'Umzug/Entrümpelung',
+          icon: Icons.local_shipping,
+          onTap: () => _openCitizenList(
+            context,
+            CitizenPostType.movingClearance,
           ),
         ),
         _HubItem(
@@ -52,12 +52,7 @@ class GemeindeAppHubScreen extends StatelessWidget {
           icon: Icons.volunteer_activism,
           onTap: () => _openCitizenList(
             context,
-            title: 'Hilfe & Ehrenamt',
-            types: const [
-              CitizenPostType.help,
-              CitizenPostType.volunteering,
-            ],
-            services: services,
+            CitizenPostType.help,
           ),
         ),
         _HubItem(
@@ -65,9 +60,7 @@ class GemeindeAppHubScreen extends StatelessWidget {
           icon: Icons.directions_car,
           onTap: () => _openCitizenList(
             context,
-            title: 'Mobilität',
-            types: const [CitizenPostType.rideSharing],
-            services: services,
+            CitizenPostType.apartmentSearch,
           ),
         ),
         _HubItem(
@@ -75,19 +68,23 @@ class GemeindeAppHubScreen extends StatelessWidget {
           icon: Icons.home,
           onTap: () => _openCitizenList(
             context,
-            title: 'Wohnen & Alltag',
-            types: const [
-              CitizenPostType.apartmentSearch,
-              CitizenPostType.movingClearance,
-            ],
-            services: services,
+            CitizenPostType.lostFound,
           ),
         ),
       ]);
     }
     final communityTypes = <CitizenPostType>[];
     if (settingsStore.isFeatureEnabled('places')) {
-      communityTypes.add(CitizenPostType.cafeMeetup);
+      items.add(
+        _HubItem(
+          title: 'Café Treff',
+          icon: Icons.local_cafe,
+          onTap: () => _openCitizenList(
+            context,
+            CitizenPostType.cafeMeetup,
+          ),
+        ),
+      );
     }
     if (settingsStore.isFeatureEnabled('clubs')) {
       communityTypes.add(CitizenPostType.kidsMeetup);
@@ -99,9 +96,7 @@ class GemeindeAppHubScreen extends StatelessWidget {
           icon: Icons.local_cafe,
           onTap: () => _openCitizenList(
             context,
-            title: 'Treffen & Gemeinschaft',
-            types: communityTypes,
-            services: services,
+            CitizenPostType.kidsMeetup,
           ),
         ),
       );
@@ -142,12 +137,11 @@ class GemeindeAppHubScreen extends StatelessWidget {
     );
   }
 
-  void _openCitizenList({
-    required BuildContext context,
-    required String title,
-    required List<CitizenPostType> types,
-    required AppServices services,
-  }) {
+  void _openCitizenList(
+    BuildContext context,
+    CitizenPostType type,
+  ) {
+    final services = AppServicesScope.of(context);
     AppRouterScope.of(context).push(
       CitizenPostsListScreen(
         title: title,
