@@ -23,6 +23,7 @@ class MehrScreen extends StatefulWidget {
 class _MehrScreenState extends State<MehrScreen> {
   static const Map<String, String> _tenantLabels = {
     'demo': 'Demo',
+    'hilders-demo': 'Hilders Demo',
     'hilders': 'Hilders',
     'fulda': 'Fulda',
   };
