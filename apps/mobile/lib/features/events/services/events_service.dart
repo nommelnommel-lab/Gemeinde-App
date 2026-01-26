@@ -82,7 +82,6 @@ class EventsService {
     final data = await _apiClient.postJson(
       '/api/admin/events',
       input.toJson(),
-      includeAdminKey: !kReleaseMode,
     );
     return Event.fromJson(data);
   }
@@ -91,7 +90,6 @@ class EventsService {
     final data = await _apiClient.putJson(
       '/api/admin/events/$id',
       input.toJson(),
-      includeAdminKey: !kReleaseMode,
     );
     return Event.fromJson(data);
   }
@@ -99,7 +97,6 @@ class EventsService {
   Future<void> deleteEvent(String id) async {
     await _apiClient.deleteJson(
       '/api/admin/events/$id',
-      includeAdminKey: !kReleaseMode,
     );
   }
 
