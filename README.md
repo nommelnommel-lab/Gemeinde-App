@@ -1,21 +1,19 @@
 # Gemeinde-App Monorepo
 
-Die Gemeinde-App ist ein Monorepo für die mobile Flutter-App, die NestJS-API und das Next.js Web-Admin-Panel.
+Gemeinde-App ist eine Multi‑Tenant Plattform für kommunale Inhalte mit einer NestJS‑API, einer Flutter‑Mobile‑App und einem Next.js Web‑Admin‑Panel – gebündelt in einem Monorepo.
 
-## Schnellüberblick
-- **API (NestJS)**: `apps/api` (läuft standardmäßig auf `http://localhost:3000`).
+## Architektur (High‑Level)
+- **Backend (NestJS API)**: `apps/api` auf `http://localhost:3000`.
 - **Mobile App (Flutter)**: `apps/mobile`.
-- **Web-Admin (Next.js)**: `apps/web-admin` (Dev-Server auf `http://localhost:3001`).
-- **Infra / Docker Compose**: `infra/docker-compose.yml` (Postgres + API).
+- **Web‑Admin (Next.js)**: `apps/web-admin` auf `http://localhost:3001`.
+- **Multi‑Tenant**: Mandantentrennung über Header `X-TENANT` + `X-SITE-KEY` (Admin zusätzlich `X-ADMIN-KEY`).
 
 ## Dokumentation
-- **Projektstatus & Features**: `docs/STATUS.md`
-- **Befehle & Runbooks (PowerShell)**: `docs/COMMANDS.md`
-- **Umgebungsvariablen & Beispiele (PowerShell)**: `docs/ENV.md`
+- **Projektstatus**: [docs/STATUS.md](docs/STATUS.md)
+- **Commands / Runbooks (PowerShell)**: [docs/COMMANDS.md](docs/COMMANDS.md)
+- **Environment & Header**: [docs/ENV.md](docs/ENV.md)
+- **Demo‑Ablauf**: [docs/DEMO_STEPS.md](docs/DEMO_STEPS.md)
 
-## Einstieg
-1. Backend mit Docker starten (`infra/docker-compose.yml`).
-2. Web-Admin starten (`apps/web-admin`).
-3. Mobile App starten (`apps/mobile`).
-
-Details, API-Endpunkte und Test-Requests findest du in `docs/COMMANDS.md`.
+## Quick Start (TL;DR)
+- **Starten & lokale Befehle**: siehe [docs/COMMANDS.md](docs/COMMANDS.md)
+- **Demo‑Ablauf**: siehe [docs/DEMO_STEPS.md](docs/DEMO_STEPS.md)
