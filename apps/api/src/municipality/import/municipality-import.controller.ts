@@ -139,6 +139,7 @@ export class MunicipalityImportController {
     const title = this.requireString(payload.title, 'title');
     const description = this.requireString(payload.description, 'description');
     const location = this.requireString(payload.location, 'location');
+    const category = this.optionalString(payload.category);
     const startAt = this.requireDate(payload.startAt, 'startAt');
     const endAt = payload.endAt
       ? this.requireDate(payload.endAt, 'endAt')
@@ -152,6 +153,7 @@ export class MunicipalityImportController {
       title,
       description,
       location,
+      category,
       startAt,
       endAt,
       status: payload.status,
@@ -162,6 +164,7 @@ export class MunicipalityImportController {
     const type = this.parsePostType(payload.type);
     const title = this.requireString(payload.title, 'title');
     const body = this.requireString(payload.body, 'body');
+    const category = this.optionalString(payload.category);
     const publishedAt = this.requireDate(payload.publishedAt, 'publishedAt');
     const status = payload.status ? this.parsePostStatus(payload.status) : undefined;
     const priority = payload.priority
@@ -179,6 +182,7 @@ export class MunicipalityImportController {
       type,
       title,
       body,
+      category,
       publishedAt,
       status,
       priority,
@@ -209,6 +213,17 @@ export class MunicipalityImportController {
       throw new BadRequestException(`${field} ist erforderlich`);
     }
     return value.trim();
+  }
+
+  private optionalString(value: string | undefined) {
+    if (value === undefined) {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      throw new BadRequestException('category darf nicht leer sein');
+    }
+    return trimmed;
   }
 
   private requireDate(value: string | undefined, field: string) {

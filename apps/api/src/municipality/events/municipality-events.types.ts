@@ -6,6 +6,7 @@ export type MunicipalityEvent = {
   title: string;
   description: string;
   location: string;
+  category?: string;
   startAt: string;
   endAt?: string;
   status: EventStatus;
@@ -17,6 +18,7 @@ export type MunicipalityEventInput = {
   title: string;
   description: string;
   location: string;
+  category?: string;
   startAt: string;
   endAt?: string;
   status?: EventStatus;
@@ -26,6 +28,7 @@ export type MunicipalityEventPatch = {
   title?: string;
   description?: string;
   location?: string;
+  category?: string;
   startAt?: string;
   endAt?: string;
   status?: EventStatus;

@@ -26,6 +26,7 @@ type PostPatch = Partial<Omit<PostInput, 'tenantId' | 'authorUserId'>> & {
 };
 
 type ListOptions = {
+  tenantId: string;
   type?: PostType;
   limit?: number;
   offset?: number;

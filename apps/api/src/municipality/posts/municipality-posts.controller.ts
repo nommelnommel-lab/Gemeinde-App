@@ -12,10 +12,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { Roles } from '../../auth/roles.decorator';
-import { RolesGuard } from '../../auth/roles.guard';
-import { UserRole } from '../../auth/user-roles';
+import { AdminGuard } from '../../admin/admin.guard';
 import { requireTenant } from '../../tenant/tenant-auth';
 import { MunicipalityPostsService } from './municipality-posts.service';
 import {
@@ -68,8 +65,7 @@ export class MunicipalityPostsController {
   }
 
   @Get('api/admin/posts')
-  @UseGuards(new JwtAuthGuard(), new RolesGuard())
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async getAdminPosts(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -91,8 +87,7 @@ export class MunicipalityPostsController {
   }
 
   @Post('api/admin/posts')
-  @UseGuards(new JwtAuthGuard(), new RolesGuard())
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async createPost(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -104,8 +99,7 @@ export class MunicipalityPostsController {
   }
 
   @Patch('api/admin/posts/:id')
-  @UseGuards(new JwtAuthGuard(), new RolesGuard())
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async updatePost(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -118,8 +112,7 @@ export class MunicipalityPostsController {
   }
 
   @Delete('api/admin/posts/:id')
-  @UseGuards(new JwtAuthGuard(), new RolesGuard())
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @UseGuards(AdminGuard)
   @Header('Cache-Control', 'no-store')
   async deletePost(
     @Headers() headers: Record<string, string | string[] | undefined>,
@@ -134,6 +127,7 @@ export class MunicipalityPostsController {
     const type = this.parseType(payload.type);
     const title = this.requireString(payload.title, 'title');
     const body = this.requireString(payload.body, 'body');
+    const category = this.optionalString(payload.category);
     const publishedAt = this.requireDate(payload.publishedAt, 'publishedAt');
     const status = payload.status ? this.parseStatus(payload.status) : undefined;
     const priority = payload.priority
@@ -151,6 +145,7 @@ export class MunicipalityPostsController {
       type,
       title,
       body,
+      category,
       publishedAt,
       status,
       priority,
@@ -168,6 +163,9 @@ export class MunicipalityPostsController {
     }
     if (payload.body !== undefined) {
       patch.body = this.requireString(payload.body, 'body');
+    }
+    if (payload.category !== undefined) {
+      patch.category = this.optionalString(payload.category);
     }
     if (payload.publishedAt !== undefined) {
       patch.publishedAt = this.requireDate(payload.publishedAt, 'publishedAt');
@@ -240,6 +238,17 @@ export class MunicipalityPostsController {
       throw new BadRequestException(`${field} ist erforderlich`);
     }
     return value.trim();
+  }
+
+  private optionalString(value: string | undefined) {
+    if (value === undefined) {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      throw new BadRequestException('category darf nicht leer sein');
+    }
+    return trimmed;
   }
 
   private parseLimit(value: string): number {

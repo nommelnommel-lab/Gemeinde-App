@@ -56,10 +56,19 @@ export const apiFetch = async <T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(buildUrl(session.apiBaseUrl, path), {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(session.apiBaseUrl, path), {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    throw new ApiError(
+      'Backend nicht erreichbar. Bitte API Base URL prüfen.',
+      0,
+      error,
+    );
+  }
   const data = await parseResponseBody(response);
 
   if (!response.ok) {

@@ -91,6 +91,10 @@ export default function RolesPanel() {
 
       <div className="card">
         <h3>Rolle setzen</h3>
+        <p className="small">
+          Hinweis: Rollen bestimmen den Zugriff auf den Staff-Modus in der
+          mobilen App.
+        </p>
         <div className="row">
           <div className="field">
             <label htmlFor="userId">User ID</label>
