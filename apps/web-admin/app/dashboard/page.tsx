@@ -9,6 +9,7 @@ import TouristCodesPanel from '../../components/TouristCodesPanel';
 import RolesPanel from '../../components/RolesPanel';
 import ContentPanel from '../../components/ContentPanel';
 import ModerationPanel from '../../components/ModerationPanel';
+import TourismPanel from '../../components/TourismPanel';
 import { fetchHealthStatus } from '../../lib/api';
 import { clearSession, loadSession } from '../../lib/storage';
 
@@ -19,6 +20,7 @@ const tabs = [
   { id: 'tourist-codes', label: 'Tourist-Codes' },
   { id: 'roles', label: 'Rollen' },
   { id: 'content', label: 'Inhalte' },
+  { id: 'tourism', label: 'Tourismus' },
   { id: 'moderation', label: 'Moderation' },
 ] as const;
 
@@ -135,6 +137,7 @@ export default function DashboardPage() {
       {activeTab === 'tourist-codes' && <TouristCodesPanel />}
       {activeTab === 'roles' && <RolesPanel />}
       {activeTab === 'content' && <ContentPanel />}
+      {activeTab === 'tourism' && <TourismPanel />}
       {activeTab === 'moderation' && <ModerationPanel />}
     </div>
   );
