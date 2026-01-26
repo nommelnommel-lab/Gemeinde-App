@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 enum CitizenPostType {
+  userPost,
   marketplace,
   movingClearance,
   help,
@@ -18,6 +19,8 @@ enum CitizenPostType {
 extension CitizenPostTypeDetails on CitizenPostType {
   String get apiValue {
     switch (this) {
+      case CitizenPostType.userPost:
+        return 'user_post';
       case CitizenPostType.marketplace:
         return 'marketplace';
       case CitizenPostType.movingClearance:
@@ -47,12 +50,14 @@ extension CitizenPostTypeDetails on CitizenPostType {
 
   String get label {
     switch (this) {
+      case CitizenPostType.userPost:
+        return 'Freier Beitrag';
       case CitizenPostType.marketplace:
         return 'Online Flohmarkt';
       case CitizenPostType.movingClearance:
         return 'Umzug/Entrümpelung';
       case CitizenPostType.help:
-        return 'Senioren Hilfe';
+        return 'Hilfe';
       case CitizenPostType.cafeMeetup:
         return 'Café Treff';
       case CitizenPostType.kidsMeetup:
@@ -64,7 +69,7 @@ extension CitizenPostTypeDetails on CitizenPostType {
       case CitizenPostType.rideSharing:
         return 'Mitfahrgelegenheit';
       case CitizenPostType.jobsLocal:
-        return 'Lokale Jobs';
+        return 'Jobs';
       case CitizenPostType.volunteering:
         return 'Ehrenamt';
       case CitizenPostType.giveaway:
@@ -74,10 +79,24 @@ extension CitizenPostTypeDetails on CitizenPostType {
     }
   }
 
+  String get createLabel {
+    switch (this) {
+      case CitizenPostType.help:
+        return 'Hilfe suchen/anbieten';
+      case CitizenPostType.volunteering:
+        return 'Ehrenamt anbieten';
+      default:
+        return label;
+    }
+  }
+
   static CitizenPostType? fromValue(String? value) {
     if (value == null) return null;
     final normalized = value.toLowerCase();
     switch (normalized) {
+      case 'user_post':
+      case 'userpost':
+        return CitizenPostType.userPost;
       case 'marketplace_listing':
       case 'marketplace':
         return CitizenPostType.marketplace;
