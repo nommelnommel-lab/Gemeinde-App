@@ -12,7 +12,10 @@ class EventsService {
 
   Future<EventsPermissions> getPermissions() async {
     try {
-      final data = await _apiClient.getJsonFlexible('/events/permissions');
+      final data = await _apiClient.getJsonFlexible(
+        '/events/permissions',
+        includeAuth: true,
+      );
       if (data is Map<String, dynamic>) {
         return EventsPermissions.fromJson(data);
       }
@@ -76,18 +79,28 @@ class EventsService {
   }
 
   Future<Event> createEvent(EventInput input) async {
-    final data = await _apiClient.postJson('/api/admin/events', input.toJson());
+    final data = await _apiClient.postJson(
+      '/api/admin/events',
+      input.toJson(),
+      includeAdminKey: !kReleaseMode,
+    );
     return Event.fromJson(data);
   }
 
   Future<Event> updateEvent(String id, EventInput input) async {
-    final data =
-        await _apiClient.putJson('/api/admin/events/$id', input.toJson());
+    final data = await _apiClient.putJson(
+      '/api/admin/events/$id',
+      input.toJson(),
+      includeAdminKey: !kReleaseMode,
+    );
     return Event.fromJson(data);
   }
 
   Future<void> deleteEvent(String id) async {
-    await _apiClient.deleteJson('/api/admin/events/$id');
+    await _apiClient.deleteJson(
+      '/api/admin/events/$id',
+      includeAdminKey: !kReleaseMode,
+    );
   }
 
   Event _mapFeedEvent(Map<String, dynamic> json) {

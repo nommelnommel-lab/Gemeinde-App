@@ -4,6 +4,7 @@ import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../auth/screens/login_screen.dart';
 import '../models/warning_item.dart';
 import '../services/warnings_service.dart';
 import '../utils/warning_formatters.dart';
@@ -253,6 +254,10 @@ class _WarningsErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalized = error.toLowerCase();
+    final isAuthError = normalized.contains('http 401') ||
+        normalized.contains('http 403') ||
+        normalized.contains('sitzung abgelaufen');
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -266,9 +271,22 @@ class _WarningsErrorView extends StatelessWidget {
             const SizedBox(height: 8),
             Text(error),
             const SizedBox(height: 12),
-            FilledButton(
-              onPressed: onRetry,
-              child: const Text('Erneut versuchen'),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                FilledButton(
+                  onPressed: onRetry,
+                  child: const Text('Erneut versuchen'),
+                ),
+                if (isAuthError)
+                  OutlinedButton(
+                    onPressed: () {
+                      AppRouterScope.of(context).push(const LoginScreen());
+                    },
+                    child: const Text('Anmelden'),
+                  ),
+              ],
             ),
           ],
         ),

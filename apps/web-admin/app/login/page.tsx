@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ErrorNotice from '../../components/ErrorNotice';
 import LoadingState from '../../components/LoadingState';
+import { buildAdminHeaders } from '../../lib/api';
 import {
   AdminSession,
   getDefaultSession,
@@ -34,11 +35,7 @@ export default function LoginPage() {
         new URL('/api/admin/users', session.apiBaseUrl).toString(),
         {
           method: 'GET',
-          headers: {
-            'X-TENANT': session.tenant,
-            'X-SITE-KEY': session.siteKey,
-            'X-ADMIN-KEY': session.adminKey,
-          },
+          headers: buildAdminHeaders(session),
         },
       );
       if (!response.ok) {

@@ -10,6 +10,7 @@ class PermissionsService {
     try {
       final data = await _apiClient.getJsonFlexible(
         '/permissions',
+        includeAuth: true,
       );
       final payload = _extractPayload(data);
       final canCreate = payload['canCreate'];

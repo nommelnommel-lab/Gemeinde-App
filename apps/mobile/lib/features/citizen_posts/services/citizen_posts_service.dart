@@ -13,6 +13,7 @@ class CitizenPostsService {
   Future<List<CitizenPost>> getPosts({required CitizenPostType type}) async {
     final response = await _apiClient.getJsonFlexible(
       '${postsEndpoint}?type=${type.apiValue}',
+      includeAuth: true,
     );
     final payload = _extractList(response);
     return payload
@@ -22,17 +23,28 @@ class CitizenPostsService {
   }
 
   Future<CitizenPost> createPost(CitizenPostInput input) async {
-    final data = await _apiClient.postJson(postsEndpoint, input.toJson());
+    final data = await _apiClient.postJson(
+      postsEndpoint,
+      input.toJson(),
+      includeAuth: true,
+    );
     final payload = _extractMap(data);
     return CitizenPost.fromJson(payload);
   }
 
   Future<void> deletePost(String id) async {
-    await _apiClient.deleteJson(postByIdEndpoint(id));
+    await _apiClient.deleteJson(
+      postByIdEndpoint(id),
+      includeAuth: true,
+    );
   }
 
   Future<void> reportPost(String id) async {
-    await _apiClient.postJson(reportPostEndpoint(id), const {});
+    await _apiClient.postJson(
+      reportPostEndpoint(id),
+      const {},
+      includeAuth: true,
+    );
   }
 
   List<dynamic> _extractList(dynamic data) {

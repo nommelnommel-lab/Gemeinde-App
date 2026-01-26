@@ -90,13 +90,17 @@ class ApiClient {
     String path, {
     bool allowAuthRetry = true,
     bool includeAdminKey = false,
+    bool includeAuth = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
       method: 'GET',
       uri: uri,
       allowAuthRetry: allowAuthRetry,
-      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      buildHeaders: () => _buildHeaders(
+        includeAdminKey: includeAdminKey,
+        includeAuth: includeAuth,
+      ),
       send: (headers) => _http
           .get(uri, headers: headers)
           .timeout(_requestTimeout),
@@ -104,7 +108,7 @@ class ApiClient {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
-        res.body.isEmpty ? 'Request failed' : res.body,
+        _resolveErrorMessage(res),
         statusCode: res.statusCode,
       );
     }
@@ -126,13 +130,17 @@ class ApiClient {
     String path, {
     bool allowAuthRetry = true,
     bool includeAdminKey = false,
+    bool includeAuth = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
       method: 'GET',
       uri: uri,
       allowAuthRetry: allowAuthRetry,
-      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      buildHeaders: () => _buildHeaders(
+        includeAdminKey: includeAdminKey,
+        includeAuth: includeAuth,
+      ),
       send: (headers) => _http
           .get(uri, headers: headers)
           .timeout(_requestTimeout),
@@ -140,7 +148,7 @@ class ApiClient {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
-        res.body.isEmpty ? 'Request failed' : res.body,
+        _resolveErrorMessage(res),
         statusCode: res.statusCode,
       );
     }
@@ -162,13 +170,17 @@ class ApiClient {
     String path, {
     bool includeAdminKey = false,
     bool allowAuthRetry = true,
+    bool includeAuth = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
       method: 'GET',
       uri: uri,
       allowAuthRetry: allowAuthRetry,
-      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      buildHeaders: () => _buildHeaders(
+        includeAdminKey: includeAdminKey,
+        includeAuth: includeAuth,
+      ),
       send: (headers) => _http
           .get(uri, headers: headers)
           .timeout(_requestTimeout),
@@ -176,7 +188,7 @@ class ApiClient {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
-        res.body.isEmpty ? 'Request failed' : res.body,
+        _resolveErrorMessage(res),
         statusCode: res.statusCode,
       );
     }
@@ -196,13 +208,17 @@ class ApiClient {
     String path, {
     bool includeAdminKey = false,
     bool allowAuthRetry = true,
+    bool includeAuth = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
       method: 'GET',
       uri: uri,
       allowAuthRetry: allowAuthRetry,
-      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      buildHeaders: () => _buildHeaders(
+        includeAdminKey: includeAdminKey,
+        includeAuth: includeAuth,
+      ),
       send: (headers) => _http
           .get(uri, headers: headers)
           .timeout(_requestTimeout),
@@ -210,7 +226,7 @@ class ApiClient {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
-        res.body.isEmpty ? 'Request failed' : res.body,
+        _resolveErrorMessage(res),
         statusCode: res.statusCode,
       );
     }
@@ -236,6 +252,7 @@ class ApiClient {
     bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
+    bool includeAuth = false,
   }) async {
     return _sendJson(
       'POST',
@@ -244,6 +261,7 @@ class ApiClient {
       includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
       allowAuthRetry: allowAuthRetry,
+      includeAuth: includeAuth,
     );
   }
 
@@ -256,6 +274,7 @@ class ApiClient {
     bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = false,
+    bool includeAuth = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
@@ -265,6 +284,7 @@ class ApiClient {
       buildHeaders: () => _buildHeaders(
         includeAdminKey: includeAdminKey,
         adminKeyOverride: adminKeyOverride,
+        includeAuth: includeAuth,
       ),
       send: (headers) async {
         final request = http.MultipartRequest('POST', uri);
@@ -282,7 +302,7 @@ class ApiClient {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
-        res.body.isEmpty ? 'Request failed' : res.body,
+        _resolveErrorMessage(res),
         statusCode: res.statusCode,
       );
     }
@@ -306,6 +326,7 @@ class ApiClient {
     bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
+    bool includeAuth = false,
   }) async {
     return _sendJson(
       'PUT',
@@ -314,6 +335,7 @@ class ApiClient {
       includeAdminKey: includeAdminKey,
       adminKeyOverride: adminKeyOverride,
       allowAuthRetry: allowAuthRetry,
+      includeAuth: includeAuth,
     );
   }
 
@@ -321,13 +343,17 @@ class ApiClient {
     String path, {
     bool includeAdminKey = false,
     bool allowAuthRetry = true,
+    bool includeAuth = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
       method: 'DELETE',
       uri: uri,
       allowAuthRetry: allowAuthRetry,
-      buildHeaders: () => _buildHeaders(includeAdminKey: includeAdminKey),
+      buildHeaders: () => _buildHeaders(
+        includeAdminKey: includeAdminKey,
+        includeAuth: includeAuth,
+      ),
       send: (headers) => _http
           .delete(uri, headers: headers)
           .timeout(_requestTimeout),
@@ -335,7 +361,7 @@ class ApiClient {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
-        res.body.isEmpty ? 'Request failed' : res.body,
+        _resolveErrorMessage(res),
         statusCode: res.statusCode,
       );
     }
@@ -360,6 +386,7 @@ class ApiClient {
     bool includeAdminKey = false,
     String? adminKeyOverride,
     bool allowAuthRetry = true,
+    bool includeAuth = false,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final res = await _sendWithAuthRetry(
@@ -370,6 +397,7 @@ class ApiClient {
         includeJson: true,
         includeAdminKey: includeAdminKey,
         adminKeyOverride: adminKeyOverride,
+        includeAuth: includeAuth,
       ),
       send: (headers) => _http
           .send(
@@ -383,7 +411,7 @@ class ApiClient {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
-        res.body.isEmpty ? 'Request failed' : res.body,
+        _resolveErrorMessage(res),
         statusCode: res.statusCode,
       );
     }
@@ -405,6 +433,7 @@ class ApiClient {
     bool includeJson = false,
     bool includeAdminKey = false,
     String? adminKeyOverride,
+    bool includeAuth = false,
   }) {
     final headers = <String, String>{};
     if (includeJson) {
@@ -420,12 +449,24 @@ class ApiClient {
         headers['X-ADMIN-KEY'] = adminKey;
       }
     }
-    final accessToken = _accessTokenProvider?.call();
-    final trimmedToken = accessToken?.trim();
-    if (trimmedToken != null && trimmedToken.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $trimmedToken';
+    if (includeAuth) {
+      final accessToken = _accessTokenProvider?.call();
+      final trimmedToken = accessToken?.trim();
+      if (trimmedToken != null && trimmedToken.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $trimmedToken';
+      }
     }
     return headers;
+  }
+
+  String _resolveErrorMessage(http.Response response) {
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      return 'Sitzung abgelaufen oder keine Berechtigung. Bitte erneut anmelden.';
+    }
+    if (response.body.isEmpty) {
+      return 'Request failed';
+    }
+    return response.body;
   }
 
   Future<http.Response> _sendWithAuthRetry({
@@ -484,10 +525,14 @@ class ApiClient {
       return await request();
     } on SocketException catch (e, stack) {
       _logException('SocketException', e, stack);
-      throw ApiException('Netzwerkfehler: $e');
+      throw ApiException(
+        'Backend nicht erreichbar. Bitte Verbindung prüfen und erneut versuchen.',
+      );
     } on TimeoutException catch (e, stack) {
       _logException('TimeoutException', e, stack);
-      throw ApiException('Zeitüberschreitung: $e');
+      throw ApiException(
+        'Zeitüberschreitung beim Backend. Bitte erneut versuchen.',
+      );
     } on HttpException catch (e, stack) {
       _logException('HttpException', e, stack);
       throw ApiException('HTTP-Fehler: $e');

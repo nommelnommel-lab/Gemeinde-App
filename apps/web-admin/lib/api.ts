@@ -1,4 +1,4 @@
-import { loadSession } from './storage';
+import { AdminSession, loadSession } from './storage';
 
 export class ApiError extends Error {
   status: number;
@@ -10,10 +10,6 @@ export class ApiError extends Error {
     this.details = details;
   }
 }
-
-const shouldIncludeAdminKey = (path: string) => {
-  return path.startsWith('/api/admin/');
-};
 
 const buildUrl = (baseUrl: string, path: string) => {
   const normalizedBase = baseUrl.endsWith('/')
@@ -35,6 +31,25 @@ const parseResponseBody = async (response: Response) => {
   }
 };
 
+type HeaderOptions = {
+  includeJson?: boolean;
+  headers?: HeadersInit;
+};
+
+export const buildAdminHeaders = (
+  session: AdminSession,
+  options: HeaderOptions = {},
+) => {
+  const headers = new Headers(options.headers ?? {});
+  headers.set('X-TENANT', session.tenant);
+  headers.set('X-SITE-KEY', session.siteKey);
+  headers.set('X-ADMIN-KEY', session.adminKey);
+  if (options.includeJson && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  return headers;
+};
+
 export const apiFetch = async <T>(
   path: string,
   options: RequestInit = {},
@@ -44,17 +59,11 @@ export const apiFetch = async <T>(
     throw new ApiError('Keine Admin-Sitzung gefunden.', 401, null);
   }
 
-  const headers = new Headers(options.headers ?? {});
-  headers.set('X-TENANT', session.tenant);
-  headers.set('X-SITE-KEY', session.siteKey);
-  if (shouldIncludeAdminKey(path)) {
-    headers.set('X-ADMIN-KEY', session.adminKey);
-  }
-
   const body = options.body;
-  if (body && !(body instanceof FormData) && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
+  const headers = buildAdminHeaders(session, {
+    headers: options.headers,
+    includeJson: Boolean(body && !(body instanceof FormData)),
+  });
 
   let response: Response;
   try {
@@ -73,9 +82,11 @@ export const apiFetch = async <T>(
 
   if (!response.ok) {
     const message =
-      data && typeof data === 'object' && 'message' in data
-        ? String((data as { message: string }).message)
-        : 'Anfrage fehlgeschlagen.';
+      response.status === 401 || response.status === 403
+        ? 'Sitzung abgelaufen oder keine Berechtigung. Bitte erneut anmelden.'
+        : data && typeof data === 'object' && 'message' in data
+          ? String((data as { message: string }).message)
+          : 'Anfrage fehlgeschlagen.';
     throw new ApiError(message, response.status, data);
   }
 

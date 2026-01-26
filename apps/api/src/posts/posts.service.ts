@@ -1,7 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { TenantFileRepository } from '../municipality/storage/tenant-file.repository';
-import { PostEntity, PostStatus, PostType } from './posts.types';
+import { PostEntity, PostReport, PostStatus, PostType } from './posts.types';
 
 type PostInput = {
   tenantId: string;
@@ -33,6 +37,8 @@ type ListOptions = {
   query?: string;
   status?: PostStatus;
   includeHidden?: boolean;
+  viewerUserId?: string;
+  reportedOnly?: boolean;
 };
 
 @Injectable()
@@ -40,6 +46,11 @@ export class PostsService {
   private readonly repository = new TenantFileRepository<PostEntity>(
     'citizen-posts',
   );
+  private readonly reportRepository = new TenantFileRepository<PostReport>(
+    'post-reports',
+  );
+  private static readonly DEFAULT_LIMIT = 20;
+  private static readonly MAX_LIMIT = 50;
 
   async list(
     tenantId: string,
@@ -47,12 +58,11 @@ export class PostsService {
   ): Promise<PostEntity[]> {
     const posts = await this.repository.getAll(tenantId);
     const normalized = posts.map((post) => this.normalizePost(tenantId, post));
-    const statusFilter =
-      options.status ?? (options.includeHidden ? undefined : 'PUBLISHED');
+    const statusFilter = this.resolveStatusFilter(options);
     const query = options.query?.trim().toLowerCase();
 
     const filtered = normalized.filter((post) => {
-      if (statusFilter && post.status !== statusFilter) {
+      if (!this.matchesVisibility(post, options, statusFilter)) {
         return false;
       }
       if (options.type && post.type !== options.type) {
@@ -70,18 +80,13 @@ export class PostsService {
     const sorted = filtered.sort(
       (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
     );
-    const offset = options.offset ?? 0;
-    const limited =
-      typeof options.limit === 'number'
-        ? sorted.slice(offset, offset + options.limit)
-        : sorted.slice(offset);
-    return limited;
+    return this.applyPagination(sorted, options);
   }
 
   async getById(
     tenantId: string,
     id: string,
-    options: { includeHidden?: boolean } = {},
+    options: { includeHidden?: boolean; viewerUserId?: string } = {},
   ): Promise<PostEntity> {
     const posts = await this.repository.getAll(tenantId);
     const post = posts.find((item) => item.id === id);
@@ -89,7 +94,8 @@ export class PostsService {
       throw new NotFoundException('Post nicht gefunden');
     }
     const normalized = this.normalizePost(tenantId, post);
-    if (!options.includeHidden && normalized.status !== 'PUBLISHED') {
+    const statusFilter = this.resolveStatusFilter(options);
+    if (!this.matchesVisibility(normalized, options, statusFilter)) {
       throw new NotFoundException('Post nicht gefunden');
     }
     return normalized;
@@ -172,6 +178,10 @@ export class PostsService {
     id: string,
     reason: string,
   ): Promise<PostEntity> {
+    const normalizedReason = reason?.trim();
+    if (!normalizedReason) {
+      throw new BadRequestException('reason ist erforderlich');
+    }
     const posts = await this.repository.getAll(tenantId);
     const index = posts.findIndex((item) => item.id === id);
     if (index === -1) {
@@ -182,7 +192,7 @@ export class PostsService {
       ...this.normalizePost(tenantId, posts[index]),
       status: 'HIDDEN',
       hiddenAt: now,
-      hiddenReason: reason,
+      hiddenReason: normalizedReason,
       updatedAt: now,
     };
     posts[index] = updated;
@@ -190,7 +200,103 @@ export class PostsService {
     return updated;
   }
 
-  async report(tenantId: string, id: string): Promise<PostEntity> {
+  async report(
+    tenantId: string,
+    id: string,
+    reporterUserId: string,
+  ): Promise<{ post: PostEntity; alreadyReported: boolean }> {
+    const normalizedReporter = reporterUserId.trim();
+    if (!normalizedReporter) {
+      throw new BadRequestException('reporterUserId ist erforderlich');
+    }
+    const posts = await this.repository.getAll(tenantId);
+    const index = posts.findIndex((item) => item.id === id);
+    if (index === -1) {
+      throw new NotFoundException('Post nicht gefunden');
+    }
+    const now = new Date().toISOString();
+    const normalized = this.normalizePost(tenantId, posts[index]);
+    const reports = await this.reportRepository.getAll(tenantId);
+    const existingReports = reports.filter((entry) => entry.postId === id);
+    const alreadyReported = existingReports.some(
+      (entry) => entry.reporterUserId === normalizedReporter,
+    );
+    let reportsForPost = existingReports;
+    if (!alreadyReported) {
+      const newReport: PostReport = {
+        id: randomUUID(),
+        tenantId,
+        postId: id,
+        reporterUserId: normalizedReporter,
+        createdAt: now,
+      };
+      reports.push(newReport);
+      reportsForPost = [...existingReports, newReport];
+      await this.reportRepository.setAll(tenantId, reports);
+    }
+
+    const nextReportsCount = reportsForPost.length;
+    const nextReportedAt =
+      nextReportsCount > 0 ? normalized.reportedAt ?? now : undefined;
+    const needsUpdate =
+      normalized.reportsCount !== nextReportsCount ||
+      normalized.reportedAt !== nextReportedAt;
+    if (needsUpdate) {
+      const updated: PostEntity = {
+        ...normalized,
+        reportsCount: nextReportsCount,
+        reportedAt: nextReportedAt,
+        updatedAt: now,
+      };
+      posts[index] = updated;
+      await this.repository.setAll(tenantId, posts);
+      return { post: updated, alreadyReported };
+    }
+    return { post: normalized, alreadyReported };
+  }
+
+  async getAll(options: ListOptions): Promise<PostEntity[]> {
+    const posts = await this.repository.getAll(options.tenantId);
+    const normalized = posts.map((post) =>
+      this.normalizePost(options.tenantId, post),
+    );
+    const statusFilter = this.resolveStatusFilter(options);
+    const query = options.query?.trim().toLowerCase();
+    const filtered = normalized.filter((post) => {
+      if (!this.matchesVisibility(post, options, statusFilter)) {
+        return false;
+      }
+      if (options.reportedOnly) {
+        if (!(post.reportedAt || (post.reportsCount ?? 0) > 0)) {
+          return false;
+        }
+      }
+      if (options.type && post.type !== options.type) {
+        return false;
+      }
+      if (query) {
+        const haystack = `${post.title} ${post.body}`.toLowerCase();
+        if (!haystack.includes(query)) {
+          return false;
+        }
+      }
+      return true;
+    });
+    const sorted = filtered.sort(
+      (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+    );
+    return this.applyPagination(sorted, options);
+  }
+
+  async hidePost(
+    tenantId: string,
+    id: string,
+    reason?: string,
+  ): Promise<PostEntity> {
+    return this.hide(tenantId, id, reason ?? '');
+  }
+
+  async unhidePost(tenantId: string, id: string): Promise<PostEntity> {
     const posts = await this.repository.getAll(tenantId);
     const index = posts.findIndex((item) => item.id === id);
     if (index === -1) {
@@ -200,8 +306,28 @@ export class PostsService {
     const normalized = this.normalizePost(tenantId, posts[index]);
     const updated: PostEntity = {
       ...normalized,
-      reportsCount: (normalized.reportsCount ?? 0) + 1,
-      reportedAt: now,
+      status: 'PUBLISHED',
+      hiddenAt: undefined,
+      hiddenReason: undefined,
+      updatedAt: now,
+    };
+    posts[index] = updated;
+    await this.repository.setAll(tenantId, posts);
+    return updated;
+  }
+
+  async resetReports(tenantId: string, id: string): Promise<PostEntity> {
+    const posts = await this.repository.getAll(tenantId);
+    const index = posts.findIndex((item) => item.id === id);
+    if (index === -1) {
+      throw new NotFoundException('Post nicht gefunden');
+    }
+    const now = new Date().toISOString();
+    const normalized = this.normalizePost(tenantId, posts[index]);
+    const updated: PostEntity = {
+      ...normalized,
+      reportsCount: 0,
+      reportedAt: undefined,
       updatedAt: now,
     };
     posts[index] = updated;
@@ -220,5 +346,51 @@ export class PostsService {
       status: post.status ?? 'PUBLISHED',
       reportsCount: post.reportsCount ?? 0,
     };
+  }
+
+  private resolveStatusFilter(options: {
+    status?: PostStatus;
+    includeHidden?: boolean;
+  }) {
+    if (options.status) {
+      return options.status;
+    }
+    if (options.includeHidden) {
+      return undefined;
+    }
+    return 'PUBLISHED';
+  }
+
+  private matchesVisibility(
+    post: PostEntity,
+    options: { includeHidden?: boolean; viewerUserId?: string },
+    statusFilter?: PostStatus,
+  ) {
+    if (post.status === 'HIDDEN') {
+      if (options.includeHidden) {
+        return true;
+      }
+      if (options.viewerUserId && post.authorUserId === options.viewerUserId) {
+        return true;
+      }
+      return false;
+    }
+    if (statusFilter && post.status !== statusFilter) {
+      return false;
+    }
+    return true;
+  }
+
+  private applyPagination(
+    items: PostEntity[],
+    options: { limit?: number; offset?: number },
+  ) {
+    const offset = options.offset ?? 0;
+    const rawLimit = options.limit ?? PostsService.DEFAULT_LIMIT;
+    const limited = Math.min(
+      Math.max(rawLimit, 1),
+      PostsService.MAX_LIMIT,
+    );
+    return items.slice(offset, offset + limited);
   }
 }

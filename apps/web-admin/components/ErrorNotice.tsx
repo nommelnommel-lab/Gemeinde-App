@@ -16,11 +16,26 @@ export default function ErrorNotice({ error, title }: ErrorNoticeProps) {
   const message = error instanceof Error ? error.message : 'Unbekannter Fehler.';
   const details = error instanceof ApiError ? error.details : null;
   const status = error instanceof ApiError ? error.status : null;
+  const shouldRelogin = status === 401 || status === 403;
 
   return (
     <div className="notice error">
       <strong>{resolvedTitle}</strong>
       <div>{message}</div>
+      {shouldRelogin && (
+        <div className="row" style={{ marginTop: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.location.href = '/login';
+              }
+            }}
+          >
+            Zur Anmeldung
+          </button>
+        </div>
+      )}
       {(details || status) && (
         <details className="details">
           <summary>Debug-Details</summary>

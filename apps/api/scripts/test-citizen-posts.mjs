@@ -2,6 +2,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
 const TENANT = process.env.TENANT ?? 'hilders';
 const SITE_KEY = process.env.SITE_KEY ?? process.env.X_SITE_KEY ?? '';
 const ADMIN_KEY = process.env.ADMIN_KEY ?? process.env.X_ADMIN_KEY ?? '';
+const USER_TOKEN = process.env.USER_TOKEN ?? '';
 
 const headersPublic = () => ({
   'X-TENANT': TENANT,
@@ -174,18 +175,22 @@ const run = async () => {
   const email = `citizen.${suffix}@example.com`;
   const password = 'secret-pass-123';
 
-  await activateOnce({
-    activationCode,
-    email,
-    password,
-    postalCode: resident.postalCode,
-    houseNumber: resident.houseNumber,
-  });
-
-  const auth = await login(email, password);
-  const accessToken = auth?.accessToken;
+  let accessToken = USER_TOKEN;
+  let authResponse = null;
   if (!accessToken) {
-    throw new Error(`Missing accessToken: ${JSON.stringify(auth)}`);
+    await activateOnce({
+      activationCode,
+      email,
+      password,
+      postalCode: resident.postalCode,
+      houseNumber: resident.houseNumber,
+    });
+
+    authResponse = await login(email, password);
+    accessToken = authResponse?.accessToken;
+  }
+  if (!accessToken) {
+    throw new Error(`Missing accessToken: ${JSON.stringify(authResponse)}`);
   }
 
   const created = await requireOk('/posts', {
@@ -215,10 +220,29 @@ const run = async () => {
     throw new Error('Created post not found in list.');
   }
 
-  await requireOk(`/posts/${created.id}/report`, {
+  const reportFirst = await requireOk(`/posts/${created.id}/report`, {
     headers: headersAuth(accessToken),
     body: {},
   });
+  if (reportFirst?.alreadyReported) {
+    throw new Error('First report should not be marked as alreadyReported.');
+  }
+
+  const reportSecond = await requireOk(`/posts/${created.id}/report`, {
+    headers: headersAuth(accessToken),
+    body: {},
+  });
+  if (!reportSecond?.alreadyReported) {
+    throw new Error('Second report should be idempotent.');
+  }
+
+  const refreshed = await requireOk(`/posts/${created.id}`, {
+    method: 'GET',
+    headers: headersAuth(accessToken),
+  });
+  if (refreshed?.reportsCount !== 1) {
+    throw new Error(`reportsCount expected 1, got ${refreshed?.reportsCount}`);
+  }
 
   // eslint-disable-next-line no-console
   console.info('DONE ✅');
