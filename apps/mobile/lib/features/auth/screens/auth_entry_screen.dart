@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/navigation/app_router.dart';
 import 'activation_screen.dart';
 import 'login_screen.dart';
+import 'tourist_redeem_screen.dart';
 
 class AuthEntryScreen extends StatelessWidget {
   const AuthEntryScreen({super.key});
@@ -29,9 +30,9 @@ class AuthEntryScreen extends StatelessWidget {
             const Spacer(),
             FilledButton(
               onPressed: () {
-                AppRouterScope.of(context).push(const LoginScreen());
+                AppRouterScope.of(context).push(const TouristRedeemScreen());
               },
-              child: const Text('Ich habe bereits ein Konto'),
+              child: const Text('Tourist-Zugang'),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
@@ -39,6 +40,13 @@ class AuthEntryScreen extends StatelessWidget {
                 AppRouterScope.of(context).push(const ActivationScreen());
               },
               child: const Text('Ich habe einen Aktivierungscode'),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () {
+                AppRouterScope.of(context).push(const LoginScreen());
+              },
+              child: const Text('Ich habe bereits ein Konto'),
             ),
             const Spacer(),
           ],
