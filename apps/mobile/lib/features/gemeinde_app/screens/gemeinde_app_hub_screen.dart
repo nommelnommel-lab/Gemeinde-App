@@ -36,45 +36,45 @@ class GemeindeAppHubScreen extends StatelessWidget {
           title: 'Online Flohmarkt',
           icon: Icons.storefront,
           onTap: () => _openCitizenList(
-            context,
-            CitizenPostType.marketplace,
-            services,
+            context: context,
+            type: CitizenPostType.marketplace,
+            services: services,
           ),
         ),
         _HubItem(
           title: 'Umzug/Entrümpelung',
           icon: Icons.local_shipping,
           onTap: () => _openCitizenList(
-            context,
-            CitizenPostType.movingClearance,
-            services,
+            context: context,
+            type: CitizenPostType.movingClearance,
+            services: services,
           ),
         ),
         _HubItem(
           title: 'Senioren Hilfe',
           icon: Icons.volunteer_activism,
           onTap: () => _openCitizenList(
-            context,
-            CitizenPostType.help,
-            services,
+            context: context,
+            type: CitizenPostType.help,
+            services: services,
           ),
         ),
         _HubItem(
           title: 'Wohnungssuche',
           icon: Icons.home_work_outlined,
           onTap: () => _openCitizenList(
-            context,
-            CitizenPostType.apartmentSearch,
-            services,
+            context: context,
+            type: CitizenPostType.apartmentSearch,
+            services: services,
           ),
         ),
         _HubItem(
           title: 'Fundbüro',
           icon: Icons.search,
           onTap: () => _openCitizenList(
-            context,
-            CitizenPostType.lostFound,
-            services,
+            context: context,
+            type: CitizenPostType.lostFound,
+            services: services,
           ),
         ),
       ]);
@@ -85,9 +85,9 @@ class GemeindeAppHubScreen extends StatelessWidget {
           title: 'Café Treff',
           icon: Icons.local_cafe,
           onTap: () => _openCitizenList(
-            context,
-            CitizenPostType.cafeMeetup,
-            services,
+            context: context,
+            type: CitizenPostType.cafeMeetup,
+            services: services,
           ),
         ),
       );
@@ -98,9 +98,9 @@ class GemeindeAppHubScreen extends StatelessWidget {
           title: 'Kinderspielen (3j-5j)',
           icon: Icons.child_friendly,
           onTap: () => _openCitizenList(
-            context,
-            CitizenPostType.kidsMeetup,
-            services,
+            context: context,
+            type: CitizenPostType.kidsMeetup,
+            services: services,
           ),
         ),
       );
@@ -141,11 +141,11 @@ class GemeindeAppHubScreen extends StatelessWidget {
     );
   }
 
-  void _openCitizenList(
-    BuildContext context,
-    CitizenPostType type,
-    AppServices services,
-  ) {
+  void _openCitizenList({
+    required BuildContext context,
+    required CitizenPostType type,
+    required AppServices services,
+  }) {
     AppRouterScope.of(context).push(
       CitizenPostsListScreen(
         type: type,
