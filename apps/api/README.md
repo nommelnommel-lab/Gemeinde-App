@@ -20,3 +20,15 @@ npm --prefix apps/api run test:activation-flow
 * `SITE_KEY` can also be provided as `X_SITE_KEY`.
 * `ADMIN_KEY` can also be provided as `X_ADMIN_KEY`.
 * `DEBUG=1` enables masked header debug output.
+
+## Seed demo tourism data (Hilders)
+
+```bash
+TENANT=hilders-demo npm --prefix apps/api run seed:tourism:hilders
+```
+
+To seed the full Hilders demo dataset (profile, forms, tourism):
+
+```bash
+TENANT=hilders-demo npm --prefix apps/api run seed:hilders
+```
