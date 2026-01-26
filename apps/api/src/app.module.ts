@@ -9,6 +9,7 @@ import { TenantModule } from './tenant/tenant.module';
 import { WarningsModule } from './warnings/warnings.module';
 import { MunicipalityModule } from './municipality/municipality.module';
 import { AuthModule } from './auth/auth.module';
+import { TourismModule } from './tourism/tourism.module';
 
 @Module({
   controllers: [AppController],
@@ -23,6 +24,7 @@ import { AuthModule } from './auth/auth.module';
     WarningsModule,
     AuthModule,
     MunicipalityModule,
+    TourismModule,
   ],
 })
 export class AppModule {}

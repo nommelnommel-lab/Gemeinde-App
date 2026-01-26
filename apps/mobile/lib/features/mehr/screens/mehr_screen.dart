@@ -80,7 +80,17 @@ class _MehrScreenState extends State<MehrScreen> {
             title: const Text('Tourist'),
             subtitle: Text('Gültig bis $touristExpiry'),
           ),
-        if (authStore.isAuthenticated && isTourist && touristExpiry != null)
+        if (authStore.isAuthenticated && isTourist)
+          ListTile(
+            leading: const Icon(Icons.explore_outlined),
+            title: const Text('Tourist-Modus'),
+            subtitle: const Text('Nur lesen, keine Bearbeitung möglich'),
+            trailing: TextButton(
+              onPressed: authStore.isLoading ? null : _logout,
+              child: const Text('Zurücksetzen'),
+            ),
+          ),
+        if (authStore.isAuthenticated && isTourist)
           const Divider(height: 0),
         if (isStaff)
           ListTile(

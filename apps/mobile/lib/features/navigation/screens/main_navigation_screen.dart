@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../gemeinde_app/screens/gemeinde_app_hub_screen.dart';
 import '../../mehr/screens/mehr_screen.dart';
 import '../../start/screens/start_screen.dart';
+import '../../tourism/screens/tourism_hub_screen.dart';
 import '../../verwaltung/screens/verwaltung_hub_screen.dart';
 import '../../warnings/screens/warnings_screen.dart';
 import '../../../shared/auth/app_permissions.dart';
@@ -37,52 +38,89 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       'waste',
     ]);
     final permissions = AppPermissionsScope.maybePermissionsOf(context);
+    final isTourist = permissions?.role == 'TOURIST';
 
-    final items = <_NavItem>[
-      _NavItem(
-        title: 'Start',
-        screen: StartFeedScreen(onSelectTab: _onSelectTab),
-        destination: const NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          label: 'Start',
-        ),
-      ),
-      if (showWarnings)
-        _NavItem(
-          title: 'Warnungen',
-          screen: const WarningsScreen(),
-          destination: const NavigationDestination(
-            icon: Icon(Icons.warning_amber_outlined),
-            label: 'Warnungen',
-          ),
-        ),
-      if (showGemeindeApp)
-        _NavItem(
-          title: 'GemeindeApp',
-          screen: const GemeindeAppHubScreen(),
-          destination: const NavigationDestination(
-            icon: Icon(Icons.groups_outlined),
-            label: 'GemeindeApp',
-          ),
-        ),
-      if (showVerwaltung)
-        _NavItem(
-          title: 'Verwaltung',
-          screen: const VerwaltungHubScreen(),
-          destination: const NavigationDestination(
-            icon: Icon(Icons.admin_panel_settings_outlined),
-            label: 'Verwaltung',
-          ),
-        ),
-      _NavItem(
-        title: 'Mehr',
-        screen: const MehrScreen(),
-        destination: const NavigationDestination(
-          icon: Icon(Icons.menu),
-          label: 'Mehr',
-        ),
-      ),
-    ];
+    final items = isTourist
+        ? <_NavItem>[
+            _NavItem(
+              title: 'Start',
+              screen: StartFeedScreen(onSelectTab: _onSelectTab),
+              destination: const NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                label: 'Start',
+              ),
+            ),
+            if (showWarnings)
+              _NavItem(
+                title: 'Warnungen',
+                screen: const WarningsScreen(),
+                destination: const NavigationDestination(
+                  icon: Icon(Icons.warning_amber_outlined),
+                  label: 'Warnungen',
+                ),
+              ),
+            _NavItem(
+              title: 'Tourismus',
+              screen: const TourismHubScreen(),
+              destination: const NavigationDestination(
+                icon: Icon(Icons.explore_outlined),
+                label: 'Tourismus',
+              ),
+            ),
+            _NavItem(
+              title: 'Mehr',
+              screen: const MehrScreen(),
+              destination: const NavigationDestination(
+                icon: Icon(Icons.menu),
+                label: 'Mehr',
+              ),
+            ),
+          ]
+        : <_NavItem>[
+            _NavItem(
+              title: 'Start',
+              screen: StartFeedScreen(onSelectTab: _onSelectTab),
+              destination: const NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                label: 'Start',
+              ),
+            ),
+            if (showWarnings)
+              _NavItem(
+                title: 'Warnungen',
+                screen: const WarningsScreen(),
+                destination: const NavigationDestination(
+                  icon: Icon(Icons.warning_amber_outlined),
+                  label: 'Warnungen',
+                ),
+              ),
+            if (showGemeindeApp)
+              _NavItem(
+                title: 'GemeindeApp',
+                screen: const GemeindeAppHubScreen(),
+                destination: const NavigationDestination(
+                  icon: Icon(Icons.groups_outlined),
+                  label: 'GemeindeApp',
+                ),
+              ),
+            if (showVerwaltung)
+              _NavItem(
+                title: 'Verwaltung',
+                screen: const VerwaltungHubScreen(),
+                destination: const NavigationDestination(
+                  icon: Icon(Icons.admin_panel_settings_outlined),
+                  label: 'Verwaltung',
+                ),
+              ),
+            _NavItem(
+              title: 'Mehr',
+              screen: const MehrScreen(),
+              destination: const NavigationDestination(
+                icon: Icon(Icons.menu),
+                label: 'Mehr',
+              ),
+            ),
+          ];
 
     final selectedIndex = items.isEmpty
         ? 0

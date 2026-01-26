@@ -23,6 +23,7 @@ class AppServices {
     required this.healthService,
     required this.tenantConfigService,
     required this.warningsService,
+    required this.tourismService,
     required this.permissionsService,
     required this.tenantStore,
   });
@@ -36,6 +37,7 @@ class AppServices {
   final HealthService healthService;
   final TenantConfigService tenantConfigService;
   final WarningsService warningsService;
+  final TourismService tourismService;
   final PermissionsService permissionsService;
   final TenantStore tenantStore;
 }
