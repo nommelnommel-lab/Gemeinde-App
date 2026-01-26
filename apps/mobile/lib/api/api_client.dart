@@ -339,6 +339,25 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> patchJson(
+    String path,
+    Map<String, dynamic> body, {
+    bool includeAdminKey = false,
+    String? adminKeyOverride,
+    bool allowAuthRetry = true,
+    bool includeAuth = false,
+  }) async {
+    return _sendJson(
+      'PATCH',
+      path,
+      body,
+      includeAdminKey: includeAdminKey,
+      adminKeyOverride: adminKeyOverride,
+      allowAuthRetry: allowAuthRetry,
+      includeAuth: includeAuth,
+    );
+  }
+
   Future<Map<String, dynamic>> deleteJson(
     String path, {
     bool includeAdminKey = false,
@@ -377,6 +396,47 @@ class ApiClient {
       _logException('Exception', e, stack);
       throw ApiException('JSON parse error: $e');
     }
+  }
+
+  Future<dynamic> fetchPosts({required String type}) {
+    return getJsonFlexible(
+      '/posts?type=$type',
+      includeAuth: true,
+    );
+  }
+
+  Future<Map<String, dynamic>> createPost(Map<String, dynamic> payload) {
+    return postJson(
+      '/posts',
+      payload,
+      includeAuth: true,
+    );
+  }
+
+  Future<Map<String, dynamic>> updatePost(
+    String id,
+    Map<String, dynamic> payload,
+  ) {
+    return patchJson(
+      '/posts/$id',
+      payload,
+      includeAuth: true,
+    );
+  }
+
+  Future<Map<String, dynamic>> deletePost(String id) {
+    return deleteJson(
+      '/posts/$id',
+      includeAuth: true,
+    );
+  }
+
+  Future<Map<String, dynamic>> reportPost(String id) {
+    return postJson(
+      '/posts/$id/report',
+      const {},
+      includeAuth: true,
+    );
   }
 
   Future<Map<String, dynamic>> _sendJson(
