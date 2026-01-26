@@ -17,12 +17,16 @@ import 'citizen_post_form_screen.dart';
 class CitizenPostsListScreen extends StatefulWidget {
   const CitizenPostsListScreen({
     super.key,
-    required this.type,
+    required this.title,
+    required this.types,
     required this.postsService,
+    this.filterTypes = const [],
   });
 
-  final CitizenPostType type;
+  final String title;
+  final List<CitizenPostType> types;
   final CitizenPostsService postsService;
+  final List<CitizenPostType> filterTypes;
 
   @override
   State<CitizenPostsListScreen> createState() => _CitizenPostsListScreenState();
@@ -34,6 +38,26 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
   String? _error;
   bool _onlyMine = false;
   List<CitizenPost> _posts = const [];
+  late final TextEditingController _searchController;
+  late final List<CitizenPostType> _baseTypes;
+  late final List<CitizenPostType> _filterTypes;
+  CitizenPostType? _selectedType;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _baseTypes = widget.types.toSet().toList();
+    _filterTypes = widget.filterTypes.isEmpty
+        ? CitizenPostType.values
+        : widget.filterTypes.toSet().toList();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -54,7 +78,12 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
     try {
       final authStore = AuthScope.of(context);
       final authorUserId = authStore.user?.id;
-      final posts = await widget.postsService.getPosts(type: widget.type);
+      final activeTypes = _activeTypes;
+      final query = _searchController.text.trim();
+      final posts = await widget.postsService.getPostsForTypes(
+        types: activeTypes,
+        query: query.isEmpty ? null : query,
+      );
       final visiblePosts = _onlyMine && authorUserId != null
           ? posts
               .where(
@@ -83,9 +112,10 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
     final authStore = AuthScope.of(context);
     final canFilterMine =
         authStore.isAuthenticated && authStore.user?.id != null;
+    final currentTitle = _currentTitle;
 
     return AppScaffold(
-      appBar: AppBar(title: Text(widget.type.label)),
+      appBar: AppBar(title: Text(currentTitle)),
       floatingActionButton: canCreate
           ? FloatingActionButton.extended(
               onPressed: _openCreate,
@@ -101,8 +131,49 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             AppSectionHeader(
-              title: widget.type.label,
-              subtitle: 'Austausch und Hilfe in der Gemeinde.',
+              title: currentTitle,
+              subtitle: _currentSubtitle(),
+            ),
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => _load(),
+                    decoration: InputDecoration(
+                      labelText: 'Suche',
+                      suffixIcon: IconButton(
+                        onPressed: _load,
+                        icon: const Icon(Icons.search),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<CitizenPostType?>(
+                    value: _selectedType,
+                    decoration: const InputDecoration(labelText: 'Typ'),
+                    items: [
+                      const DropdownMenuItem<CitizenPostType?>(
+                        value: null,
+                        child: Text('Alle Typen'),
+                      ),
+                      ..._filterTypes.map(
+                        (type) => DropdownMenuItem<CitizenPostType?>(
+                          value: type,
+                          child: Text(type.label),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() => _selectedType = value);
+                      _load();
+                    },
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             if (canFilterMine)
@@ -153,7 +224,7 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
                           runSpacing: 8,
                           children: [
                             AppChip(
-                              label: widget.type.label,
+                              label: post.type.label,
                               icon: Icons.local_activity_outlined,
                             ),
                             AppChip(
@@ -176,7 +247,7 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
   }
 
   String _emptyMessage() {
-    final label = widget.type.label;
+    final label = _currentTitle;
     if (_onlyMine) {
       return 'Du hast noch keine Beiträge in $label.';
     }
@@ -221,12 +292,43 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
     return '$day.$month.$year · $hours:$minutes';
   }
 
+  String get _currentTitle =>
+      _selectedType?.label ?? widget.title;
+
+  String _currentSubtitle() {
+    final activeTypes = _activeTypes;
+    if (activeTypes.length <= 1) {
+      return 'Austausch und Hilfe in der Gemeinde.';
+    }
+    final labels = activeTypes.map((type) => type.label).join(', ');
+    return 'Umfasst: $labels';
+  }
+
+  List<CitizenPostType> get _activeTypes {
+    if (_selectedType != null) {
+      return [_selectedType!];
+    }
+    return _baseTypes;
+  }
+
   bool _canCreate(AppPermissions? permissions) {
+    return _creatableTypes(permissions).isNotEmpty;
+  }
+
+  List<CitizenPostType> _creatableTypes(AppPermissions? permissions) {
     final create = permissions?.canCreate;
     if (create == null) {
-      return false;
+      return const [];
     }
-    switch (widget.type) {
+    return _activeTypes
+        .where((type) => _canCreateType(type, create))
+        .toList();
+  }
+
+  bool _canCreateType(CitizenPostType type, CreatePermissions create) {
+    switch (type) {
+      case CitizenPostType.userPost:
+        return false;
       case CitizenPostType.marketplace:
         return create.marketplace;
       case CitizenPostType.movingClearance:
@@ -267,15 +369,48 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
   }
 
   Future<void> _openCreate() async {
+    final permissions = AppPermissionsScope.maybePermissionsOf(context);
+    final creatableTypes = _creatableTypes(permissions);
+    if (creatableTypes.isEmpty) {
+      return;
+    }
+    CitizenPostType? selectedType;
+    if (creatableTypes.length == 1) {
+      selectedType = creatableTypes.first;
+    } else {
+      selectedType = await _selectCreateType(creatableTypes);
+    }
+    if (selectedType == null) {
+      return;
+    }
     final result = await AppRouterScope.of(context).push<CitizenPost?>(
       CitizenPostFormScreen(
-        type: widget.type,
+        type: selectedType,
         postsService: widget.postsService,
       ),
     );
     if (result != null) {
       _load();
     }
+  }
+
+  Future<CitizenPostType?> _selectCreateType(
+    List<CitizenPostType> types,
+  ) {
+    return showDialog<CitizenPostType>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Was möchtest du erstellen?'),
+        children: types
+            .map(
+              (type) => SimpleDialogOption(
+                onPressed: () => Navigator.of(context).pop(type),
+                child: Text(type.createLabel),
+              ),
+            )
+            .toList(),
+      ),
+    );
   }
 
   Widget _buildErrorState() {

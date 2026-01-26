@@ -6,14 +6,47 @@ class CitizenPostsService {
 
   final ApiClient _apiClient;
 
-  Future<List<CitizenPost>> getPosts({required CitizenPostType type}) async {
-    final response = await _apiClient.fetchPosts(type: type.apiValue);
+  Future<List<CitizenPost>> getPosts({
+    required CitizenPostType type,
+    String? query,
+  }) async {
+    final response = await _apiClient.fetchPosts(
+      type: type.apiValue,
+      query: query,
+    );
     final payload = _extractList(response);
     final posts = payload
         .whereType<Map<String, dynamic>>()
         .map(CitizenPost.fromJson)
         .toList();
     posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return posts;
+  }
+
+  Future<List<CitizenPost>> getPostsForTypes({
+    required List<CitizenPostType> types,
+    String? query,
+  }) async {
+    if (types.isEmpty) {
+      return const [];
+    }
+    if (types.length == 1) {
+      return getPosts(type: types.first, query: query);
+    }
+    final uniqueTypes = types.toSet().toList();
+    final results = await Future.wait(
+      uniqueTypes.map(
+        (type) => getPosts(type: type, query: query),
+      ),
+    );
+    final merged = <String, CitizenPost>{};
+    for (final batch in results) {
+      for (final post in batch) {
+        merged[post.id] = post;
+      }
+    }
+    final posts = merged.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return posts;
   }
 

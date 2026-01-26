@@ -33,73 +33,74 @@ class GemeindeAppHubScreen extends StatelessWidget {
     if (settingsStore.isFeatureEnabled('services')) {
       items.addAll([
         _HubItem(
-          title: 'Online Flohmarkt',
+          title: 'Beiträge & Markt',
           icon: Icons.storefront,
           onTap: () => _openCitizenList(
-            context: context,
-            type: CitizenPostType.marketplace,
+            context,
+            title: 'Beiträge & Markt',
+            types: const [
+              CitizenPostType.userPost,
+              CitizenPostType.marketplace,
+              CitizenPostType.giveaway,
+              CitizenPostType.skillExchange,
+            ],
             services: services,
           ),
         ),
         _HubItem(
-          title: 'Umzug/Entrümpelung',
-          icon: Icons.local_shipping,
-          onTap: () => _openCitizenList(
-            context: context,
-            type: CitizenPostType.movingClearance,
-            services: services,
-          ),
-        ),
-        _HubItem(
-          title: 'Senioren Hilfe',
+          title: 'Hilfe & Ehrenamt',
           icon: Icons.volunteer_activism,
           onTap: () => _openCitizenList(
-            context: context,
-            type: CitizenPostType.help,
+            context,
+            title: 'Hilfe & Ehrenamt',
+            types: const [
+              CitizenPostType.help,
+              CitizenPostType.volunteering,
+            ],
             services: services,
           ),
         ),
         _HubItem(
-          title: 'Wohnungssuche',
-          icon: Icons.home_work_outlined,
+          title: 'Mobilität',
+          icon: Icons.directions_car,
           onTap: () => _openCitizenList(
-            context: context,
-            type: CitizenPostType.apartmentSearch,
+            context,
+            title: 'Mobilität',
+            types: const [CitizenPostType.rideSharing],
             services: services,
           ),
         ),
         _HubItem(
-          title: 'Fundbüro',
-          icon: Icons.search,
+          title: 'Wohnen & Alltag',
+          icon: Icons.home,
           onTap: () => _openCitizenList(
-            context: context,
-            type: CitizenPostType.lostFound,
+            context,
+            title: 'Wohnen & Alltag',
+            types: const [
+              CitizenPostType.apartmentSearch,
+              CitizenPostType.movingClearance,
+            ],
             services: services,
           ),
         ),
       ]);
     }
+    final communityTypes = <CitizenPostType>[];
     if (settingsStore.isFeatureEnabled('places')) {
-      items.add(
-        _HubItem(
-          title: 'Café Treff',
-          icon: Icons.local_cafe,
-          onTap: () => _openCitizenList(
-            context: context,
-            type: CitizenPostType.cafeMeetup,
-            services: services,
-          ),
-        ),
-      );
+      communityTypes.add(CitizenPostType.cafeMeetup);
     }
     if (settingsStore.isFeatureEnabled('clubs')) {
+      communityTypes.add(CitizenPostType.kidsMeetup);
+    }
+    if (communityTypes.isNotEmpty) {
       items.add(
         _HubItem(
-          title: 'Kinderspielen (3j-5j)',
-          icon: Icons.child_friendly,
+          title: 'Treffen & Gemeinschaft',
+          icon: Icons.local_cafe,
           onTap: () => _openCitizenList(
-            context: context,
-            type: CitizenPostType.kidsMeetup,
+            context,
+            title: 'Treffen & Gemeinschaft',
+            types: communityTypes,
             services: services,
           ),
         ),
@@ -143,12 +144,14 @@ class GemeindeAppHubScreen extends StatelessWidget {
 
   void _openCitizenList({
     required BuildContext context,
-    required CitizenPostType type,
+    required String title,
+    required List<CitizenPostType> types,
     required AppServices services,
   }) {
     AppRouterScope.of(context).push(
       CitizenPostsListScreen(
-        type: type,
+        title: title,
+        types: types,
         postsService: services.citizenPostsService,
       ),
     );
