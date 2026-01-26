@@ -15,7 +15,6 @@ import 'features/auth/services/auth_service.dart';
 import 'features/admin/services/admin_service.dart';
 import 'features/verwaltung/services/tenant_config_service.dart';
 import 'features/warnings/services/warnings_service.dart';
-import 'shared/auth/admin_key_store.dart';
 import 'shared/auth/auth_bootstrap.dart';
 import 'shared/auth/auth_scope.dart';
 import 'shared/auth/auth_store.dart';
@@ -34,10 +33,8 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   final tenantStore = TenantStore(prefs);
   await tenantStore.getTenantId();
-  final adminKeyStore = AdminKeyStore(prefs);
   runApp(
     GemeindeApp(
-      adminKeyStore: adminKeyStore,
       prefs: prefs,
       tenantStore: tenantStore,
     ),
@@ -47,12 +44,10 @@ Future<void> main() async {
 class GemeindeApp extends StatefulWidget {
   const GemeindeApp({
     super.key,
-    required this.adminKeyStore,
     required this.prefs,
     required this.tenantStore,
   });
 
-  final AdminKeyStore adminKeyStore;
   final SharedPreferences prefs;
   final TenantStore tenantStore;
 
@@ -76,7 +71,6 @@ class _GemeindeAppState extends State<GemeindeApp> {
     _apiClient = ApiClient(
       baseUrl: AppConfig.apiBaseUrl,
       tenantStore: widget.tenantStore,
-      adminKeyStore: widget.adminKeyStore,
       accessTokenProvider: () => _authStore.accessToken,
       refreshSession: () => _authStore.refreshSession(),
     );
@@ -96,7 +90,6 @@ class _GemeindeAppState extends State<GemeindeApp> {
       tenantConfigService: TenantConfigService(_apiClient),
       warningsService: WarningsService(_apiClient),
       permissionsService: PermissionsService(_apiClient),
-      adminKeyStore: widget.adminKeyStore,
       tenantStore: widget.tenantStore,
     );
     _tenantSettingsStore = TenantSettingsStore(

@@ -98,21 +98,6 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
     final showEvents = settingsStore.isFeatureEnabled('events');
     final showNews = settingsStore.isFeatureEnabled('posts');
     final showWarnings = settingsStore.isFeatureEnabled('warnings');
-    final showGemeindeApp = showEvents ||
-        showNews ||
-        settingsStore.isFeatureEnabled('services') ||
-        settingsStore.isFeatureEnabled('places') ||
-        settingsStore.isFeatureEnabled('clubs');
-    final showVerwaltung = settingsStore.isFeatureEnabled('services') ||
-        settingsStore.isFeatureEnabled('places') ||
-        settingsStore.isFeatureEnabled('waste');
-    int nextIndex = 1;
-    if (showWarnings) {
-      nextIndex += 1;
-    }
-    final gemeindeAppIndex = showGemeindeApp ? nextIndex++ : null;
-    final verwaltungIndex = showVerwaltung ? nextIndex++ : null;
-
     final resolvedFilter = _resolveFilter(
       showEvents: showEvents,
       showNews: showNews,
@@ -176,30 +161,6 @@ class _StartFeedScreenState extends State<StartFeedScreen> {
                   onTap: () => _handleTap(item),
                 ),
               ),
-            ),
-          const SizedBox(height: 24),
-          const AppSectionHeader(
-            title: 'Gemeinde & Verwaltung',
-            subtitle: 'Services, Formulare und Angebote entdecken.',
-          ),
-          if (showGemeindeApp)
-            _StartCard(
-              title: 'GemeindeApp',
-              subtitle: 'Angebote und Veranstaltungen entdecken',
-              icon: Icons.groups,
-              onTap: gemeindeAppIndex == null
-                  ? null
-                  : () => widget.onSelectTab(gemeindeAppIndex),
-            ),
-          if (showGemeindeApp && showVerwaltung) const SizedBox(height: 16),
-          if (showVerwaltung)
-            _StartCard(
-              title: 'Verwaltung',
-              subtitle: 'Formulare und Infos aus der Gemeinde',
-              icon: Icons.admin_panel_settings,
-              onTap: verwaltungIndex == null
-                  ? null
-                  : () => widget.onSelectTab(verwaltungIndex),
             ),
         ],
       ),
