@@ -1,100 +1,85 @@
-# COMMAND CHEATSHEET (PowerShell)
+# COMMANDS (PowerShell)
 
-> Alle Pfade sind Windows-freundlich. Führe Befehle aus dem Repo-Root aus.
+> Alle Pfade sind Windows‑PowerShell‑kompatibel. Befehle werden aus dem Repo‑Root ausgeführt.
 
-## Alles starten (Kurzfassung)
-1. **Backend (Docker Compose)**
-   ```powershell
-   Set-Location infra
-   Copy-Item .env.example .env -Force
-   docker compose up -d --build
-   Set-Location ..
-   ```
-2. **Web-Admin (Next.js, Port 3001)**
-   ```powershell
-   npm --prefix apps/web-admin install
-   npm --prefix apps/web-admin run dev -p 3001
-   ```
-3. **Mobile (Flutter)**
-   ```powershell
-   Set-Location apps\mobile
-   flutter pub get
-   flutter run
-   ```
+## Infrastructure / Backend
 
----
-
-## Backend (Docker)
-**Starten**
+Starte Postgres + API via Docker Compose.
 ```powershell
-Set-Location infra
+Push-Location infra
 Copy-Item .env.example .env -Force
 docker compose up -d --build
+Pop-Location
 ```
 
-**Stoppen**
+Stoppe die Container.
 ```powershell
+Push-Location infra
 docker compose down
+Pop-Location
 ```
 
-**Logs ansehen**
+Zeige API‑Logs im Follow‑Modus.
 ```powershell
+Push-Location infra
 docker compose logs -f api
+Pop-Location
 ```
 
-**Healthcheck**
-```powershell
-Invoke-RestMethod http://localhost:3000/health
-```
+## Web‑Admin
 
----
-
-## Web-Admin (Next.js)
+Installiere Abhängigkeiten und starte den Dev‑Server auf Port 3001.
 ```powershell
 npm --prefix apps/web-admin install
 npm --prefix apps/web-admin run dev -p 3001
 ```
-Öffnen: `http://localhost:3001`
 
----
+## Mobile App
 
-## Mobile (Flutter)
+Installiere Abhängigkeiten und starte die App.
 ```powershell
 Set-Location apps\mobile
 flutter pub get
 flutter run
 ```
 
-**Demo-Mode**
+Starte die Mobile‑App im Demo‑Mode.
 ```powershell
+Set-Location apps\mobile
 flutter run --dart-define=DEMO_MODE=true
 ```
 
-**Optional: SITE_KEY setzen (Prod/Dev-Tenant)**
+Setze optional den Site‑Key (Nicht‑Demo‑Modus).
 ```powershell
+Set-Location apps\mobile
 flutter run --dart-define=SITE_KEY=HD-2026-9f3c1a2b-KEY
 ```
 
----
+## Demo & Seed
 
-## Seed-Skripte (API)
+Seed‑Daten für Tenants und Demo‑Inhalte (optional nach Bedarf).
 ```powershell
 npm --prefix apps/api run seed:tenant -- <tenantId>
 npm --prefix apps/api run seed:hilders
 npm --prefix apps/api run seed:hilders-demo
 npm --prefix apps/api run seed:tourism:hilders
+npm --prefix apps/api run seed:demo
 ```
 
----
+## Testing & Debugging
 
-## Wichtige API-Calls (PowerShell, Copy/Paste)
-> Hinweis: Für **Admin-Endpunkte** sind `X-TENANT`, `X-SITE-KEY`, `X-ADMIN-KEY` erforderlich.
+Führe einen Health‑Check der API aus.
+```powershell
+Invoke-RestMethod http://localhost:3000/health
+```
 
-### 1) Resident anlegen (Admin)
+> Hinweis: Für **Admin‑Endpunkte** sind `X-TENANT`, `X-SITE-KEY`, `X-ADMIN-KEY` erforderlich.
+
+Lege einen Resident als Admin an.
 ```powershell
 $headers = @{
   "Content-Type" = "application/json"
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
   "X-ADMIN-KEY" = "HD-ADMIN-TEST-KEY"
 }
@@ -103,11 +88,11 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/residents" 
   -Body '{"firstName":"Anna","lastName":"Muster","postalCode":"36115","houseNumber":"12A"}'
 ```
 
-### 2) Activation-Code erzeugen (Admin)
+Erzeuge einen Activation‑Code (Admin).
 ```powershell
 $headers = @{
   "Content-Type" = "application/json"
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
   "X-ADMIN-KEY" = "HD-ADMIN-TEST-KEY"
 }
@@ -116,11 +101,11 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/activation-
   -Body '{"residentId":"<residentId>","expiresInDays":14}'
 ```
 
-### 3) Resident aktivieren (User)
+Aktiviere einen Resident (User).
 ```powershell
 $headers = @{
   "Content-Type" = "application/json"
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
 }
 Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/auth/activate" `
@@ -128,11 +113,11 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/auth/activate" `
   -Body '{"activationCode":"<code>","postalCode":"36115","houseNumber":"12A","email":"user@example.com","password":"Passwort123!"}'
 ```
 
-### 4) Login (User)
+Login als User.
 ```powershell
 $headers = @{
   "Content-Type" = "application/json"
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
 }
 Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/auth/login" `
@@ -140,10 +125,10 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/auth/login" `
   -Body '{"email":"user@example.com","password":"Passwort123!"}'
 ```
 
-### 5) Permissions abrufen (User Token)
+Lese Berechtigungen mit User‑Token aus.
 ```powershell
 $headers = @{
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
   "Authorization" = "Bearer <accessToken>"
 }
@@ -151,11 +136,11 @@ Invoke-RestMethod -Method Get -Uri "http://localhost:3000/permissions" `
   -Headers $headers
 ```
 
-### 6) Rolle setzen (Admin)
+Setze eine Rolle (Admin).
 ```powershell
 $headers = @{
   "Content-Type" = "application/json"
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
   "X-ADMIN-KEY" = "HD-ADMIN-TEST-KEY"
 }
@@ -164,11 +149,11 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/users/role"
   -Body '{"userId":"<userId>","role":"STAFF"}'
 ```
 
-### 7) Bürger-Post erstellen (Citizen)
+Erstelle einen Bürger‑Post (Citizen).
 ```powershell
 $headers = @{
   "Content-Type" = "application/json"
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
   "Authorization" = "Bearer <accessToken>"
 }
@@ -177,11 +162,11 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/posts" `
   -Body '{"type":"USER_POST","title":"Hallo Nachbarn","body":"Testpost"}'
 ```
 
-### 8) Offiziellen Post erstellen (Admin, News/Warnung)
+Erstelle einen offiziellen Post (Admin, News/Warnung).
 ```powershell
 $headers = @{
   "Content-Type" = "application/json"
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
   "X-ADMIN-KEY" = "HD-ADMIN-TEST-KEY"
 }
@@ -190,12 +175,12 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/admin/posts" `
   -Body '{"type":"NEWS","title":"Amtliche Info","body":"Inhalt","publishedAt":"2024-12-01T08:00:00.000Z"}'
 ```
 
-### 9) Beitrag melden + Moderation abrufen
+Melde einen Beitrag und rufe die Moderation ab.
 ```powershell
 # Report
 $headers = @{
   "Content-Type" = "application/json"
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
   "Authorization" = "Bearer <accessToken>"
 }
@@ -205,7 +190,7 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/posts/<postId>/report
 
 # Moderation (Backend-Route)
 $headers = @{
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
   "X-ADMIN-KEY" = "HD-ADMIN-TEST-KEY"
 }
@@ -213,11 +198,11 @@ Invoke-RestMethod -Method Get -Uri "http://localhost:3000/admin/posts/reported" 
   -Headers $headers
 ```
 
-### 10) Tourist-Code einlösen
+Löse einen Tourist‑Code ein.
 ```powershell
 $headers = @{
   "Content-Type" = "application/json"
-  "X-TENANT" = "hilders"
+  "X-TENANT" = "hilders-demo"
   "X-SITE-KEY" = "HD-2026-9f3c1a2b-KEY"
 }
 Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/tourist/redeem" `
@@ -225,10 +210,8 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/tourist/redeem" `
   -Body '{"code":"<touristCode>","deviceId":"device-123"}'
 ```
 
----
-
-## Troubleshooting (Kurz)
-- **Port belegt**: API nutzt `3000`, Web-Admin `3001`. Ändere den Port oder stoppe den Prozess.
+Troubleshooting‑Hinweise.
+- **Port belegt**: API nutzt `3000`, Web‑Admin `3001`. Ändere den Port oder stoppe den Prozess.
 - **403/401**: `X-TENANT`, `X-SITE-KEY`, `X-ADMIN-KEY` fehlen oder sind falsch.
 - **404**: Route prüfen (z. B. Moderation ist `/admin/posts/...`, nicht `/api/admin/posts/...`).
-- **Android Emulator**: API-Base-URL in der App ist `http://10.0.2.2:3000` (Debug/Demo).
+- **Android Emulator**: API‑Base‑URL in der App ist `http://10.0.2.2:3000` (Debug/Demo).
