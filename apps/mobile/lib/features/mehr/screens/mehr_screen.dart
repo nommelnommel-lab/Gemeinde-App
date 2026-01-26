@@ -56,6 +56,7 @@ class _MehrScreenState extends State<MehrScreen> {
   Widget build(BuildContext context) {
     final permissions =
         AppPermissionsScope.maybePermissionsOf(context) ?? AppPermissions.empty;
+    final isTourist = permissions.role == 'TOURIST';
     final isStaff = permissions.isStaff;
     final services = AppServicesScope.of(context);
     final showAdminTools = !kReleaseMode;
@@ -63,6 +64,7 @@ class _MehrScreenState extends State<MehrScreen> {
         services.adminKeyStore.getAdminKey(services.tenantStore.resolveTenantId());
     final hasAdminKey = adminKey != null && adminKey.trim().isNotEmpty;
     final authStore = AuthScope.of(context);
+    final touristExpiry = _formatExpiry(authStore.expiresAt);
 
     return ListView(
       children: [
@@ -87,6 +89,14 @@ class _MehrScreenState extends State<MehrScreen> {
             },
           ),
         const Divider(height: 0),
+        if (authStore.isAuthenticated && isTourist && touristExpiry != null)
+          ListTile(
+            leading: const Icon(Icons.card_membership_outlined),
+            title: const Text('Tourist'),
+            subtitle: Text('Gültig bis $touristExpiry'),
+          ),
+        if (authStore.isAuthenticated && isTourist && touristExpiry != null)
+          const Divider(height: 0),
         if (isStaff)
           ListTile(
             leading: const Icon(Icons.verified_user_outlined),
@@ -239,5 +249,19 @@ class _MehrScreenState extends State<MehrScreen> {
     if (!mounted) return;
     AppPermissionsScope.controllerOf(context)
         .setPermissions(AppPermissions.empty);
+  }
+
+  String? _formatExpiry(String? value) {
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) {
+      return null;
+    }
+    final day = parsed.day.toString().padLeft(2, '0');
+    final month = parsed.month.toString().padLeft(2, '0');
+    final year = parsed.year.toString();
+    return '$day.$month.$year';
   }
 }

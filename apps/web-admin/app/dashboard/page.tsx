@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import ResidentsPanel from '../../components/ResidentsPanel';
 import ImportPanel from '../../components/ImportPanel';
 import CodesPanel from '../../components/CodesPanel';
+import TouristCodesPanel from '../../components/TouristCodesPanel';
 import RolesPanel from '../../components/RolesPanel';
 import ContentPanel from '../../components/ContentPanel';
 import ModerationPanel from '../../components/ModerationPanel';
@@ -15,6 +16,7 @@ const tabs = [
   { id: 'residents', label: 'Bewohner' },
   { id: 'import', label: 'Import' },
   { id: 'codes', label: 'Codes' },
+  { id: 'tourist-codes', label: 'Tourist-Codes' },
   { id: 'roles', label: 'Rollen' },
   { id: 'content', label: 'Inhalte' },
   { id: 'moderation', label: 'Moderation' },
@@ -130,6 +132,7 @@ export default function DashboardPage() {
       {activeTab === 'residents' && <ResidentsPanel />}
       {activeTab === 'import' && <ImportPanel />}
       {activeTab === 'codes' && <CodesPanel />}
+      {activeTab === 'tourist-codes' && <TouristCodesPanel />}
       {activeTab === 'roles' && <RolesPanel />}
       {activeTab === 'content' && <ContentPanel />}
       {activeTab === 'moderation' && <ModerationPanel />}

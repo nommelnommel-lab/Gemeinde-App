@@ -6,6 +6,7 @@ export type JwtAccessPayload = {
   residentId: string;
   email: string;
   role: UserRole;
+  expiresAt?: string;
 };
 
 export type AuthUserView = {
@@ -21,4 +22,5 @@ export type AuthResponse = {
   accessToken: string;
   refreshToken: string;
   user: AuthUserView;
+  expiresAt?: string;
 };

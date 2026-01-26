@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -15,6 +16,9 @@ class AuthStore extends ChangeNotifier {
 
   static const _refreshTokenKey = 'refreshToken';
   static const _userKey = 'authUser';
+  static const _accessTokenKey = 'accessToken';
+  static const _expiresAtKey = 'accessTokenExpiresAt';
+  static const _deviceIdKey = 'touristDeviceId';
 
   final FlutterSecureStorage _secureStorage;
   final AuthService _authService;
@@ -22,6 +26,7 @@ class AuthStore extends ChangeNotifier {
   AuthUser? _user;
   String? _accessToken;
   String? _refreshToken;
+  String? _expiresAt;
   Future<bool>? _refreshSessionFuture;
   bool _isLoading = false;
   String? _lastError;
@@ -29,6 +34,7 @@ class AuthStore extends ChangeNotifier {
   AuthUser? get user => _user;
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
+  String? get expiresAt => _expiresAt;
   bool get isLoading => _isLoading;
   String? get lastError => _lastError;
   bool get isAuthenticated => _accessToken != null;
@@ -51,6 +57,16 @@ class AuthStore extends ChangeNotifier {
 
     _refreshToken = await _loadRefreshToken();
     if (_refreshToken == null || _refreshToken!.isEmpty) {
+      _accessToken = await _loadAccessToken();
+      _expiresAt = await _loadExpiresAt();
+      if (_accessToken != null &&
+          _accessToken!.isNotEmpty &&
+          !_isExpired(_expiresAt)) {
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+      await _clearSession();
       _isLoading = false;
       notifyListeners();
       return;
@@ -97,6 +113,18 @@ class AuthStore extends ChangeNotifier {
       () => _authService.login(
         email: email,
         password: password,
+      ),
+    );
+  }
+
+  Future<void> redeemTourist({
+    required String code,
+    required String deviceId,
+  }) async {
+    await _authenticate(
+      () => _authService.redeemTourist(
+        code: code,
+        deviceId: deviceId,
       ),
     );
   }
@@ -154,8 +182,15 @@ class AuthStore extends ChangeNotifier {
     _accessToken = response.accessToken;
     _refreshToken = response.refreshToken;
     _user = response.user;
+    _expiresAt = response.expiresAt;
     if (_refreshToken != null && _refreshToken!.isNotEmpty) {
       await _secureStorage.write(key: _refreshTokenKey, value: _refreshToken);
+    }
+    await _secureStorage.write(key: _accessTokenKey, value: _accessToken);
+    if (_expiresAt != null && _expiresAt!.isNotEmpty) {
+      await _secureStorage.write(key: _expiresAtKey, value: _expiresAt);
+    } else {
+      await _secureStorage.delete(key: _expiresAtKey);
     }
     await _secureStorage.write(
       key: _userKey,
@@ -173,9 +208,33 @@ class AuthStore extends ChangeNotifier {
     return null;
   }
 
+  Future<String?> _loadAccessToken() async {
+    final token = await _secureStorage.read(key: _accessTokenKey);
+    if (token != null && token.isNotEmpty) {
+      _accessToken = token;
+      return token;
+    }
+    _accessToken = null;
+    return null;
+  }
+
+  Future<String?> _loadExpiresAt() async {
+    final value = await _secureStorage.read(key: _expiresAtKey);
+    _expiresAt = value;
+    return value;
+  }
+
   Future<bool> _refreshSessionInternal() async {
     final token = _refreshToken ?? await _loadRefreshToken();
     if (token == null || token.isEmpty) {
+      _accessToken = await _loadAccessToken();
+      _expiresAt = await _loadExpiresAt();
+      if (_accessToken != null &&
+          _accessToken!.isNotEmpty &&
+          !_isExpired(_expiresAt)) {
+        notifyListeners();
+        return true;
+      }
       await _clearSession();
       notifyListeners();
       return false;
@@ -195,8 +254,34 @@ class AuthStore extends ChangeNotifier {
   Future<void> _clearSession() async {
     await _secureStorage.delete(key: _refreshTokenKey);
     await _secureStorage.delete(key: _userKey);
+    await _secureStorage.delete(key: _accessTokenKey);
+    await _secureStorage.delete(key: _expiresAtKey);
     _refreshToken = null;
     _accessToken = null;
     _user = null;
+    _expiresAt = null;
+  }
+
+  bool _isExpired(String? value) {
+    if (value == null || value.isEmpty) {
+      return false;
+    }
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) {
+      return false;
+    }
+    return parsed.isBefore(DateTime.now());
+  }
+
+  Future<String> getOrCreateDeviceId() async {
+    final existing = await _secureStorage.read(key: _deviceIdKey);
+    if (existing != null && existing.isNotEmpty) {
+      return existing;
+    }
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    final generated = base64Url.encode(bytes);
+    await _secureStorage.write(key: _deviceIdKey, value: generated);
+    return generated;
   }
 }

@@ -153,7 +153,7 @@ class AppPermissions {
   final bool canGenerateActivationCodes;
   final bool canManageRoles;
 
-  bool get isStaff => role != 'USER';
+  bool get isStaff => role == 'STAFF' || role == 'ADMIN';
   bool get isStaffMode => isAdmin || isStaff;
 
   static const empty = AppPermissions(
