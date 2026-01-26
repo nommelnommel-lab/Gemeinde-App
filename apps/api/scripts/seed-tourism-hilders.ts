@@ -1,5 +1,5 @@
 import { TourismService } from '../src/tourism/tourism.service';
-import { tourismSeedItems } from './tourism-hilders.data';
+import { tourismSeedItems } from '../src/tourism/tourism-seed-hilders.data';
 
 const tenantId = process.env.TENANT ?? 'hilders-demo';
 

@@ -6,5 +6,6 @@ import { TourismService } from './tourism.service';
 @Module({
   controllers: [TourismController, AdminTourismController],
   providers: [TourismService],
+  exports: [TourismService],
 })
 export class TourismModule {}

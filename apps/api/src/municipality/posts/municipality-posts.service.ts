@@ -171,8 +171,13 @@ export class MunicipalityPostsService {
     await this.repository.setAll(tenantId, posts);
   }
 
+  async resetToSeed(tenantId: string): Promise<void> {
+    const seeded = this.createSeedPosts(tenantId);
+    await this.repository.setAll(tenantId, seeded);
+  }
+
   private createSeedPosts(tenantId: string): MunicipalityPost[] {
-    if (tenantId !== 'hilders') {
+    if (tenantId !== 'hilders' && tenantId !== 'hilders-demo') {
       return [];
     }
 

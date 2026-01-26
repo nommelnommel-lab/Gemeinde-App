@@ -1,7 +1,7 @@
 import { MunicipalityFormsService } from '../src/municipality/forms/municipality-forms.service';
 import { MunicipalityProfileService } from '../src/municipality/profile/municipality-profile.service';
 import { TourismService } from '../src/tourism/tourism.service';
-import { tourismSeedItems } from './tourism-hilders.data';
+import { tourismSeedItems } from '../src/tourism/tourism-seed-hilders.data';
 
 const tenantId = process.env.TENANT ?? 'hilders-demo';
 
