@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_chip.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_section_header.dart';
 import '../../../shared/widgets/app_states.dart';
 import '../../auth/screens/login_screen.dart';
 import '../models/citizen_post.dart';
@@ -94,8 +97,14 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
           padding: const EdgeInsets.all(16),
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
+            AppSectionHeader(
+              title: widget.type.label,
+              subtitle: 'Austausch und Hilfe in der Gemeinde.',
+            ),
+            const SizedBox(height: 12),
             if (canFilterMine)
-              Card(
+              AppCard(
+                padding: const EdgeInsets.all(0),
                 child: SwitchListTile(
                   title: const Text('Nur meine'),
                   subtitle: const Text('Nur eigene Beiträge anzeigen.'),
@@ -119,11 +128,41 @@ class _CitizenPostsListScreenState extends State<CitizenPostsListScreen> {
               )
             else
               ..._posts.map(
-                (post) => Card(
-                  child: ListTile(
-                    title: Text(post.title),
-                    subtitle: Text(_subtitle(post)),
+                (post) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: AppCard(
                     onTap: () => _openDetail(post),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          post.title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _subtitle(post),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            AppChip(
+                              label: widget.type.label,
+                              icon: Icons.local_activity_outlined,
+                            ),
+                            AppChip(
+                              label: _formatDate(
+                                post.createdAt.toIso8601String(),
+                              ),
+                              icon: Icons.calendar_today_outlined,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -4,7 +4,10 @@ import '../../../shared/auth/app_permissions.dart';
 import '../../../shared/auth/auth_scope.dart';
 import '../../../shared/di/app_services_scope.dart';
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_chip.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_section_header.dart';
 import '../../../shared/widgets/app_states.dart';
 import '../../auth/screens/login_screen.dart';
 import '../models/news_item.dart';
@@ -86,14 +89,22 @@ class _NewsScreenState extends State<NewsScreen> {
           padding: const EdgeInsets.all(16),
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Suche',
-                hintText: 'Titel oder Stichwort',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+            const AppSectionHeader(
+              title: 'Aktuelle Meldungen',
+              subtitle: 'Filtere nach Kategorie oder Suchbegriff.',
+            ),
+            const SizedBox(height: 8),
+            AppCard(
+              padding: const EdgeInsets.all(12),
+              child: TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Suche',
+                  hintText: 'Titel oder Stichwort',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => _searchTerm = value),
               ),
-              onChanged: (value) => setState(() => _searchTerm = value),
             ),
             const SizedBox(height: 12),
             _CategoryFilter(
@@ -114,13 +125,9 @@ class _NewsScreenState extends State<NewsScreen> {
               )
             else
               ..._filteredNews.map(
-                (item) => Card(
-                  child: ListTile(
-                    title: Text(item.title),
-                    subtitle: Text(
-                      '${_formatDate(item.publishedAt)} · ${item.excerpt}',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: AppCard(
                     onTap: () async {
                       final updated =
                           await AppRouterScope.of(context).push<bool>(
@@ -135,6 +142,35 @@ class _NewsScreenState extends State<NewsScreen> {
                         await _load();
                       }
                     },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.title,
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        Text(
+                          item.excerpt,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            AppChip(
+                              label: item.category,
+                              icon: Icons.local_offer,
+                            ),
+                            AppChip(
+                              label: _formatDate(item.publishedAt),
+                              icon: Icons.calendar_today_outlined,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

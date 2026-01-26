@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/navigation/app_router.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/app_chip.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/app_section_header.dart';
 import '../models/event.dart';
 import '../services/events_service.dart';
 import 'event_form_screen.dart';
@@ -82,25 +85,35 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _formatDate(_event.date),
-                style: Theme.of(context).textTheme.headlineSmall,
+              AppSectionHeader(
+                title: title.isEmpty ? 'Event' : title,
+                subtitle: 'Alle wichtigen Informationen auf einen Blick.',
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.place_outlined, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      location,
-                      style: Theme.of(context).textTheme.titleMedium,
+              const SizedBox(height: 12),
+              AppCard(
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    AppChip(
+                      label: _formatDate(_event.date),
+                      icon: Icons.event,
                     ),
-                  ),
-                ],
+                    AppChip(
+                      label: location,
+                      icon: Icons.place_outlined,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
-              Text(description, style: Theme.of(context).textTheme.bodyLarge),
+              const AppSectionHeader(title: 'Beschreibung'),
+              AppCard(
+                child: Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
             ],
           ),
         ),
