@@ -14,7 +14,6 @@ class GemeindeAppHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settingsStore = TenantSettingsScope.of(context);
-    final services = AppServicesScope.of(context);
     final items = <_HubItem>[];
 
     if (settingsStore.isFeatureEnabled('events')) {
@@ -38,7 +37,6 @@ class GemeindeAppHubScreen extends StatelessWidget {
           onTap: () => _openCitizenList(
             context,
             CitizenPostType.marketplace,
-            services,
           ),
         ),
         _HubItem(
@@ -47,7 +45,6 @@ class GemeindeAppHubScreen extends StatelessWidget {
           onTap: () => _openCitizenList(
             context,
             CitizenPostType.movingClearance,
-            services,
           ),
         ),
         _HubItem(
@@ -56,7 +53,6 @@ class GemeindeAppHubScreen extends StatelessWidget {
           onTap: () => _openCitizenList(
             context,
             CitizenPostType.help,
-            services,
           ),
         ),
         _HubItem(
@@ -65,7 +61,6 @@ class GemeindeAppHubScreen extends StatelessWidget {
           onTap: () => _openCitizenList(
             context,
             CitizenPostType.apartmentSearch,
-            services,
           ),
         ),
         _HubItem(
@@ -74,7 +69,6 @@ class GemeindeAppHubScreen extends StatelessWidget {
           onTap: () => _openCitizenList(
             context,
             CitizenPostType.lostFound,
-            services,
           ),
         ),
       ]);
@@ -87,7 +81,6 @@ class GemeindeAppHubScreen extends StatelessWidget {
           onTap: () => _openCitizenList(
             context,
             CitizenPostType.cafeMeetup,
-            services,
           ),
         ),
       );
@@ -100,7 +93,6 @@ class GemeindeAppHubScreen extends StatelessWidget {
           onTap: () => _openCitizenList(
             context,
             CitizenPostType.kidsMeetup,
-            services,
           ),
         ),
       );
@@ -144,8 +136,8 @@ class GemeindeAppHubScreen extends StatelessWidget {
   void _openCitizenList(
     BuildContext context,
     CitizenPostType type,
-    AppServices services,
   ) {
+    final services = AppServicesScope.of(context);
     AppRouterScope.of(context).push(
       CitizenPostsListScreen(
         type: type,
