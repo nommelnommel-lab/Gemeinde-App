@@ -62,7 +62,6 @@ export class PostsController {
       offset: parsedOffset,
       query,
       includeHidden,
-      viewerUserId: user?.sub,
     });
   }
 
@@ -119,7 +118,7 @@ export class PostsController {
     const post = await this.postsService.getById(tenantId, id, {
       includeHidden: true,
     });
-    this.assertCanEdit(post, request.user);
+    this.assertCanEdit(post, request.user, { allowHiddenForAuthors: false });
     const patch = this.validatePatch(payload, post, request.user?.role);
     if (patch.type && !this.isOfficial(patch.type)) {
       this.requireCreatePermission(headers, patch.type);
@@ -461,6 +460,7 @@ export class PostsController {
   private assertCanEdit(
     post: PostEntity,
     user?: { sub?: string; role?: UserRole },
+    options: { allowHiddenForAuthors?: boolean } = {},
   ) {
     if (!user?.sub) {
       throw new ForbiddenException('Authentifizierung erforderlich');
@@ -473,6 +473,10 @@ export class PostsController {
       return;
     }
     if (post.authorUserId && post.authorUserId === user.sub) {
+      // Option A: Autoren dürfen nur veröffentlichte Beiträge bearbeiten.
+      if (post.status === 'HIDDEN' && !options.allowHiddenForAuthors) {
+        throw new ForbiddenException('Post ist verborgen und kann nicht bearbeitet werden');
+      }
       return;
     }
     throw new ForbiddenException('Keine Berechtigung');
