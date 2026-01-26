@@ -218,10 +218,13 @@ export class PostsService {
     const normalized = this.normalizePost(tenantId, posts[index]);
     const reports = await this.reportRepository.getAll(tenantId);
     const existingReports = reports.filter((entry) => entry.postId === id);
-    const alreadyReported = existingReports.some(
-      (entry) => entry.reporterUserId === normalizedReporter,
-    );
-    let reportsForPost = existingReports;
+    const uniqueReporters = new Map<string, PostReport>();
+    existingReports.forEach((entry) => {
+      if (!uniqueReporters.has(entry.reporterUserId)) {
+        uniqueReporters.set(entry.reporterUserId, entry);
+      }
+    });
+    const alreadyReported = uniqueReporters.has(normalizedReporter);
     if (!alreadyReported) {
       const newReport: PostReport = {
         id: randomUUID(),
@@ -231,11 +234,11 @@ export class PostsService {
         createdAt: now,
       };
       reports.push(newReport);
-      reportsForPost = [...existingReports, newReport];
+      uniqueReporters.set(normalizedReporter, newReport);
       await this.reportRepository.setAll(tenantId, reports);
     }
 
-    const nextReportsCount = reportsForPost.length;
+    const nextReportsCount = uniqueReporters.size;
     const nextReportedAt =
       nextReportsCount > 0 ? normalized.reportedAt ?? now : undefined;
     const needsUpdate =
